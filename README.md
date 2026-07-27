@@ -23,6 +23,9 @@ The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
 4. [PostHog observability stack](docs/adr/0004-posthog-observability-stack.md) — full bundle, no Sentry
 5. [Journal content privacy](docs/adr/0005-journal-content-privacy-mode.md) — `privacyMode` on, metadata only
 6. [Flutter iOS + Android only](docs/adr/0006-flutter-ios-android-only.md) — no web, demand-driven expansion
+7. [Protected `main`](docs/adr/0007-protected-main-for-autonomous-agents.md) — PR + CI gate, because agents write here
+
+The project's language is defined in [`CONTEXT.md`](CONTEXT.md).
 
 ## Architecture
 
