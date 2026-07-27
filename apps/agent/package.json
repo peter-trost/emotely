@@ -1,0 +1,8 @@
+{
+  "name": "@emotely/agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --build"
+  }
+}

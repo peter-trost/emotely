@@ -1,0 +1,5 @@
+package com.trostsystems.emotely
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

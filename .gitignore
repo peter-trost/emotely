@@ -1,7 +1,6 @@
 # Node / TS
 node_modules/
 dist/
-.turbo/
 *.tsbuildinfo
 
 # Env / secrets
@@ -13,12 +12,17 @@ dist/
 .vercel/
 
 # Flutter / Dart
+.fvm/
 apps/app/.dart_tool/
 apps/app/build/
 apps/app/.flutter-plugins
 apps/app/.flutter-plugins-dependencies
 apps/app/ios/Pods/
 apps/app/**/GeneratedPluginRegistrant.*
+
+# IDE
+.idea/
+*.iml
 
 # OS / editor
 .DS_Store

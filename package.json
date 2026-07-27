@@ -1,0 +1,17 @@
+{
+  "name": "emotely",
+  "private": true,
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "typecheck": "tsc --build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.5",
+    "typescript": "7.0.2"
+  }
+}
