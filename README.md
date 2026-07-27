@@ -13,6 +13,17 @@ Three goals, held at once:
    client are both open (MIT) and meant to be read.
 3. **Fund spare-time work** — a 5€/month subscription with high margins.
 
+## Decisions
+
+The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
+
+1. [Monorepo](docs/adr/0001-monorepo.md) — agent + app + shared contract in one repo
+2. [Tools-first harness](docs/adr/0002-tools-first-harness.md) — tool calls, not prompted JSON
+3. [Model gateway + cost ceiling](docs/adr/0003-model-gateway-and-cost-ceiling.md) — provider-agnostic, cheap-model constraint
+4. [PostHog observability stack](docs/adr/0004-posthog-observability-stack.md) — full bundle, no Sentry
+5. [Journal content privacy](docs/adr/0005-journal-content-privacy-mode.md) — `privacyMode` on, metadata only
+6. [Flutter iOS + Android only](docs/adr/0006-flutter-ios-android-only.md) — no web, demand-driven expansion
+
 ## Architecture
 
 Monorepo. Two apps that share one contract, plus Supabase (data/auth) and
