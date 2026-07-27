@@ -1,0 +1,25 @@
+# Node / TS
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel/
+
+# Flutter / Dart
+apps/app/.dart_tool/
+apps/app/build/
+apps/app/.flutter-plugins
+apps/app/.flutter-plugins-dependencies
+apps/app/ios/Pods/
+apps/app/**/GeneratedPluginRegistrant.*
+
+# OS / editor
+.DS_Store
+*.log
