@@ -6,6 +6,5 @@
     "rewriteRelativeImportExtensions": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../../packages/contract" }]
+  "include": ["src"]
 }

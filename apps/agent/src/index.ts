@@ -1,2 +1,8 @@
-// The session loop lands in issue #2 (tools-first harness, ADR 0002).
-export {};
+export { defaultQuestionSet } from "./default-question-set.ts";
+export {
+  type Question,
+  type QuestionSet,
+  runSession,
+  type SessionClient,
+  type SessionResult,
+} from "./session.ts";

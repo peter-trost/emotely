@@ -1,7 +1,15 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
   "files": {
-    "includes": ["**", "!**/dist", "!apps/app"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!apps/app",
+      "!**/.vercel",
+      "!.entire/logs",
+      "!.entire/metadata",
+      "!.entire/tmp"
+    ]
   },
   "linter": {
     "enabled": true,
