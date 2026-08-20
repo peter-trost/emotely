@@ -10,9 +10,12 @@
   },
   "scripts": {
     "typecheck": "tsc --build",
-    "test": "node --test src/"
+    "test": "node --test \"src/*.test.ts\""
   },
   "dependencies": {
     "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0"
   }
 }
