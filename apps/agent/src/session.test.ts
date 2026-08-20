@@ -163,7 +163,6 @@ describe("runSession", () => {
         ]),
       ],
       [complete("c5", "A good day: rated 7, grateful for three things.")],
-      [{ type: "text", text: "Done." }],
     ]);
 
     const asked: AskQuestionInput[] = [];
@@ -193,5 +192,7 @@ describe("runSession", () => {
         value: ["my wife", "myself", "Flutter"],
       },
     });
+    // 5 model rounds (ask, record, ask, record, complete) at 1+1 mock tokens
+    assert.deepEqual(result.usage, { inputTokens: 5, outputTokens: 5 });
   });
 });

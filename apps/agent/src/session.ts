@@ -38,6 +38,8 @@ export type SessionClient = {
 export type SessionResult = {
   summary: string;
   answers: Record<string, Answer>;
+  /** Token totals across every model round, for cost accounting. */
+  usage: { inputTokens: number; outputTokens: number };
 };
 
 const systemPrompt = (set: QuestionSet) =>
@@ -53,6 +55,7 @@ export async function runSession(opts: {
 }): Promise<SessionResult> {
   const { questionSet, client, model } = opts;
   const answers: SessionResult["answers"] = {};
+  const usage = { inputTokens: 0, outputTokens: 0 };
   let summary: string | undefined;
 
   const tools = {
@@ -113,6 +116,8 @@ export async function runSession(opts: {
       messages,
     });
     messages.push(...result.response.messages);
+    usage.inputTokens += result.totalUsage.inputTokens ?? 0;
+    usage.outputTokens += result.totalUsage.outputTokens ?? 0;
 
     if (result.finishReason !== "tool-calls") continue;
 
@@ -133,5 +138,5 @@ export async function runSession(opts: {
     }
   }
 
-  return { summary, answers };
+  return { summary, answers, usage };
 }
