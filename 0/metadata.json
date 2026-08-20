@@ -115,6 +115,37 @@
         "label": "Skill: domain-modeling",
         "default_collapsed": true
       }
+    },
+    {
+      "id": "claude-skill-toolu_01TkaHV9qceG55QUNimVQ9gM",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "tdd"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "57c1f0041aa8",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 279,
+        "end": 280,
+        "entry_ids": [
+          "a8667b89-deba-422f-83a5-7b8613d80baf"
+        ],
+        "tool_use_id": "toolu_01TkaHV9qceG55QUNimVQ9gM"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01TkaHV9qceG55QUNimVQ9gM"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: tdd",
+        "default_collapsed": true
+      }
     }
   ],
   "initial_attribution": {
