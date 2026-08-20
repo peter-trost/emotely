@@ -1,7 +1,7 @@
 # emotely
 
 A daily journaling app with an AI **Journaling Assistant** that walks you through
-a structured reflection — up to 10 topics per session — and produces a summarized
+a structured reflection — walking a chosen question set — and produces a summarized
 journal entry. This is a ground-up rebuild of the original emotely (a shipped
 Flutter + Firebase app, sunset in early 2025) around a modern, tools-first AI
 harness.
@@ -36,7 +36,7 @@ PostHog (analytics + the self-driving loop).
 emotely/
 ├─ apps/
 │  ├─ agent/      TypeScript · Vercel AI SDK agent loop · deploys to Vercel
-│  │             tools: ask_topic / record_answer / complete_session
+│  │             tools: ask_question / record_answer / complete_session
 │  │             evals/ — offline fixtures → cost + quality (CI gate)
 │  └─ app/        Flutter (iOS + Android) · renders one native widget per tool call
 ├─ packages/
@@ -76,12 +76,12 @@ that *begged* the model to emit parseable JSON (`response` + `summary`), with a
 
 The rebuild gives the model **tools** instead:
 
-- `ask_topic(topic, input_type)` — `input_type ∈ text | color_picker | mood_slider | multi_select`; the client renders the matching native widget. **This is the generative UI.**
-- `record_answer(topic, value)` — structured, validated tool args. No JSON-parsing prayer.
+- `ask_question(question, answer_type)` — `answer_type ∈ text_list | longtext | rating | emoji | color`; the client renders the matching native widget and supplies the answer as the tool result. **This is the generative UI.**
+- `record_answer(question, value)` — structured, validated tool args, typed per answer type. No JSON-parsing prayer.
 - `complete_session(summary)` — the summary is a validated tool argument, not parsed prose.
 
 The old `ColorText` / `ColorTextEditingController` feature becomes just one
-`input_type` (`color_picker`).
+`answer_type` (`color`).
 
 ## PostHog — the "self-driving" layer
 
@@ -111,7 +111,7 @@ must not surprise-bill.
 
 ## Cost model (the hard constraint)
 
-A daily poweruser (~30 sessions/month, ~10 topics each) must cost **well under
+A daily poweruser (~30 sessions/month, ~10 questions each) must cost **well under
 50¢/month**, ideally a few cents, inside a 5€ sub with high margins.
 
 - Frontier models (Claude Sonnet/Opus) — **out**, blow the budget per session.
@@ -120,7 +120,7 @@ A daily poweruser (~30 sessions/month, ~10 topics each) must cost **well under
   tier that hits "a few cents."
 - **Prompt caching** on the static context prompt cuts session cost 3–5× — this
   matters more than the exact model.
-- The task is narrow and well-specified (10 fixed topics, extract → summarize) —
+- The task is narrow and well-specified (a fixed question set, extract → summarize) —
   a cheap model with good tool-calling is enough. No frontier reasoning needed.
 
 Final model is chosen **empirically** at build time via the eval harness + a
@@ -140,7 +140,7 @@ the wild*.
 ## Build order
 
 1. **`apps/agent` skeleton** — Vercel AI SDK loop, the three tools, gateway wired,
-   one cheap model hardcoded. Prove a full 10-topic session runs end-to-end via
+   one cheap model hardcoded. Prove a full 10-question session runs end-to-end via
    tool calls. No client yet.
 2. **Offline eval harness** — port the original prompt + `promptfoo` conversation
    fixtures into `evals/`. CI gate: replay, assert correctness, measure cost per
