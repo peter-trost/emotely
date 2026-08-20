@@ -349,3 +349,7 @@ I topped up the credits by 10€. The UI now says 15.00. Seems like 5.00 was fre
 ---
 
 Yes do the vercel link + env setup including 1-3.
+
+---
+
+I merged #15. Address the review comments in #14
