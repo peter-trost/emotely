@@ -1,0 +1,202 @@
+Q1: Ask a subagent to gather additional context on how this was handled. The user was able to choose from pre-existing question/topic sets before starting a session. The chosen set was ingested into the context at the start of the session. So (b). `topic` should be a somewhat free string, because in the end the user should be able to create their own question sets.
+
+Q2: (a)
+
+Q3: Research in the existing app. We had multi-answer, long text, color, emoji and rating. Let's stick with this initially and adjust later.
+
+Q4: Long text is single answer, multi-answer (usually like "what are you grateful for today?") has multiple answers, emoji and color we could allow multiple answers if we want and rating is a single answer.
+
+Q5: agreed
+
+Q6: agreed
+
+Q7: agreed
+
+Q8: agreed
+
+Q9: agreed, although I'd say we need more data for the step limit. For example if someone wants to record 10 or even 20 things they're grateful for, we want to allow that. So a generous limit is what we will aim for now. We can then adjust and think about UX patterns that make restricting it more transparent to the user
+
+---
+
+<task-notification>
+<task-id>a772d943e3304a0df</task-id>
+<tool-use-id>toolu_01Lqr6F6TXd9dX6Da1aN35VT</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/da2977c3-738b-415d-8fef-fb250f0d8e38/tasks/a772d943e3304a0df.output</output-file>
+<status>completed</status>
+<summary>Agent "Research legacy topic sets and input types" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>`tags` is also dead. Research complete.
+
+---
+
+# Legacy emotely: question sets &amp; input types
+
+## 1. The set concept: `JournalQuestionSet`
+
+Not "topic set" or "template" — the code says **question set**. The word "topic" appears *only* in the LLM context prompt in `firestore-genai-chatbot.env`; there is zero occurrence of "topic" in the Dart codebase. The app calls them questions.
+
+Three-layer model, and the split matters:
+
+**`JournalQuestion`** — `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/journal_question.dart`
+```dart
+required String id;                          // Firestore doc id
+required Translations localizations;         // Map&lt;String,String&gt;, lang code -&gt; question text
+required JournalQuestionAnswerType type;     // the input type
+@Default(&lt;String&gt;[]) List&lt;String&gt; tags;       // DEAD — never read anywhere
+int? minAnswers;                              // null =&gt; treated as 1
+int? maxAnswers;                              // DEAD — never enforced anywhere
+```
+`Translations = Map&lt;String, String&gt;` (`/Users/petertrost/dev/emotely-legacy/app/lib/common/typedefs.dart:10`). Localization falls back to `localizations[languageCode] ?? first entry`, else throws `MissingLocalizationException`.
+
+**`JournalQuestionSet`** — `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/journal_question_set.dart`
+```dart
+required String id;
+required Translations name;
+Translations? description;
+bool? isPremium;
+@Default(&lt;JournalQuestion&gt;[]) List&lt;JournalQuestion&gt; questions;  // hydrated, ordered
+```
+
+**`JournalQuestionSetDto`** — `/Users/petertrost/dev/emotely-legacy/app/lib/common/dtos/journal_question_set_dto.dart` — this is the **Firestore wire shape**. Same fields but `List&lt;String&gt; questionIds` instead of embedded questions. `toJournalQuestionSet()` joins ids against a question map; **missing ids are silently dropped** (logged as a warning, set still returned shorter than declared). Ordering is the order of `questionIds`.
+
+### Where sets live: Firestore, not assets
+
+Four collections, all read at runtime (`firestore.rules`):
+- `question-sets/{setId}` — public sets, world-readable to any authed user
+- `journal-questions/{questionId}` — public questions
+- `users/{uid}/question-sets/{setId}` — private sets
+- `users/{uid}/journal-questions/{questionId}` — private questions
+
+Providers: `public_question_sets_provider.dart:61`, `public_questions_provider.dart:14`, `private_question_sets_service.dart:47`, `private_questions_service.dart:42`. Selection resolves private-first, then public (`selected_question_set_provider.dart:59-69`), defaulting to `KT9cr1mEoilCTNC6o3mK`.
+
+One set is **hardcoded**: `legacyQuestionSet` in `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/legacy.dart` — 10 questions, same id `KT9cr1mEoilCTNC6o3mK`, used as the `@Default` for `JournalEntry.questionSet` so pre-question-set entries still render. It's the only place you can see a full concrete set without a live Firestore.
+
+### Could users author their own sets? **No — the machinery exists but is unreachable.**
+
+`PrivateQuestionSetsService.putQuestionSet` / `deleteQuestionSet` / `getNewQuestionSetId` and the `PrivateQuestionsService` equivalents are fully implemented, and Firestore rules allow the writes. But grepping for callers across `app/lib`, `feature/`, and `widgetbook/` returns **nothing** outside the service files themselves. `question_sets_view.dart` has no create/edit/delete affordance — `QuestionSetsController` only exposes `setSelectedQuestionSet`, `handleCheckout`, `refresh`. So in shipped behavior: pick from predefined sets only. Private sets were a half-built feature (backend + service layer done, UI never landed).
+
+Also worth flagging for contract v1: `question_sets_controller.dart:33-52` has premium filtering commented out with `// SUBSCRIPTION SALES DISCONTINUED. Code for demo purposes only`.
+
+## 2. How a set got into the model context
+
+The chosen set is **denormalized onto the journal entry**, then rendered to text at session start. Two steps:
+
+**Step 1 — freeze the set onto the entry.** `journaling_setup_controller.dart:118-138`: on pressing the journaling-assistant button, `_updateEntryWithSelectedQuestionSet()` does `journalEntry.copyWith(questionSet: questionSet)` and writes it. The entry stores the **entire hydrated set including full question objects**, not a reference — so past entries survive set edits.
+
+**Step 2 — render to a system message.** `journaling_assistant_controller.dart:110-123`: on build, if the chat collection is empty, send an initialization prompt.
+
+`_createQuestionsString` (`:307-319`) is the composition point:
+```dart
+return '${question.id}: $questionText - $typeInstructions\n\n';
+```
+joined with `'\n'`. The `typeInstructions` come from `JournalingAssistantJournalQuestionAnswerTypeExtension.toLocalizedInstructions` (`/Users/petertrost/dev/emotely-legacy/app/lib/ui/pages/journaling_assistant/extensions/journaling_assistant_journal_question_answer_type_extension.dart`) — a pure switch on the enum to a localized string. **These are per-type constants, not per-question.** `minAnswers` never reaches the prompt.
+
+The wrapper is a localization template, `journalingAssistantInitialPrompt` (`app_localizations_en.dart:966-974`), 5 positional args:
+```
+Journaling history:
+{history}
+
+The user's name is {name}. Please talk to them in english.
+
+This conversation is about the journal entry for {entryDate}.
+
+Now is {nowIso8601}.
+
+Collect the following information:
+{questionsString}
+```
+History is built by `_createJournalingHistoryString` (`:282-299`) as `{date}:\n{questionId}: {localizedQuestion} - {answersJoined}`.
+
+Sent via `JournalingAssistantServiceImpl.sendMessage(prompt, isSystemMessage: true)`, which **prefixes the literal string `'System prompt: '`** and sets `isSystemMessage: true` on the doc (`journaling_assistant_service.dart:76-82`). The Firebase GenAI chatbot extension picks it up from `users/{userID}/journalEntries/{date}/chat`, prepends the static `CONTEXT` env var, and writes back `response`.
+
+So the env prompt's "Each topic comes with instructions on the format and number of answers required" refers to exactly these five localized strings.
+
+Live example of the fully rendered prompt: `/Users/petertrost/dev/emotely-legacy/backend/extensions/firestore-genai-chatbot/tests/conversations/opening/pete_english.txt`. **Caveat: that fixture is stale** — it says `1-5 colors` / `Multiple text-based answers`, while the current localization says `One or multiple`. Trust the localization file.
+
+## 3. The five input types
+
+Enum `JournalQuestionAnswerType` (`journal_question.dart:10-21`). The user's recollection maps correctly but the names differ: "multi-answer" is `text`, "long text" is `longtext`.
+
+| Enum | JSON (`type`) | Union tag (`answerType`) | Class | Answer field &amp; type | Multi? | Validation | Prompt instruction (EN) |
+|---|---|---|---|---|---|---|---|
+| `text` | `"text"` | `"text"` | `JournalContentText` | `answers: List&lt;String&gt;` | Yes | `length &gt;= max(1, minAnswers)` | `One or multiple texts as a list of Strings, e.g. ["Today I learned about LLMs", ...]` |
+| `longtext` | `"longtext"` | `"longtext"` | `JournalContentLongtext` | `answer: String?` | **No** | non-empty; **no length cap** | `A SINGLE text as a String, e.g. "I feel happy because..."` |
+| `rating` | `"rating"` | `"rating"` | `JournalContentRating` | `rating: int?` | **No** | non-null, `!= 0`; **1–10** | `A SINGLE rating from 1 to 10 (inclusive) as an Integer, e.g. 5` |
+| `emoji` | `"emoji"` | `"emoji"` | `JournalContentEmoji` | `emojis: List&lt;String&gt;` | Yes | `length &gt;= max(1, minAnswers)` | `One or multiple emojis as a list of Strings, e.g. ["😊", "🌟"]` |
+| `color` | `"color"` | `"color"` | `JournalContentColor` | `colors: List&lt;String&gt;` | Yes | `length &gt;= max(1, minAnswers)` | `One or multiple colors in hex code format as a list of Strings, e.g. ["#FF0000", "#00FF00"]` |
+
+All in `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/journal_content.dart` (a freezed union, `@Freezed(unionKey: 'answerType')`). Each variant carries an `@Assert` that the embedded `question.type` matches its variant.
+
+Per-type detail:
+
+- **rating** — plain `int`, not double. Scale 1–10 inclusive. The `Slider` (`question_answer_dialog.dart:424-451`) is `max: 10, divisions: 10` so it emits 0–10, and **0 is the sentinel for "no answer"** — it writes empty string, and the dialog controller rejects `rating == 0` as `EmptyAnswersException` (`journal_entry_dialog_controller.dart:147-150`). The 1–10 bound is enforced by the widget, not by the model — the LLM path (`journaling_assistant_model.dart:204-218`) only does `answer as int` with no range check, so an out-of-range rating from the model would persist.
+- **emoji** — Unicode string, **one emoji per list element**. `EmojiGrid` (`emoji_grid.dart`) is a grid of single-emoji slots via `emoji_picker_flutter`; `currentController.text = emoji.emoji`. Several emojis = several list entries.
+- **color** — hex string `"#RRGGBB"`, uppercase, alpha disabled (`colors_grid.dart:185,308` `enableAlpha: false`; `:229,292` `toHexString(includeHashSign: true)`). Not an ARGB int. Parser `ColorStringUtils.fromString` (`/Users/petertrost/dev/emotely-legacy/app/lib/common/extensions/color_extension.dart`) is *laxer* than the writer: accepts 6 or 8 hex digits, `#` optional, 6-digit gets `0xFF000000` OR'd in. But `ColorText`/`ColorTextEditingController` render with `RegExp(r'#[0-9a-fA-F]{6}\b')` — **strictly 6 digits with a leading `#`**, so an 8-digit value would parse but never render as a swatch.
+- **longtext** — no `maxLength`; `LongTextField` is just `maxLines: 5, minLines: 3`.
+- **text** — a list of short strings, dynamically-grown `TextField` rows (`multitext.dart` + the controller-list logic in `question_answer_dialog.dart:159-214`).
+
+**Multiplicity is uniform**: all three multi-types are `List&lt;String&gt;`. There is no repeated-record shape. The single-valued types are scalar-nullable, not one-element lists.
+
+**Validation summary**: only `minAnswers` is ever enforced, and only for the three list types, defaulting to 1 when null. `maxAnswers` is declared on the model, serialized, has a localized error string `errorMaxAnswers`, and is **never read by any code path** — as is `tags`. Both are dead fields. On the LLM path, `_throwIfNotEnoughAnswers` (`journaling_assistant_model.dart:260-276`) raises `InvalidAnswerException` wrapping `NotEnoughAnswersException`, which triggers a regeneration round-trip with a corrective system prompt.
+
+## 4. Firestore journal-entry document
+
+Path: `users/{uid}/journalEntries/{yyyy-MM-dd}`, written with `SetOptions(merge: true)` (`/Users/petertrost/dev/emotely-legacy/app/lib/services/journal_entry/journal_entry_service.dart:44-52`). Shape from `journal_entry.g.dart`:
+
+```jsonc
+{
+  "date": "2024-07-24",                     // string, also the doc id
+  "createdAt": "2024-07-24T14:16:04.137Z",  // ISO-8601 UTC string, NOT a Firestore Timestamp
+  "modifiedAt": "...",
+  "timezone": "Europe/Berlin",              // nullable
+  "dailyQuote": "...",                      // nullable
+  "image": { ... },                         // fpdart Option-encoded EmotelyImage
+  "questionSet": {                          // FULL embedded set, not a ref
+    "id": "KT9cr1mEoilCTNC6o3mK",
+    "name": { "en": "...", "de": "..." },
+    "description": { "en": "...", "de": "..." },
+    "isPremium": false,
+    "questions": [ { "id": "...", "localizations": {...}, "type": "rating", "tags": [], "minAnswers": 3 } ]
+  },
+  "content": {                              // Option&lt;Map&lt;questionId, JournalContent&gt;&gt;
+    "ZP1r3kAnMd9XZ1rU1sem": {
+      "answerType": "text",                 // union discriminator
+      "question": { /* full JournalQuestion duplicated again */ },
+      "answers": ["my wife", "myself", "Flutter"]
+    },
+    "CpUKaQcSH9u4La8Y2lBM": { "answerType": "longtext", "question": {...}, "answer": "..." },
+    "NUy0Q6sAiHQjteaSyjz4": { "answerType": "rating",   "question": {...}, "rating": 7 },
+    "N5dhXuRDmJ6DRRGDxcuB": { "answerType": "emoji",    "question": {...}, "emojis": ["🔥","🤔"] },
+    "I3QkqSeXmGSX47IAlih4": { "answerType": "color",    "question": {...}, "colors": ["#00FF00","#FF0004"] }
+  }
+}
+```
+
+Content is **keyed by question id**, and each entry re-embeds the whole `JournalQuestion` — so a question object appears twice per entry (once in `questionSet.questions`, once inside its `content` value). Timestamps are ISO strings via `DatetimeJsonConverter`, so they aren't queryable as Firestore timestamps. `content` and `image` go through fpdart's `Option.toJson`, which is a non-obvious wrapper worth checking against real production data before assuming a flat map.
+
+Chat lives in the subcollection `users/{uid}/journalEntries/{date}/chat`, docs `{prompt, response, isSystemMessage, createTime, status: {state, error}, retries}` — `state` is `COMPLETED` / `ERROR` / absent.
+
+`JournalEntry.completed` (`journal_entry.dart:51-54`) is `answeredQuestionsCount == questionSet.questions.length` — comparing against the **stored** set, so a set whose ids failed to hydrate makes entries complete at a lower bar.
+
+## 5. Surprises and corrections to the recollection
+
+1. **"Topic" is prompt-only vocabulary.** The code has no topic concept. If contract v1 wants to keep the user-facing word "topic", that's a rename, not a port.
+2. **Five types confirmed, two names differ**: `text` (the multi-answer one) and `longtext`. Naming `text` for the multi-answer type is the most confusing thing in this model — `text` is plural, `longtext` is singular.
+3. **Users could not create sets.** Full service + rules exist, no UI. Treat private sets as unshipped.
+4. **`maxAnswers` and `tags` are dead fields.** Don't port them into contract v1 without deciding they should actually do something.
+5. **Format instructions are per-type, not per-question.** The prompt says "Each topic comes with instructions on the format and number of answers required" — but the *number* part is a lie. `minAnswers` never reaches the model. `List down at least 3 things` gets `minAnswers: 3` enforced only on the parse-back, so the model has to be told "3" via the question text itself, then failures round-trip through the regenerate path. That's a real design bug worth fixing in the rebuild: put the count in the instruction string.
+6. **Rating has no server- or model-side range check.** 1–10 is a Slider convention plus a prompt string. 0 doubles as the null sentinel.
+7. **Color is `#RRGGBB` strings** — matching the recollection — but the parser accepts 8-digit and bare-hex forms the renderer's regex will silently refuse to display.
+8. **The question set is denormalized onto every entry**, and questions are stored twice per entry. Good for history immutability, heavy on document size, and it means "edit a set" has no defined effect on past entries.
+9. **The test fixture prompt is stale** relative to the localization strings — don't cite `pete_english.txt` as the current contract.
+10. Timestamps are ISO-8601 strings, not Firestore `Timestamp`s, so date-range queries on `createdAt` were never possible server-side.</result>
+<usage><subagent_tokens>146703</subagent_tokens><tool_uses>53</tool_uses><duration_ms>331918</duration_ms></usage>
+</task-notification>
+
+---
+
+Q10: agreed
+Q11: agreed
+Q12: agreed
+Q13: agreed
+Q14: agreed
