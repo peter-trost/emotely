@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --build",
-    "test": "tsc --build && node --test \"src/*.test.ts\""
+    "test": "tsc --build && node --test \"src/*.test.ts\"",
+    "session": "node src/cli.ts"
   },
   "dependencies": {
     "@emotely/contract": "workspace:*",
