@@ -15,12 +15,14 @@ import {
   tool,
 } from "ai";
 
-export type Question = {
-  id: string;
-  text: string;
-  answer_type: AnswerType;
-  min_answers?: number;
-};
+type ListAnswerType = Extract<AnswerType, "color" | "emoji" | "text_list">;
+type ScalarAnswerType = Exclude<AnswerType, ListAnswerType>;
+
+// Union on answer_type so min_answers only exists where the value is a list.
+export type Question = { id: string; text: string } & (
+  | { answer_type: ScalarAnswerType; min_answers?: never }
+  | { answer_type: ListAnswerType; min_answers?: number }
+);
 
 export type QuestionSet = {
   id: string;
@@ -39,7 +41,7 @@ export type SessionResult = {
 };
 
 const systemPrompt = (set: QuestionSet) =>
-  `You are a journaling assistant. Walk the user through these questions in order using the ask_question tool, record each answer with record_answer, then call complete_session with a summary of the user's day.
+  `You are a journaling assistant. Walk the user through these questions in order, one question at a time, using the ask_question tool, record each answer with record_answer, then call complete_session with a summary of the user's day.
 
 Questions:
 ${set.questions.map((q) => `${q.id}: ${q.text} (answer_type: ${q.answer_type}${q.min_answers ? `, at least ${q.min_answers} answers` : ""})`).join("\n")}`;
@@ -112,22 +114,22 @@ export async function runSession(opts: {
     });
     messages.push(...result.response.messages);
 
-    if (result.finishReason === "tool-calls") {
-      for (const call of result.toolCalls) {
-        if (call.toolName !== "ask_question") continue;
-        const value = await client.askQuestion(call.input as AskQuestionInput);
-        messages.push({
-          role: "tool",
-          content: [
-            {
-              type: "tool-result",
-              toolCallId: call.toolCallId,
-              toolName: call.toolName,
-              output: { type: "json", value: { answer: value } },
-            },
-          ],
-        });
-      }
+    if (result.finishReason !== "tool-calls") continue;
+
+    for (const call of result.toolCalls) {
+      if (call.toolName !== "ask_question") continue;
+      const value = await client.askQuestion(call.input as AskQuestionInput);
+      messages.push({
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: call.toolCallId,
+            toolName: call.toolName,
+            output: { type: "json", value: { answer: value } },
+          },
+        ],
+      });
     }
   }
 
