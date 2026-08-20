@@ -4,5 +4,10 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@emotely/contract": "workspace:*",
+    "ai": "7.0.70",
+    "zod": "4.4.3"
   }
 }
