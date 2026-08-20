@@ -3,11 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "test": "tsc --build && node --test \"src/*.test.ts\""
   },
   "dependencies": {
     "@emotely/contract": "workspace:*",
     "ai": "7.0.70",
     "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0"
   }
 }
