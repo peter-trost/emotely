@@ -10,16 +10,16 @@ import { modelUnderTest, scriptedClient } from "./harness.ts";
 describe(`protocol eval — ${modelUnderTest}`, () => {
   it("completes a full 10-question session within the cost ceiling", async () => {
     const answers = {
-      "15CjDQMbgiupVv4EGKWh": ["how the eval harness works"],
-      CpUKaQcSH9u4La8Y2lBM: "Shipped the offline eval gate.",
-      I3QkqSeXmGSX47IAlih4: ["#00FF88"],
-      N5dhXuRDmJ6DRRGDxcuB: ["🔥", "😌"],
-      NUy0Q6sAiHQjteaSyjz4: 8,
-      O3ewi4LNh8RHoFo45Je3: 9,
-      V7N4ipTxlaqxXlRHEAUE: 7,
-      ZP1r3kAnMd9XZ1rU1sem: ["my wife", "green CI", "cheap models"],
-      f3GVndW7IGrd8qb3icvf: 8,
-      g3xpuKYjz9aljHZhHkOu: "My wife supported the late debugging.",
+      "learned-today": ["how the eval harness works"],
+      "best-thing": "Shipped the offline eval gate.",
+      "day-colors": ["#00FF88"],
+      "mood-emojis": ["🔥", "😌"],
+      productivity: 8,
+      satisfaction: 9,
+      appreciation: 7,
+      "gratitude-list": ["my wife", "green CI", "cheap models"],
+      "goal-alignment": 8,
+      "gratitude-person": "My wife supported the late debugging.",
     };
 
     // temperature 0 for stability; one retry absorbs residual variance.

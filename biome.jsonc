@@ -37,11 +37,6 @@
         // Package entrypoints (src/index.ts) are the public API surface.
         "noBarrelFile": "off"
       },
-      "security": {
-        // Heuristic flags Firestore document ids as secrets. Real secrets
-        // are gated by GitHub secret scanning + push protection.
-        "noSecrets": "off"
-      },
       "style": {
         // The tool-call wire format is snake_case (packages/contract);
         // the rule cannot split wire fields from code identifiers.
