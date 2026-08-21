@@ -3,7 +3,7 @@
   "checkpoint_id": "01M0HDBPT1YWEDGGY6KAFMRHY0",
   "session_id": "da2977c3-738b-415d-8fef-fb250f0d8e38",
   "strategy": "manual-commit",
-  "created_at": "2026-08-21T05:40:37.209342Z",
+  "created_at": "2026-08-21T05:40:57.688923Z",
   "branch": "feat/eval-harness",
   "checkpoints_count": 3,
   "save_step_count": 1,
@@ -13,11 +13,11 @@
   "turn_id": "f15420dbe270",
   "compact_transcript_start": 0,
   "token_usage": {
-    "input_tokens": 504,
-    "cache_creation_tokens": 1092632,
-    "cache_read_tokens": 47977855,
-    "output_tokens": 137008,
-    "api_call_count": 254
+    "input_tokens": 508,
+    "cache_creation_tokens": 1099354,
+    "cache_read_tokens": 48587865,
+    "output_tokens": 137749,
+    "api_call_count": 256
   },
   "skill_events_version": 1,
   "skill_events": [
