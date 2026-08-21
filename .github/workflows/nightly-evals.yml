@@ -1,0 +1,24 @@
+name: Nightly evals
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  behavior:
+    runs-on: ubuntu-latest
+    environment: ci
+    env:
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+      EVAL_RUNS: "3"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Judged behavioral scenarios, 3 runs each, 2-of-3 to pass.
+      - run: pnpm --filter @emotely/agent eval:behavior

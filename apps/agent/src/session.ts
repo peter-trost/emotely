@@ -51,8 +51,10 @@ export async function runSession(opts: {
   questionSet: QuestionSet;
   client: SessionClient;
   model: LanguageModel;
+  /** Sampling temperature; evals pin 0 for stability, product uses default. */
+  temperature?: number;
 }): Promise<SessionResult> {
-  const { questionSet, client, model } = opts;
+  const { questionSet, client, model, temperature } = opts;
   const answers: SessionResult["answers"] = {};
   const usage = { inputTokens: 0, outputTokens: 0 };
   let summary: string | undefined;
@@ -112,6 +114,7 @@ export async function runSession(opts: {
       instructions: sessionPrompt(questionSet),
       tools,
       stopWhen: isStepCount(1),
+      temperature,
       messages,
     });
     messages.push(...result.response.messages);

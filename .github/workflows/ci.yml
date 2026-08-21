@@ -42,6 +42,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.agent == 'true'
     runs-on: ubuntu-latest
+    environment: ci
+    env:
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -53,6 +56,14 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm -r --if-present test
+      # Live-model protocol eval (deterministic assertions; judged behavior
+      # evals run nightly). Skips when the key is absent (fork PRs).
+      - run: |
+          if [ -n "$AI_GATEWAY_API_KEY" ]; then
+            pnpm --filter @emotely/agent eval
+          else
+            echo "eval skipped: no gateway key available"
+          fi
 
   app:
     needs: changes
