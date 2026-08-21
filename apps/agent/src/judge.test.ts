@@ -19,7 +19,12 @@ const model = new MockLanguageModelV4({
     content: [{ type: "text" as const, text: verdictJson }],
     finishReason: { unified: "stop" as const, raw: undefined },
     usage: {
-      inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
+      inputTokens: {
+        total: 1,
+        noCache: 1,
+        cacheRead: undefined,
+        cacheWrite: undefined,
+      },
       outputTokens: { total: 1, text: 1, reasoning: undefined },
     },
     warnings: [],
@@ -31,7 +36,10 @@ describe("judgeSession", () => {
     const verdicts = await judgeSession({
       model,
       transcript: "assistant: Hi Pete! ...",
-      rubrics: ["greets the user by name", "asks only about the current question"],
+      rubrics: [
+        "greets the user by name",
+        "asks only about the current question",
+      ],
     });
 
     assert.equal(verdicts.length, 2);

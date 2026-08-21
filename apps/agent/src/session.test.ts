@@ -4,6 +4,7 @@ import type { AskQuestionInput } from "@emotely/contract";
 import { MockLanguageModelV4 } from "ai/test";
 import type { QuestionSet, SessionClient } from "./session.ts";
 import { runSession } from "./session.ts";
+import { PROMPT_ID } from "./session-prompt.ts";
 
 const set: QuestionSet = {
   id: "test-set",
@@ -200,5 +201,7 @@ describe("runSession", () => {
     const roles = result.messages.map((m) => m.role);
     assert.ok(roles.includes("assistant"));
     assert.ok(roles.includes("tool"));
+    // Evals and PostHog events pin against the versioned prompt id.
+    assert.equal(result.promptId, PROMPT_ID);
   });
 });

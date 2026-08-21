@@ -14,6 +14,7 @@ import {
   type ModelMessage,
   tool,
 } from "ai";
+import { PROMPT_ID, sessionPrompt } from "./session-prompt.ts";
 
 type ListAnswerType = Extract<AnswerType, "color" | "emoji" | "text_list">;
 type ScalarAnswerType = Exclude<AnswerType, ListAnswerType>;
@@ -42,13 +43,9 @@ export type SessionResult = {
   usage: { inputTokens: number; outputTokens: number };
   /** The full conversation, for eval transcripts and debugging. */
   messages: ModelMessage[];
+  /** Version id of the system prompt this session ran with. */
+  promptId: string;
 };
-
-const systemPrompt = (set: QuestionSet) =>
-  `You are a journaling assistant. Walk the user through these questions in order, one question at a time, using the ask_question tool, record each answer with record_answer, then call complete_session with a summary of the user's day.
-
-Questions:
-${set.questions.map((q) => `${q.id}: ${q.text} (answer_type: ${q.answer_type}${q.min_answers ? `, at least ${q.min_answers} answers` : ""})`).join("\n")}`;
 
 export async function runSession(opts: {
   questionSet: QuestionSet;
@@ -112,7 +109,7 @@ export async function runSession(opts: {
     }
     const result = await generateText({
       model,
-      system: systemPrompt(questionSet),
+      instructions: sessionPrompt(questionSet),
       tools,
       stopWhen: isStepCount(1),
       messages,
@@ -140,5 +137,5 @@ export async function runSession(opts: {
     }
   }
 
-  return { summary, answers, usage, messages };
+  return { summary, answers, usage, messages, promptId: PROMPT_ID };
 }
