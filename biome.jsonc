@@ -23,6 +23,9 @@
         "useLiteralKeys": "off"
       },
       "correctness": {
+        // Workspace imports resolve to build output (dist/) that doesn't
+        // exist when lint runs pre-build in CI; tsc owns module resolution.
+        "noUnresolvedImports": "off",
         // This is a Node service; browser-portability rules don't apply.
         "noNodejsModules": "off",
         // Qwik framework rule; no Qwik in this repo.
