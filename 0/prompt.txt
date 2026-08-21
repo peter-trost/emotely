@@ -1,0 +1,475 @@
+Q1: Ask a subagent to gather additional context on how this was handled. The user was able to choose from pre-existing question/topic sets before starting a session. The chosen set was ingested into the context at the start of the session. So (b). `topic` should be a somewhat free string, because in the end the user should be able to create their own question sets.
+
+Q2: (a)
+
+Q3: Research in the existing app. We had multi-answer, long text, color, emoji and rating. Let's stick with this initially and adjust later.
+
+Q4: Long text is single answer, multi-answer (usually like "what are you grateful for today?") has multiple answers, emoji and color we could allow multiple answers if we want and rating is a single answer.
+
+Q5: agreed
+
+Q6: agreed
+
+Q7: agreed
+
+Q8: agreed
+
+Q9: agreed, although I'd say we need more data for the step limit. For example if someone wants to record 10 or even 20 things they're grateful for, we want to allow that. So a generous limit is what we will aim for now. We can then adjust and think about UX patterns that make restricting it more transparent to the user
+
+---
+
+<task-notification>
+<task-id>a772d943e3304a0df</task-id>
+<tool-use-id>toolu_01Lqr6F6TXd9dX6Da1aN35VT</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/da2977c3-738b-415d-8fef-fb250f0d8e38/tasks/a772d943e3304a0df.output</output-file>
+<status>completed</status>
+<summary>Agent "Research legacy topic sets and input types" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>`tags` is also dead. Research complete.
+
+---
+
+# Legacy emotely: question sets &amp; input types
+
+## 1. The set concept: `JournalQuestionSet`
+
+Not "topic set" or "template" — the code says **question set**. The word "topic" appears *only* in the LLM context prompt in `firestore-genai-chatbot.env`; there is zero occurrence of "topic" in the Dart codebase. The app calls them questions.
+
+Three-layer model, and the split matters:
+
+**`JournalQuestion`** — `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/journal_question.dart`
+```dart
+required String id;                          // Firestore doc id
+required Translations localizations;         // Map&lt;String,String&gt;, lang code -&gt; question text
+required JournalQuestionAnswerType type;     // the input type
+@Default(&lt;String&gt;[]) List&lt;String&gt; tags;       // DEAD — never read anywhere
+int? minAnswers;                              // null =&gt; treated as 1
+int? maxAnswers;                              // DEAD — never enforced anywhere
+```
+`Translations = Map&lt;String, String&gt;` (`/Users/petertrost/dev/emotely-legacy/app/lib/common/typedefs.dart:10`). Localization falls back to `localizations[languageCode] ?? first entry`, else throws `MissingLocalizationException`.
+
+**`JournalQuestionSet`** — `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/journal_question_set.dart`
+```dart
+required String id;
+required Translations name;
+Translations? description;
+bool? isPremium;
+@Default(&lt;JournalQuestion&gt;[]) List&lt;JournalQuestion&gt; questions;  // hydrated, ordered
+```
+
+**`JournalQuestionSetDto`** — `/Users/petertrost/dev/emotely-legacy/app/lib/common/dtos/journal_question_set_dto.dart` — this is the **Firestore wire shape**. Same fields but `List&lt;String&gt; questionIds` instead of embedded questions. `toJournalQuestionSet()` joins ids against a question map; **missing ids are silently dropped** (logged as a warning, set still returned shorter than declared). Ordering is the order of `questionIds`.
+
+### Where sets live: Firestore, not assets
+
+Four collections, all read at runtime (`firestore.rules`):
+- `question-sets/{setId}` — public sets, world-readable to any authed user
+- `journal-questions/{questionId}` — public questions
+- `users/{uid}/question-sets/{setId}` — private sets
+- `users/{uid}/journal-questions/{questionId}` — private questions
+
+Providers: `public_question_sets_provider.dart:61`, `public_questions_provider.dart:14`, `private_question_sets_service.dart:47`, `private_questions_service.dart:42`. Selection resolves private-first, then public (`selected_question_set_provider.dart:59-69`), defaulting to `KT9cr1mEoilCTNC6o3mK`.
+
+One set is **hardcoded**: `legacyQuestionSet` in `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/legacy.dart` — 10 questions, same id `KT9cr1mEoilCTNC6o3mK`, used as the `@Default` for `JournalEntry.questionSet` so pre-question-set entries still render. It's the only place you can see a full concrete set without a live Firestore.
+
+### Could users author their own sets? **No — the machinery exists but is unreachable.**
+
+`PrivateQuestionSetsService.putQuestionSet` / `deleteQuestionSet` / `getNewQuestionSetId` and the `PrivateQuestionsService` equivalents are fully implemented, and Firestore rules allow the writes. But grepping for callers across `app/lib`, `feature/`, and `widgetbook/` returns **nothing** outside the service files themselves. `question_sets_view.dart` has no create/edit/delete affordance — `QuestionSetsController` only exposes `setSelectedQuestionSet`, `handleCheckout`, `refresh`. So in shipped behavior: pick from predefined sets only. Private sets were a half-built feature (backend + service layer done, UI never landed).
+
+Also worth flagging for contract v1: `question_sets_controller.dart:33-52` has premium filtering commented out with `// SUBSCRIPTION SALES DISCONTINUED. Code for demo purposes only`.
+
+## 2. How a set got into the model context
+
+The chosen set is **denormalized onto the journal entry**, then rendered to text at session start. Two steps:
+
+**Step 1 — freeze the set onto the entry.** `journaling_setup_controller.dart:118-138`: on pressing the journaling-assistant button, `_updateEntryWithSelectedQuestionSet()` does `journalEntry.copyWith(questionSet: questionSet)` and writes it. The entry stores the **entire hydrated set including full question objects**, not a reference — so past entries survive set edits.
+
+**Step 2 — render to a system message.** `journaling_assistant_controller.dart:110-123`: on build, if the chat collection is empty, send an initialization prompt.
+
+`_createQuestionsString` (`:307-319`) is the composition point:
+```dart
+return '${question.id}: $questionText - $typeInstructions\n\n';
+```
+joined with `'\n'`. The `typeInstructions` come from `JournalingAssistantJournalQuestionAnswerTypeExtension.toLocalizedInstructions` (`/Users/petertrost/dev/emotely-legacy/app/lib/ui/pages/journaling_assistant/extensions/journaling_assistant_journal_question_answer_type_extension.dart`) — a pure switch on the enum to a localized string. **These are per-type constants, not per-question.** `minAnswers` never reaches the prompt.
+
+The wrapper is a localization template, `journalingAssistantInitialPrompt` (`app_localizations_en.dart:966-974`), 5 positional args:
+```
+Journaling history:
+{history}
+
+The user's name is {name}. Please talk to them in english.
+
+This conversation is about the journal entry for {entryDate}.
+
+Now is {nowIso8601}.
+
+Collect the following information:
+{questionsString}
+```
+History is built by `_createJournalingHistoryString` (`:282-299`) as `{date}:\n{questionId}: {localizedQuestion} - {answersJoined}`.
+
+Sent via `JournalingAssistantServiceImpl.sendMessage(prompt, isSystemMessage: true)`, which **prefixes the literal string `'System prompt: '`** and sets `isSystemMessage: true` on the doc (`journaling_assistant_service.dart:76-82`). The Firebase GenAI chatbot extension picks it up from `users/{userID}/journalEntries/{date}/chat`, prepends the static `CONTEXT` env var, and writes back `response`.
+
+So the env prompt's "Each topic comes with instructions on the format and number of answers required" refers to exactly these five localized strings.
+
+Live example of the fully rendered prompt: `/Users/petertrost/dev/emotely-legacy/backend/extensions/firestore-genai-chatbot/tests/conversations/opening/pete_english.txt`. **Caveat: that fixture is stale** — it says `1-5 colors` / `Multiple text-based answers`, while the current localization says `One or multiple`. Trust the localization file.
+
+## 3. The five input types
+
+Enum `JournalQuestionAnswerType` (`journal_question.dart:10-21`). The user's recollection maps correctly but the names differ: "multi-answer" is `text`, "long text" is `longtext`.
+
+| Enum | JSON (`type`) | Union tag (`answerType`) | Class | Answer field &amp; type | Multi? | Validation | Prompt instruction (EN) |
+|---|---|---|---|---|---|---|---|
+| `text` | `"text"` | `"text"` | `JournalContentText` | `answers: List&lt;String&gt;` | Yes | `length &gt;= max(1, minAnswers)` | `One or multiple texts as a list of Strings, e.g. ["Today I learned about LLMs", ...]` |
+| `longtext` | `"longtext"` | `"longtext"` | `JournalContentLongtext` | `answer: String?` | **No** | non-empty; **no length cap** | `A SINGLE text as a String, e.g. "I feel happy because..."` |
+| `rating` | `"rating"` | `"rating"` | `JournalContentRating` | `rating: int?` | **No** | non-null, `!= 0`; **1–10** | `A SINGLE rating from 1 to 10 (inclusive) as an Integer, e.g. 5` |
+| `emoji` | `"emoji"` | `"emoji"` | `JournalContentEmoji` | `emojis: List&lt;String&gt;` | Yes | `length &gt;= max(1, minAnswers)` | `One or multiple emojis as a list of Strings, e.g. ["😊", "🌟"]` |
+| `color` | `"color"` | `"color"` | `JournalContentColor` | `colors: List&lt;String&gt;` | Yes | `length &gt;= max(1, minAnswers)` | `One or multiple colors in hex code format as a list of Strings, e.g. ["#FF0000", "#00FF00"]` |
+
+All in `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/journal_content.dart` (a freezed union, `@Freezed(unionKey: 'answerType')`). Each variant carries an `@Assert` that the embedded `question.type` matches its variant.
+
+Per-type detail:
+
+- **rating** — plain `int`, not double. Scale 1–10 inclusive. The `Slider` (`question_answer_dialog.dart:424-451`) is `max: 10, divisions: 10` so it emits 0–10, and **0 is the sentinel for "no answer"** — it writes empty string, and the dialog controller rejects `rating == 0` as `EmptyAnswersException` (`journal_entry_dialog_controller.dart:147-150`). The 1–10 bound is enforced by the widget, not by the model — the LLM path (`journaling_assistant_model.dart:204-218`) only does `answer as int` with no range check, so an out-of-range rating from the model would persist.
+- **emoji** — Unicode string, **one emoji per list element**. `EmojiGrid` (`emoji_grid.dart`) is a grid of single-emoji slots via `emoji_picker_flutter`; `currentController.text = emoji.emoji`. Several emojis = several list entries.
+- **color** — hex string `"#RRGGBB"`, uppercase, alpha disabled (`colors_grid.dart:185,308` `enableAlpha: false`; `:229,292` `toHexString(includeHashSign: true)`). Not an ARGB int. Parser `ColorStringUtils.fromString` (`/Users/petertrost/dev/emotely-legacy/app/lib/common/extensions/color_extension.dart`) is *laxer* than the writer: accepts 6 or 8 hex digits, `#` optional, 6-digit gets `0xFF000000` OR'd in. But `ColorText`/`ColorTextEditingController` render with `RegExp(r'#[0-9a-fA-F]{6}\b')` — **strictly 6 digits with a leading `#`**, so an 8-digit value would parse but never render as a swatch.
+- **longtext** — no `maxLength`; `LongTextField` is just `maxLines: 5, minLines: 3`.
+- **text** — a list of short strings, dynamically-grown `TextField` rows (`multitext.dart` + the controller-list logic in `question_answer_dialog.dart:159-214`).
+
+**Multiplicity is uniform**: all three multi-types are `List&lt;String&gt;`. There is no repeated-record shape. The single-valued types are scalar-nullable, not one-element lists.
+
+**Validation summary**: only `minAnswers` is ever enforced, and only for the three list types, defaulting to 1 when null. `maxAnswers` is declared on the model, serialized, has a localized error string `errorMaxAnswers`, and is **never read by any code path** — as is `tags`. Both are dead fields. On the LLM path, `_throwIfNotEnoughAnswers` (`journaling_assistant_model.dart:260-276`) raises `InvalidAnswerException` wrapping `NotEnoughAnswersException`, which triggers a regeneration round-trip with a corrective system prompt.
+
+## 4. Firestore journal-entry document
+
+Path: `users/{uid}/journalEntries/{yyyy-MM-dd}`, written with `SetOptions(merge: true)` (`/Users/petertrost/dev/emotely-legacy/app/lib/services/journal_entry/journal_entry_service.dart:44-52`). Shape from `journal_entry.g.dart`:
+
+```jsonc
+{
+  "date": "2024-07-24",                     // string, also the doc id
+  "createdAt": "2024-07-24T14:16:04.137Z",  // ISO-8601 UTC string, NOT a Firestore Timestamp
+  "modifiedAt": "...",
+  "timezone": "Europe/Berlin",              // nullable
+  "dailyQuote": "...",                      // nullable
+  "image": { ... },                         // fpdart Option-encoded EmotelyImage
+  "questionSet": {                          // FULL embedded set, not a ref
+    "id": "KT9cr1mEoilCTNC6o3mK",
+    "name": { "en": "...", "de": "..." },
+    "description": { "en": "...", "de": "..." },
+    "isPremium": false,
+    "questions": [ { "id": "...", "localizations": {...}, "type": "rating", "tags": [], "minAnswers": 3 } ]
+  },
+  "content": {                              // Option&lt;Map&lt;questionId, JournalContent&gt;&gt;
+    "ZP1r3kAnMd9XZ1rU1sem": {
+      "answerType": "text",                 // union discriminator
+      "question": { /* full JournalQuestion duplicated again */ },
+      "answers": ["my wife", "myself", "Flutter"]
+    },
+    "CpUKaQcSH9u4La8Y2lBM": { "answerType": "longtext", "question": {...}, "answer": "..." },
+    "NUy0Q6sAiHQjteaSyjz4": { "answerType": "rating",   "question": {...}, "rating": 7 },
+    "N5dhXuRDmJ6DRRGDxcuB": { "answerType": "emoji",    "question": {...}, "emojis": ["🔥","🤔"] },
+    "I3QkqSeXmGSX47IAlih4": { "answerType": "color",    "question": {...}, "colors": ["#00FF00","#FF0004"] }
+  }
+}
+```
+
+Content is **keyed by question id**, and each entry re-embeds the whole `JournalQuestion` — so a question object appears twice per entry (once in `questionSet.questions`, once inside its `content` value). Timestamps are ISO strings via `DatetimeJsonConverter`, so they aren't queryable as Firestore timestamps. `content` and `image` go through fpdart's `Option.toJson`, which is a non-obvious wrapper worth checking against real production data before assuming a flat map.
+
+Chat lives in the subcollection `users/{uid}/journalEntries/{date}/chat`, docs `{prompt, response, isSystemMessage, createTime, status: {state, error}, retries}` — `state` is `COMPLETED` / `ERROR` / absent.
+
+`JournalEntry.completed` (`journal_entry.dart:51-54`) is `answeredQuestionsCount == questionSet.questions.length` — comparing against the **stored** set, so a set whose ids failed to hydrate makes entries complete at a lower bar.
+
+## 5. Surprises and corrections to the recollection
+
+1. **"Topic" is prompt-only vocabulary.** The code has no topic concept. If contract v1 wants to keep the user-facing word "topic", that's a rename, not a port.
+2. **Five types confirmed, two names differ**: `text` (the multi-answer one) and `longtext`. Naming `text` for the multi-answer type is the most confusing thing in this model — `text` is plural, `longtext` is singular.
+3. **Users could not create sets.** Full service + rules exist, no UI. Treat private sets as unshipped.
+4. **`maxAnswers` and `tags` are dead fields.** Don't port them into contract v1 without deciding they should actually do something.
+5. **Format instructions are per-type, not per-question.** The prompt says "Each topic comes with instructions on the format and number of answers required" — but the *number* part is a lie. `minAnswers` never reaches the model. `List down at least 3 things` gets `minAnswers: 3` enforced only on the parse-back, so the model has to be told "3" via the question text itself, then failures round-trip through the regenerate path. That's a real design bug worth fixing in the rebuild: put the count in the instruction string.
+6. **Rating has no server- or model-side range check.** 1–10 is a Slider convention plus a prompt string. 0 doubles as the null sentinel.
+7. **Color is `#RRGGBB` strings** — matching the recollection — but the parser accepts 8-digit and bare-hex forms the renderer's regex will silently refuse to display.
+8. **The question set is denormalized onto every entry**, and questions are stored twice per entry. Good for history immutability, heavy on document size, and it means "edit a set" has no defined effect on past entries.
+9. **The test fixture prompt is stale** relative to the localization strings — don't cite `pete_english.txt` as the current contract.
+10. Timestamps are ISO-8601 strings, not Firestore `Timestamp`s, so date-range queries on `createdAt` were never possible server-side.</result>
+<usage><subagent_tokens>146703</subagent_tokens><tool_uses>53</tool_uses><duration_ms>331918</duration_ms></usage>
+</task-notification>
+
+---
+
+Q10: agreed
+Q11: agreed
+Q12: agreed
+Q13: agreed
+Q14: agreed
+
+---
+
+<task-notification>
+<task-id>a9d3e029c0fdf6d94</task-id>
+<tool-use-id>toolu_01GBTyKmwKTob8cYUbtgxpfc</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/da2977c3-738b-415d-8fef-fb250f0d8e38/tasks/a9d3e029c0fdf6d94.output</output-file>
+<status>completed</status>
+<summary>Agent "Research AI SDK versions and APIs" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Research complete. All findings verified against live npm, the live gateway catalog API, and runtime probes — not memory.
+
+## Versions to pin
+
+| Package | Version | Notes |
+|---|---|---|
+| `ai` | **7.0.70** | v7 is current stable. `latest` on npm; v6 (`6.0.259`) and v5 (`5.0.240`) still tagged |
+| `zod` | **4.4.3** | `ai@7` peer dep is `^3.25.76 \|\| ^4.1.8` — v4 fully supported, use it |
+| `@ai-sdk/gateway` | *don't add* | Already a transitive dep of `ai@7` (4.0.56); `gateway`/`createGateway` re-exported from `ai` |
+| `vitest` | 4.1.11 | if you want a runner; `node --test` also works |
+| `tsx` | **not needed** | see Node section |
+| `typescript` | 7.0.2 | already in repo root = current npm latest, no change |
+
+**Do not install `@ai-sdk/gateway`, `@ai-sdk/google`, or `@ai-sdk/openai`.** Plain model strings route through the gateway with `ai` alone.
+
+## Model recommendation: `zai/glm-4.7-flash`
+
+Live catalog (`https://ai-gateway.vercel.sh/v1/models`, fetched today):
+
+| Gateway ID | Input $/M | Output $/M | Context | Tool use |
+|---|---|---|---|---|
+| **`zai/glm-4.7-flash`** | **$0.07** | **$0.40** | 200k | yes |
+| `zai/glm-4.7-flashx` | $0.06 | $0.40 | 200k | yes |
+| `google/gemini-2.5-flash-lite` | $0.10 | $0.40 | 1M | yes |
+| `google/gemini-3.1-flash-lite` | $0.25 | $1.50 | 1M | yes |
+| `google/gemini-3.5-flash-lite` | $0.30 | $2.50 | — | yes |
+
+**Hardcode `zai/glm-4.7-flash`.** Cheapest credible tool-caller: 30% under Gemini 2.5 Flash-Lite on input, identical output price, and explicitly tagged `tool-use` with `tools`/`tool_choice` params. FlashX is $0.01/M cheaper but is a truncated-description variant with no distinct capability upside — not worth the unfamiliarity. Note Gemini Flash-Lite's current generation is **3.5**, but it is 3x the input cost; 2.5-flash-lite is the one to switch to if you need the 1M context window.
+
+Gemini Flash-Lite and GLM-4.x both support tool calling — confirmed via the `tool-use` tag and `tools` in `supported_parameters`.
+
+## Code sketches (all behavior probe-verified against `ai@7.0.70`)
+
+**(a) Client-side tool — caller supplies the result.** I ran this; I did not infer it. With no `execute`, the loop halts at `finishReason: "tool-calls"` and exposes `toolCalls`. No error is thrown.
+
+```ts
+import { generateText, tool, isStepCount, type ModelMessage } from 'ai';
+import { z } from 'zod';
+
+const askQuestion = tool({
+  description: 'Ask the user a question',
+  inputSchema: z.object({ question: z.string() }),
+  // no execute =&gt; client-side; loop stops and hands you the call
+});
+
+const messages: ModelMessage[] = [{ role: 'user', content: 'hi' }];
+
+while (true) {
+  const r = await generateText({
+    model: 'zai/glm-4.7-flash',
+    tools: { askQuestion },
+    stopWhen: isStepCount(10),
+    messages,
+  });
+  messages.push(...r.response.messages);
+  if (r.finishReason !== 'tool-calls') { console.log(r.text); break; }
+
+  for (const tc of r.toolCalls) {
+    const answer = await promptUser(tc.input.question); // your CLI
+    messages.push({
+      role: 'tool',
+      content: [{
+        type: 'tool-result',
+        toolCallId: tc.toolCallId,
+        toolName: tc.toolName,
+        output: { type: 'json', value: { answer } }, // discriminated union!
+      }],
+    });
+  }
+}
+```
+
+`output` **must** be `{type:'json'|'text', value}`. Passing a raw object (the v5 style) throws `InvalidPromptError` — I verified this failure mode explicitly.
+Docs: https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling
+
+**(b) Mock-model test.** Class is `MockLanguageModelV4` from `ai/test`:
+
+```ts
+import { generateText, tool, isStepCount } from 'ai';
+import { MockLanguageModelV4 } from 'ai/test';
+
+const model = new MockLanguageModelV4({
+  doGenerate: async () =&gt; ({
+    content: [{ type: 'tool-call', toolCallId: 'c1', toolName: 'askQuestion',
+                input: JSON.stringify({ question: 'How are you?' }) }],
+    finishReason: { unified: 'tool-calls', raw: undefined }, // object, not string
+    usage: { inputTokens: { total: 1, noCache: 1 },
+             outputTokens: { total: 1, text: 1 } },          // nested, not flat
+    warnings: [],
+  }),
+});
+```
+
+Two v5→v7 breaks: `finishReason` is now an object `{unified, raw}` on the *mock return*, and `usage` uses nested `{total, noCache}` / `{total, text}` objects. On the *result* object, `r.finishReason` reads back as the plain string `'tool-calls'`.
+Docs: https://ai-sdk.dev/docs/ai-sdk-core/testing
+
+**(c) Gateway wiring.** Gateway is the default provider — a bare `'creator/model'` string just works:
+
+```ts
+// .env.local: AI_GATEWAY_API_KEY=...
+const r = await generateText({ model: 'zai/glm-4.7-flash', prompt: 'hi' });
+```
+
+Local (not on Vercel): set `AI_GATEWAY_API_KEY` from an API key in the Vercel dashboard. The OIDC path (`vercel env pull`) also works but tokens expire after 12h and need `vercel dev` to auto-refresh — **use the API key for a CLI**, OIDC is the wrong tool here.
+Docs: https://ai-sdk.dev/providers/ai-sdk-providers/ai-gateway
+
+## Node / TypeScript
+
+- `.nvmrc` = **24.18.0**; root `package.json` engines `&gt;=24`, packageManager `pnpm@11.17.0`, TS **7.0.2**.
+- **Skip `tsx`.** Node 24 runs `.ts` natively with no flag — I confirmed `node script.ts` works even on the v22 currently active in the shell. One constraint: `enum` and other non-erasable syntax throw `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`; use `as const` unions. Type-only imports work fine.
+- Repo `tsconfig.base.json` already sets `nodenext` + `strict` + `noUncheckedIndexedAccess` + `composite` — compatible as-is. Consider adding `verbatimModuleSyntax` to keep type-stripping honest.
+- `apps/agent` and `packages/contract` already exist as workspace dirs, and `pnpm-workspace.yaml` already globs them.
+
+## Contradictions and recent changes to flag
+
+1. **`stepCountIs` is now an alias.** The canonical v7 name is `isStepCount`; the shipped types literally export `isStepCount as stepCountIs`. Both work — prefer `isStepCount`. `maxSteps` is gone entirely.
+2. **Vercel's gateway docs say "AI SDK v5 and v6"** while npm ships v7 stable. The docs lag; v7 works against the gateway (`gateway`/`createGateway` verified as live exports). Gateway base URL is `https://ai-gateway.vercel.sh/v4/ai`.
+3. **The tools doc conflates approvals with results.** It shows `tool-approval-response` when asked about client-side tool results. These are distinct: `ToolContent = Array&lt;ToolResultPart | ToolApprovalResponse&gt;`. For a CLI answering `ask_question` you want `tool-result`, not the approval flow. My probe confirms `tool-result` is what resumes the loop.
+4. **`ai` v7 also ships a `ToolLoopAgent` / `Agent` class** (exported, `Experimental_Agent` alias) if you'd rather not hand-roll the while-loop. Worth a look, but the manual loop above is what gives the CLI driver control over `ask_question`, so I'd stay with it.
+
+**Skipped:** `tsx`, `@ai-sdk/gateway`, and any provider package — Node 24 and `ai@7` cover all three. Add `vitest` only when `node --test` stops being enough.</result>
+<usage><subagent_tokens>80111</subagent_tokens><tool_uses>31</tool_uses><duration_ms>309536</duration_ms></usage>
+</task-notification>
+
+---
+
+Sounds good overall, go ahead. 
+
+Fix the formatting for entire's config. 
+
+For the API key you can do the full thing yourself safely. 1. check if there is an MCP/CLI which you can use to create the key and safely pipe it into the file, or use the chrome tool to create the API key, copy it and pipe it into the file. Should work without it going into the session context.
+
+---
+
+I topped up the credits by 10€. The UI now says 15.00. Seems like 5.00 was free. Commit the entire config in a separate PR
+
+---
+
+Yes do the vercel link + env setup including 1-3.
+
+---
+
+I merged #15. Address the review comments in #14
+
+---
+
+okay let's go ahead with #3 now. /grill-with-docs – I'm especially interested in the eval framework we should pick. Does the Vercel AI SDK with a framework? Do we use promptfoo? Is there something else? Or raw typescript tests?
+
+---
+
+<task-notification>
+<task-id>add817dc14fedf673</task-id>
+<tool-use-id>toolu_01Q3cHBksxaLWtFv3jcxmHRu</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/da2977c3-738b-415d-8fef-fb250f0d8e38/tasks/add817dc14fedf673.output</output-file>
+<status>completed</status>
+<summary>Agent "Research eval framework options" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>I have everything verified. Here are my findings.
+
+## (a) Comparison table
+
+| Framework | Version (verified npm, 2026-08-20) | Fits our multi-turn tool loop? | Cost tracking | CI gating | Extra deps | Adapter effort |
+|---|---|---|---|---|---|---|
+| **AI SDK / Vercel first-party evals** | n/a — **does not exist** | — | — | — | — | — |
+| **promptfoo** | **0.122.0** (2026-08-04); repo pushed **today**, 24.4k★, ~522k dl/wk | Yes, via custom JS/TS provider wrapping `runSession` | `cost` field on `ProviderResponse` — **you compute it** | `eval --fail-on-error`, `threshold`, junit.xml | promptfoo (large CLI dep tree) | **Medium** — provider adapter + config + YAML port |
+| **Evalite** | 0.19.0 (published **2026-02-20**); v1 stuck at `1.0.0-beta.16`; **last commit 2025-11-10** | Yes in principle (task is any async fn) | Not built in | Score thresholds, static HTML export | **vitest** + evalite + better-sqlite3/fastify | Low code, but a stack migration |
+| **Braintrust autoevals** | **0.3.0** (2026-06-09) | Scorer library only — no runner | No | No (library) | autoevals + `openai` (hard dep) | Low — drop-in scorers |
+| **langsmith (TS)** | 0.9.0 (2026-08-19) | Yes, but SaaS-tracing-oriented | Platform-side | Via platform | langsmith + LangSmith account | Medium + vendor account |
+| **Raw `node --test`** | already installed | **Native** — it's just calling `runSession` | `getGenerationInfo()` per generation | `node --test` exit code (already the gate) | **zero** | **Lowest** — ~150 lines |
+
+**Key finding on Q1: there is no first-party Vercel/AI SDK eval framework.** `ai/test` ships only `MockLanguageModelV4`, `MockEmbeddingModelV4`, `mockId`, `mockValues`, `simulateReadableStream` — unit-test mocks, not evals. Vercel's docs point outward to third parties (Braintrust has the Marketplace integration). There is no `@vercel/evals`.
+
+## (b) Recommendation: raw `node --test` harness, with `autoevals` only if you want a pre-built judge
+
+Reasoning for **this** repo:
+
+- **Your loop is already the eval harness.** `runSession({questionSet, client, model})` takes an injectable `SessionClient`. `session.test.ts` already scripts a client with canned answers. An offline eval is that same file with a real gateway model instead of `MockLanguageModelV4`. Every framework here would wrap the exact function you can call directly — that wrapper is the only thing they add.
+- **promptfoo's abstraction fights your shape.** Its simulated-user provider assumes the target speaks OpenAI chat format (`{role, content}[]`) and terminates on `###STOP###` in a text response. Your session terminates on a `complete_session` **tool call**, and your "user" answers structured widget values (a rating `7`, a `text_list`), not prose. You'd stringify tool state into pseudo-chat to satisfy promptfoo, then assert on it — losing the typed `answers` record that is the actual thing worth asserting. Its own docs note `_conversation` forces concurrency 1.
+- **Evalite is a dormant dependency.** Last commit 2025-11-10, stable release Feb 2026, v1 never left beta after 16 betas. Adopting it means adopting **vitest** (displacing `node --test`) plus better-sqlite3/fastify — a stack migration to gain a UI, betting on a stalled project. Fails the boring-tooling bar on the axis that matters: maintenance.
+- **CI gating is already solved.** `node --test` exit codes are your gate. promptfoo needs a *second* runner in CI (`npx promptfoo eval --fail-on-error`, separate cache, separate report), which is real ongoing surface for a solo founder.
+- **PostHog covers the other half.** Since online experiments handle in-the-wild quality, the offline gate only needs to catch behavioral regressions on a handful of fixtures. That's assertions, not an eval platform.
+
+Minimal harness (~150 lines, one new file):
+
+- **Fixture format** — plain TS objects, not YAML: `{ name, questionSet, answers: Record&lt;qid, JSONValue&gt;, expect }`. Typed, refactorable, no nunjucks.
+- **Simulated user** — canned answers keyed by `question_id`, i.e. your existing `SessionClient`. Skip the LLM-simulated user; it doubles cost and adds a second nondeterminism source. Add it only when you need adversarial/free-text probing (the `out-of-context-user-prompts` case).
+- **Judge** — one `generateText` call with a rubric returning `{pass, reason}` via a zod schema. That's the whole of `llm-rubric`. Use a strong model as judge even while evaluating cheap candidates. `autoevals` is a reasonable drop-in here, but note it hard-depends on the `openai` package.
+- **Cost** — see gotcha below.
+- **Stability** — run each fixture N times, assert pass-rate ≥ threshold rather than every run green, or you'll get a flaky gate on `temperature: 1` behavior.
+- **Reporting** — `node --test` gives TAP; append a cost/pass-rate summary line per model.
+
+## (c) Legacy fixture shape
+
+Located at `/Users/petertrost/dev/emotely-legacy/backend/extensions/firestore-genai-chatbot/tests/`.
+
+- **Encoding**: `promptfooconfig.yaml` points at a single nunjucks-templated `conversation-template.json` that renders a Gemini-format `[{role, parts:[{text}]}]` array. Each test supplies `vars.openerPrompt` (a `file://` .txt) plus an optional `messages` list of `role: text` pairs (`model:`/`user:`/`system:`). Context is injected by `getContext.js`; provider is `google:gemini-1.5-flash` at `temperature: 1`, judge is `openai:gpt-4o-mini`.
+- **Assertions**: overwhelmingly `llm-rubric` (natural-language rubrics), plus a few `contains` / `not-icontains`. No `javascript` assertions. Examples: "ensure that the output does not indicate that the conversation is ending", "ensure that the output contains only a single question".
+- **Four scenarios**: `opening/` (greets by name, single question, no date/time, JSON `summary: null`), `question-lookalikes/` (user answer that reads like a question), `user-ends-conversation-lookalikes/` ("No, that's all for today" must not end the session), `out-of-context-user-prompts/` (deflect a weather question back to journaling).
+- **Porting reality — the fixtures do not survive intact in any tool.** As you suspected, this config targets one prompt+context producing **one text completion**, with the conversation hand-written as a fixed transcript. Our agent instead emits *tool calls*, and the transcript is generated by the loop. What ports is the **intent** of each rubric, not the YAML. Roughly equal work into promptfoo or raw TS (rewrite ~10 rubrics as judge prompts + restructure conversations as canned answer maps); promptfoo additionally makes you keep nunjucks and the pseudo-chat encoding. Note several rubrics are now **obsolete by construction** — "output contains a JSON object with `summary` null" is enforced by the `complete_session` zod schema, and "asks only one question" by the `ask_question` tool contract. Those become type assertions, not LLM judgments, which is a strict improvement.
+
+## (d) Gotchas
+
+- **Gateway cost is NOT in the response metadata.** I checked the installed types (`@ai-sdk/gateway@4.0.56`, `dist/index.d.ts`): `providerMetadata.gateway` carries **`generationId`**, and there is **no `cost` field** on it. (A web search claimed `gateway.cost` exists — that is wrong; I verified against the shipped `.d.ts`.) To get money you call `gateway.getGenerationInfo({ id })`, which returns `totalCost`, `upstreamInferenceCost`, `promptTokens`, `completionTokens`, `latency`, etc. **Implications**: one extra API round-trip *per generation*, and your session makes one `generateText` call per round — so a 2-question session is ~5 lookups. Cheaper alternative: sum `result.usage` tokens across rounds (free, already in the response) and multiply by the model's published rate; use `getGenerationInfo` only for spot-checking. There's also `getCredits()` for balance and a spend-report API for aggregates. Note generation lookups may lag slightly behind the request.
+- **Custom Reporting is a paid add-on** ($0.075/1k tag writes, **$5 per 1,000 queries** to the reporting endpoint) — don't wire per-generation reporting queries into a CI gate that runs on every PR.
+- **promptfoo cost is manual with a custom provider.** `ProviderResponse.cost` exists, but nothing computes it for you when the provider is your own function — you'd do the same token math anyway, so promptfoo buys you no cost tracking here. Its `stats` include `tokenUsage` but the summary shape has no cost field.
+- **promptfoo means a second CI runner** (`npx promptfoo eval --fail-on-error`, separate `~/.cache/promptfoo` cache key, separate report artifact) living alongside `node --test`.
+- **Evalite requires adopting vitest** and pulls better-sqlite3 (native build) + fastify. Its cost reporting is absent, and v1 is beta-only.
+- **autoevals pulls the `openai` package** as a hard dependency even if you judge through the gateway.
+- **Non-determinism**: the legacy config ran at `temperature: 1`. Set `temperature: 0` for candidate models where supported, and still gate on an N-run pass-rate threshold — a single-run all-green assertion on LLM behavior will flake in CI.
+- **Free-tier rate limits (429)** on the gateway can flake CI if evals fan out across several candidate models in parallel; serialize or retry.
+- **Judge cost is real**: an `llm-rubric` port means one judge call *per rubric per fixture per run*. With N-run stability multipliers this can exceed the cost of the sessions you're measuring — budget it, and consider judging once per session against several rubrics in a single structured call.
+
+**Bottom line**: skip the framework. Add `apps/agent/src/session.eval.ts` (or a `*.eval.ts` glob excluded from the default `node --test` run so it doesn't hit the network on every unit-test invocation), driven by the `SessionClient` seam you already built. Reach for promptfoo only if you later need its red-team/adversarial strategies — that's the one capability none of this replicates.</result>
+<usage><subagent_tokens>80285</subagent_tokens><tool_uses>37</tool_uses><duration_ms>252485</duration_ms></usage>
+</task-notification>
+
+---
+
+Q1: agreed. 
+
+Q2: agreed on scripted
+
+Q3: deterministic checks on PR, flaky ones nightly with 2-of-3 to pass.
+
+Q4: agreed
+
+Q5: agreed
+
+Q6: agreed – is session.v*.md the best practice for versioning prompts? Do research online on what industry leaders use
+
+Q7: agreed
+
+Q8: agreed
+
+---
+
+<task-notification>
+<task-id>afe2a1a78b804f9c2</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/da2977c3-738b-415d-8fef-fb250f0d8e38/tasks/afe2a1a78b804f9c2.output</output-file>
+<status>failed</status>
+<summary>Agent "Research prompt versioning practices" failed: Agent terminated early due to an API error: API Error: The response stopped arriving. The response above may be incomplete.</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Let me run that check with absolute paths instead.</result>
+</task-notification>
+
+---
+
+my mobile hotspot lost connection when I went to bed. Please continue where it interrupted
+
+---
+
+address the review comments
+
+---
+
+okay PR looks good, merge. 
+
+Next I'd like to discuss lint ruling. I want this repo to be super strict with lints everywhere. The smaller the solution space, the more consistent our code will be. Any rule that improves code quality, reduces errors, makes it more maintainable, or easier to review should be enabled and fail CI. This is also true for the dart analyzer later.
+
+---
+
+agreed on everything. We do it now.
