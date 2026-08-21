@@ -1,0 +1,175 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M0JXA7MX2RGF7D0GBM75CFEH",
+  "session_id": "da2977c3-738b-415d-8fef-fb250f0d8e38",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-21T19:38:40.713919Z",
+  "branch": "chore/strict-lints",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    "CLAUDE.md"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-fable-5",
+  "turn_id": "2235ebeffe22",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 698,
+    "cache_creation_tokens": 1485526,
+    "cache_read_tokens": 81907621,
+    "output_tokens": 203286,
+    "api_call_count": 351
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01FtxGWrRZGz8XU88jCa82AR",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "research"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "2235ebeffe22",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 75,
+        "end": 76,
+        "entry_ids": [
+          "e2587634-cb92-4618-953e-92e1ae2f150c"
+        ],
+        "tool_use_id": "toolu_01FtxGWrRZGz8XU88jCa82AR"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01FtxGWrRZGz8XU88jCa82AR"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: research",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_015ASLHkFHiBS8zqLtcHSbjy",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "grilling"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "2235ebeffe22",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 169,
+        "end": 170,
+        "entry_ids": [
+          "0174b5ef-a0b3-491f-ab3d-7e967f91d98f"
+        ],
+        "tool_use_id": "toolu_015ASLHkFHiBS8zqLtcHSbjy"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_015ASLHkFHiBS8zqLtcHSbjy"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: grilling",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_011orAvGax9EkRjEeRdLWrJT",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "domain-modeling"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "2235ebeffe22",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 170,
+        "end": 171,
+        "entry_ids": [
+          "b654b227-2f7a-42b5-9d4d-0c9b25461371"
+        ],
+        "tool_use_id": "toolu_011orAvGax9EkRjEeRdLWrJT"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_011orAvGax9EkRjEeRdLWrJT"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: domain-modeling",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01TkaHV9qceG55QUNimVQ9gM",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "tdd"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "2235ebeffe22",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 279,
+        "end": 280,
+        "entry_ids": [
+          "a8667b89-deba-422f-83a5-7b8613d80baf"
+        ],
+        "tool_use_id": "toolu_01TkaHV9qceG55QUNimVQ9gM"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01TkaHV9qceG55QUNimVQ9gM"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: tdd",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 11
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-21T19:38:40.591599Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 257,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 257,
+    "total_lines_changed": 527,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
