@@ -144,6 +144,68 @@
         "label": "Skill: tdd",
         "default_collapsed": true
       }
+    },
+    {
+      "id": "claude-skill-toolu_01TUsjSw5F2ipT9TuSDd7org",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "grilling"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "850b5929d2d9",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2024,
+        "end": 2025,
+        "entry_ids": [
+          "7b82ea4d-1175-42c5-a668-d3c3b81709bb"
+        ],
+        "tool_use_id": "toolu_01TUsjSw5F2ipT9TuSDd7org"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01TUsjSw5F2ipT9TuSDd7org"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: grilling",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01XGNq2YYwEpaBGu6tNZ5c2L",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "domain-modeling"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "850b5929d2d9",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 2025,
+        "end": 2026,
+        "entry_ids": [
+          "e23b525c-1001-4374-8e86-7094e7eefc12"
+        ],
+        "tool_use_id": "toolu_01XGNq2YYwEpaBGu6tNZ5c2L"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01XGNq2YYwEpaBGu6tNZ5c2L"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: domain-modeling",
+        "default_collapsed": true
+      }
     }
   ],
   "session_metrics": {
