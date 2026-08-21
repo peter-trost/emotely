@@ -19,8 +19,8 @@ jobs:
       agent: ${{ steps.filter.outputs.agent }}
       app: ${{ steps.filter.outputs.app }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
         id: filter
         with:
           filters: |
@@ -42,10 +42,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.agent == 'true'
     runs-on: ubuntu-latest
+    environment: ci
+    env:
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -53,6 +56,18 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm -r --if-present test
+      # Live-model protocol eval (deterministic assertions; judged behavior
+      # evals run nightly). Fork PRs have no secrets and skip; anywhere else
+      # a missing key is a broken 'ci' environment and fails loudly.
+      - run: |
+          if [ -n "$AI_GATEWAY_API_KEY" ]; then
+            pnpm --filter @emotely/agent eval
+          elif [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
+            echo "eval skipped: fork PR has no gateway key"
+          else
+            echo "::error::AI_GATEWAY_API_KEY is missing — check the 'ci' environment secret"
+            exit 1
+          fi
 
   app:
     needs: changes
@@ -62,8 +77,8 @@ jobs:
       run:
         working-directory: apps/app
     steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version-file: apps/app/.fvmrc

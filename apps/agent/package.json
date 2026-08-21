@@ -1,11 +1,14 @@
 {
   "name": "@emotely/agent",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --build",
+    "typecheck": "tsc --build && tsc -p evals",
     "test": "tsc --build && node --test \"src/*.test.ts\"",
-    "session": "node src/cli.ts"
+    "session": "node src/cli.ts",
+    "eval": "node --test \"evals/protocol.eval.ts\"",
+    "eval:behavior": "node --test \"evals/behavior.eval.ts\""
   },
   "dependencies": {
     "@emotely/contract": "workspace:*",

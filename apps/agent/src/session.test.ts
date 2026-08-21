@@ -4,23 +4,23 @@ import type { AskQuestionInput } from "@emotely/contract";
 import { MockLanguageModelV4 } from "ai/test";
 import type { QuestionSet, SessionClient } from "./session.ts";
 import { runSession } from "./session.ts";
+import { PROMPT_ID } from "./session-prompt.ts";
 
+const qRate = {
+  id: "q-rate",
+  text: "How would you rate your day?",
+  answer_type: "rating",
+} satisfies QuestionSet["questions"][number];
+const qGrateful = {
+  id: "q-grateful",
+  text: "What are you grateful for?",
+  answer_type: "text_list",
+  min_answers: 3,
+} satisfies QuestionSet["questions"][number];
 const set: QuestionSet = {
   id: "test-set",
   name: "Test set",
-  questions: [
-    {
-      id: "q-rate",
-      text: "How would you rate your day?",
-      answer_type: "rating",
-    },
-    {
-      id: "q-grateful",
-      text: "What are you grateful for?",
-      answer_type: "text_list",
-      min_answers: 3,
-    },
-  ],
+  questions: [qRate, qGrateful],
 };
 
 type MockContent =
@@ -56,7 +56,7 @@ function scriptedModel(script: MockContent[][]) {
   });
 }
 
-const ask = (id: string, q: (typeof set.questions)[number]): MockContent => ({
+const ask = (id: string, q: QuestionSet["questions"][number]): MockContent => ({
   type: "tool-call",
   toolCallId: id,
   toolName: "ask_question",
@@ -92,7 +92,7 @@ const complete = (id: string, summary: string): MockContent => ({
 describe("runSession", () => {
   it("rejects an answer below min_answers back to the model without storing it", async () => {
     const model = scriptedModel([
-      [ask("c1", set.questions[1]!)],
+      [ask("c1", qGrateful)],
       [record("c2", "q-grateful", "text_list", ["just one", "and two"])],
       [complete("c3", "Gave up after the rejection.")],
       [{ type: "text", text: "Done." }],
@@ -110,7 +110,7 @@ describe("runSession", () => {
     // Model that asks the same question forever.
     const model = new MockLanguageModelV4({
       doGenerate: async () => ({
-        content: [ask("loop", set.questions[0]!)],
+        content: [ask("loop", qRate)],
         finishReason: { unified: "tool-calls" as const, raw: undefined },
         usage: {
           inputTokens: {
@@ -134,7 +134,7 @@ describe("runSession", () => {
 
   it("a repeated record_answer for the same question overwrites (last write wins)", async () => {
     const model = scriptedModel([
-      [ask("c1", set.questions[0]!)],
+      [ask("c1", qRate)],
       [record("c2", "q-rate", "rating", 3)],
       [record("c3", "q-rate", "rating", 8)],
       [complete("c4", "Corrected the rating.")],
@@ -152,9 +152,9 @@ describe("runSession", () => {
 
   it("walks the set in order and completes with a summary and validated answers", async () => {
     const model = scriptedModel([
-      [ask("c1", set.questions[0]!)],
+      [ask("c1", qRate)],
       [record("c2", "q-rate", "rating", 7)],
-      [ask("c3", set.questions[1]!)],
+      [ask("c3", qGrateful)],
       [
         record("c4", "q-grateful", "text_list", [
           "my wife",
@@ -163,7 +163,6 @@ describe("runSession", () => {
         ]),
       ],
       [complete("c5", "A good day: rated 7, grateful for three things.")],
-      [{ type: "text", text: "Done." }],
     ]);
 
     const asked: AskQuestionInput[] = [];
@@ -193,5 +192,15 @@ describe("runSession", () => {
         value: ["my wife", "myself", "Flutter"],
       },
     });
+    // 5 model rounds (ask, record, ask, record, complete) at 1+1 mock tokens
+    assert.deepEqual(result.usage, { inputTokens: 5, outputTokens: 5 });
+    // Full conversation is exposed for eval judging: initial user message,
+    // model tool calls, and the client's tool results all present.
+    assert.equal(result.messages[0]?.role, "user");
+    const roles = result.messages.map((m) => m.role);
+    assert.ok(roles.includes("assistant"));
+    assert.ok(roles.includes("tool"));
+    // Evals and PostHog events pin against the versioned prompt id.
+    assert.equal(result.promptId, PROMPT_ID);
   });
 });

@@ -17,6 +17,9 @@
       "preset": "recommended",
       "nursery": {
         "noFloatingPromises": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error"
       }
     }
   },
