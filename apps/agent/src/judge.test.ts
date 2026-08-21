@@ -5,7 +5,7 @@ import { judgeSession } from "./judge.ts";
 
 const verdictJson = JSON.stringify({
   verdicts: [
-    { rubric: "greets the user by name", pass: true, reason: "Greets Pete." },
+    { rubric: "greets the user by name", pass: true, reason: "Greets Peter." },
     {
       rubric: "asks only about the current question",
       pass: false,
@@ -35,7 +35,7 @@ describe("judgeSession", () => {
   it("returns one validated verdict per rubric from a single model call", async () => {
     const verdicts = await judgeSession({
       model,
-      transcript: "assistant: Hi Pete! ...",
+      transcript: "assistant: Hi Peter! ...",
       rubrics: [
         "greets the user by name",
         "asks only about the current question",

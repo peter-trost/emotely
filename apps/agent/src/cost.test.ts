@@ -11,13 +11,12 @@ describe("sessionCostUsd", () => {
       { inputTokens: 60_000, outputTokens: 4_000 },
       { inputTokens: 40_000, outputTokens: 6_000 },
     ];
-    assert.equal(
-      sessionCostUsd(usages, MODEL_RATES["zai/glm-4.7-flash"]!),
-      0.011,
-    );
+    const rates = MODEL_RATES["zai/glm-4.7-flash"];
+    assert.ok(rates);
+    assert.equal(sessionCostUsd(usages, rates), 0.011);
   });
 
-  it("throws for a model with no known rates", () => {
+  it("has no rates entry for unknown models", () => {
     assert.equal(MODEL_RATES["not/a-model"], undefined);
   });
 });

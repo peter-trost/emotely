@@ -13,10 +13,10 @@ import {
   scriptedClient,
 } from "./harness.ts";
 
-// Judged behavioral scenarios ported from the legacy promptfoo fixtures
-// (question-lookalikes, end-of-conversation lookalikes, out-of-context
-// prompts, opening tone). Nightly gate: 2-of-3 runs must pass; a scenario
-// passes a run when the machine checks hold AND every rubric passes.
+// Judged behavioral scenarios: opening tone, question-lookalikes,
+// end-of-conversation lookalikes, out-of-context prompts.
+// Nightly gate: 2-of-3 runs must pass; a scenario passes a run when the
+// machine checks hold AND every rubric passes.
 
 const miniSet: QuestionSet = {
   id: "eval-mini",
@@ -93,11 +93,19 @@ describe(`behavior eval — ${modelUnderTest}, judge ${judgeModel}, runs ${evalR
       const failures: string[] = [];
 
       for (let run = 1; run <= evalRuns; run++) {
-        const result = await runSession({
-          questionSet: miniSet,
-          client: scriptedClient(scenario.answers),
-          model: modelUnderTest,
-        });
+        // A crashed run (model emitted malformed tool input, gateway error)
+        // counts as a failed run instead of aborting the scenario.
+        let result: Awaited<ReturnType<typeof runSession>>;
+        try {
+          result = await runSession({
+            questionSet: miniSet,
+            client: scriptedClient(scenario.answers),
+            model: modelUnderTest,
+          });
+        } catch (err) {
+          failures.push(`run ${run}: session crashed — ${String(err)}`);
+          continue;
+        }
 
         const machineOk =
           result.summary.length > 0 &&

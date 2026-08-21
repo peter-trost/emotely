@@ -8,9 +8,13 @@ try {
 }
 
 export const modelUnderTest = process.env.EMOTELY_MODEL ?? "zai/glm-4.7-flash";
-// Judge stays a stronger model than the candidates it grades.
+// Judge: open source, cheap, and from a different family than the candidates
+// it grades (avoids same-family self-preference). Benched 2026-08-21 for
+// schema reliability + verdict quality: qwen3.7-plus 5/5 on both; deepseek
+// v4-flash and gpt-oss-120b could not hold the verdict schema, qwen3.7-flash
+// misjudged 4/5. $0.40/M in, $1.20/M out.
 export const judgeModel =
-  process.env.EMOTELY_JUDGE_MODEL ?? "anthropic/claude-haiku-4.5";
+  process.env.EMOTELY_JUDGE_MODEL ?? "alibaba/qwen3.7-plus";
 
 /** Scripted user: answers each question from a canned map. */
 export function scriptedClient(
