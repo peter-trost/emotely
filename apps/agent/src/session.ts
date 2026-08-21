@@ -40,6 +40,8 @@ export type SessionResult = {
   answers: Record<string, Answer>;
   /** Token totals across every model round, for cost accounting. */
   usage: { inputTokens: number; outputTokens: number };
+  /** The full conversation, for eval transcripts and debugging. */
+  messages: ModelMessage[];
 };
 
 const systemPrompt = (set: QuestionSet) =>
@@ -138,5 +140,5 @@ export async function runSession(opts: {
     }
   }
 
-  return { summary, answers, usage };
+  return { summary, answers, usage, messages };
 }

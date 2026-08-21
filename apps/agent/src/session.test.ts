@@ -194,5 +194,11 @@ describe("runSession", () => {
     });
     // 5 model rounds (ask, record, ask, record, complete) at 1+1 mock tokens
     assert.deepEqual(result.usage, { inputTokens: 5, outputTokens: 5 });
+    // Full conversation is exposed for eval judging: initial user message,
+    // model tool calls, and the client's tool results all present.
+    assert.equal(result.messages[0]?.role, "user");
+    const roles = result.messages.map((m) => m.role);
+    assert.ok(roles.includes("assistant"));
+    assert.ok(roles.includes("tool"));
   });
 });
