@@ -33,7 +33,9 @@ function scriptedModel(script: MockContent[][]) {
   return new MockLanguageModelV4({
     doGenerate: async () => {
       const content = queue.shift();
-      if (!content) throw new Error("mock model script exhausted");
+      if (!content) {
+        throw new Error("mock model script exhausted");
+      }
       const isToolCall = content.some((c) => c.type === "tool-call");
       return {
         content,

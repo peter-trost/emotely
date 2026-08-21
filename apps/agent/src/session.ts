@@ -33,7 +33,7 @@ export type QuestionSet = {
 
 export type SessionClient = {
   /** Answer an ask_question tool call with the raw widget value. */
-  askQuestion(input: AskQuestionInput): Promise<JSONValue>;
+  askQuestion: (input: AskQuestionInput) => Promise<JSONValue>;
 };
 
 export type SessionResult = {
@@ -47,24 +47,22 @@ export type SessionResult = {
   promptId: string;
 };
 
-export async function runSession(opts: {
-  questionSet: QuestionSet;
-  client: SessionClient;
-  model: LanguageModel;
-  /** Sampling temperature; evals pin 0 for stability, product uses default. */
-  temperature?: number;
-}): Promise<SessionResult> {
-  const { questionSet, client, model, temperature } = opts;
-  const answers: SessionResult["answers"] = {};
-  const usage = { inputTokens: 0, outputTokens: 0 };
-  let summary: string | undefined;
+// ponytail: generous cap — a poweruser recording 20 gratitudes must never hit
+// it; tighten with real usage data once PostHog is wired (issue #5).
+const MAX_ROUNDS_PER_QUESTION = 6;
+const ROUND_SLACK = 20;
 
-  const tools = {
+function buildSessionTools(
+  questionSet: QuestionSet,
+  answers: SessionResult["answers"],
+  onComplete: (summary: string) => void,
+) {
+  return {
     ask_question: tool({
       description:
         "Ask the user one journaling question; the client renders the widget.",
       inputSchema: askQuestionInput,
-      // no execute: client-side tool — the loop below supplies the result
+      // no execute: client-side tool — the session loop supplies the result
     }),
     record_answer: tool({
       description: "Record the validated answer for one question.",
@@ -87,20 +85,36 @@ export async function runSession(opts: {
     complete_session: tool({
       description: "Finish the session with a summary of the journal entry.",
       inputSchema: completeSessionInput,
-      execute: async (input) => {
-        summary = input.summary;
+      execute: async ({ summary }) => {
+        onComplete(summary);
         return { completed: true };
       },
     }),
   };
+}
+
+export async function runSession(opts: {
+  questionSet: QuestionSet;
+  client: SessionClient;
+  model: LanguageModel;
+  /** Sampling temperature; evals pin 0 for stability, product uses default. */
+  temperature?: number;
+}): Promise<SessionResult> {
+  const { questionSet, client, model, temperature } = opts;
+  const answers: SessionResult["answers"] = {};
+  const usage = { inputTokens: 0, outputTokens: 0 };
+  let summary: string | undefined;
+
+  const tools = buildSessionTools(questionSet, answers, (s) => {
+    summary = s;
+  });
 
   const messages: ModelMessage[] = [
     { role: "user", content: "I am ready to start my journaling session." },
   ];
 
-  // ponytail: generous cap — a poweruser recording 20 gratitudes must never hit it;
-  // tighten with real usage data once PostHog is wired (issue #5).
-  const maxRounds = questionSet.questions.length * 6 + 20;
+  const maxRounds =
+    questionSet.questions.length * MAX_ROUNDS_PER_QUESTION + ROUND_SLACK;
   let rounds = 0;
 
   while (summary === undefined) {
@@ -121,10 +135,14 @@ export async function runSession(opts: {
     usage.inputTokens += result.totalUsage.inputTokens ?? 0;
     usage.outputTokens += result.totalUsage.outputTokens ?? 0;
 
-    if (result.finishReason !== "tool-calls") continue;
+    if (result.finishReason !== "tool-calls") {
+      continue;
+    }
 
     for (const call of result.toolCalls) {
-      if (call.toolName !== "ask_question") continue;
+      if (call.toolName !== "ask_question") {
+        continue;
+      }
       const value = await client.askQuestion(call.input as AskQuestionInput);
       messages.push({
         role: "tool",

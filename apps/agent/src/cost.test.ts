@@ -8,8 +8,8 @@ describe("sessionCostUsd", () => {
     // (0.07 $/M input, 0.40 $/M output, gateway catalog 2026-08-20)
     // = 0.1 * 0.07 + 0.01 * 0.40 = 0.007 + 0.004 = 0.011
     const usages = [
-      { inputTokens: 60_000, outputTokens: 4_000 },
-      { inputTokens: 40_000, outputTokens: 6_000 },
+      { inputTokens: 60_000, outputTokens: 4000 },
+      { inputTokens: 40_000, outputTokens: 6000 },
     ];
     const rates = MODEL_RATES["zai/glm-4.7-flash"];
     assert.ok(rates);

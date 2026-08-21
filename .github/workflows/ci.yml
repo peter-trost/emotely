@@ -85,7 +85,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: dart format --set-exit-if-changed .
-      - run: flutter analyze
+      - run: flutter analyze --fatal-infos
 
   # The single required check. Green only if every job succeeded or was skipped.
   ci-ok:

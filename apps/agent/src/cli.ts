@@ -1,3 +1,4 @@
+import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import type { JSONValue } from "ai";
 import { defaultQuestionSet } from "./default-question-set.ts";
@@ -10,14 +11,16 @@ try {
 }
 
 // ponytail: model swap is one env var; PostHog flag payload takes over in issue #5.
-const model = process.env.EMOTELY_MODEL ?? "zai/glm-4.7-flash";
+const model = process.env["EMOTELY_MODEL"] ?? "zai/glm-4.7-flash";
 
 // Piped stdin (the scripted driver) EOF-closes readline before the first
 // question, so pre-read all lines in that case; interactive keeps readline.
 const piped: string[] = [];
 if (!process.stdin.isTTY) {
   const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk as Buffer);
+  }
   piped.push(
     ...Buffer.concat(chunks).toString("utf8").split("\n").filter(Boolean),
   );
@@ -28,9 +31,13 @@ const rl = process.stdin.isTTY
   : undefined;
 
 async function prompt(text: string): Promise<string> {
-  if (rl) return rl.question(text);
+  if (rl) {
+    return rl.question(text);
+  }
   const line = piped.shift();
-  if (line === undefined) throw new Error("scripted stdin ran out of answers");
+  if (line === undefined) {
+    throw new Error("scripted stdin ran out of answers");
+  }
   console.log(`${text}${line}`);
   return line;
 }
@@ -48,8 +55,12 @@ const client: SessionClient = {
     const raw = await prompt(
       `\n${input.question}\n(${hints[input.answer_type]}) > `,
     );
-    if (input.answer_type === "rating") return Number(raw.trim());
-    if (input.answer_type === "longtext") return raw.trim();
+    if (input.answer_type === "rating") {
+      return Number(raw.trim());
+    }
+    if (input.answer_type === "longtext") {
+      return raw.trim();
+    }
     return raw
       .split(",")
       .map((s) => s.trim())

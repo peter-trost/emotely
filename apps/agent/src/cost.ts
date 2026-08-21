@@ -11,11 +11,15 @@ export const MODEL_RATES: Record<string, ModelRates> = {
   "zai/glm-4.7-flash": { inputPerM: 0.07, outputPerM: 0.4 },
 };
 
+const TOKENS_PER_MILLION = 1_000_000;
+
 export function sessionCostUsd(
   usages: Array<{ inputTokens: number; outputTokens: number }>,
   rates: ModelRates,
 ): number {
   const input = usages.reduce((sum, u) => sum + u.inputTokens, 0);
   const output = usages.reduce((sum, u) => sum + u.outputTokens, 0);
-  return (input * rates.inputPerM + output * rates.outputPerM) / 1_000_000;
+  return (
+    (input * rates.inputPerM + output * rates.outputPerM) / TOKENS_PER_MILLION
+  );
 }
