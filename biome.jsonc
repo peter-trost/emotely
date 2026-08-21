@@ -1,0 +1,100 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!**/dist",
+      "!apps/app",
+      "!**/.vercel",
+      "!.entire/logs",
+      "!.entire/metadata",
+      "!.entire/tmp"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      // Policy: deny-by-default. Every rule is on and an error; each
+      // exception below carries its justification. See CLAUDE.md.
+      "preset": "all",
+      "complexity": {
+        // Conflicts with tsconfig noPropertyAccessFromIndexSignature, which
+        // requires process.env["X"]-style access; the TS flag wins.
+        "useLiteralKeys": "off"
+      },
+      "correctness": {
+        // Workspace imports resolve to build output (dist/) that doesn't
+        // exist when lint runs pre-build in CI; tsc owns module resolution.
+        "noUnresolvedImports": "off",
+        // This is a Node service; browser-portability rules don't apply.
+        "noNodejsModules": "off",
+        // Qwik framework rule; no Qwik in this repo.
+        "useQwikValidLexicalScope": "off"
+      },
+      "performance": {
+        // Session loops are conversations — sequential awaits by design.
+        "noAwaitInLoops": "off",
+        // Package entrypoints (src/index.ts) are the public API surface.
+        "noBarrelFile": "off"
+      },
+      "style": {
+        // The tool-call wire format is snake_case (packages/contract);
+        // the rule cannot split wire fields from code identifiers.
+        "useNamingConvention": "off",
+        // Idiomatic TS; the formatter keeps ternaries readable.
+        "noTernary": "off",
+        // Early continue beats another nesting level.
+        "noContinue": "off",
+        // ++/-- in for-loops is idiomatic.
+        "noIncrementDecrement": "off",
+        // Inline `export` is idiomatic ESM; no exports-last ordering.
+        "useExportsLast": "off",
+        "useConsistentTypeDefinitions": {
+          "level": "error",
+          "options": { "style": "type" }
+        }
+      },
+      "suspicious": {
+        // Interface-mandated async implementations often need no await
+        // (tool execute callbacks, scripted clients).
+        "useAwait": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      // Tests and evals: literal expected values are the point, long
+      // test bodies are fine, and eval reports print to stdout.
+      "includes": ["**/*.test.ts", "apps/agent/evals/**"],
+      "linter": {
+        "rules": {
+          "style": { "noMagicNumbers": "off", "noProcessEnv": "off" },
+          "complexity": { "noExcessiveLinesPerFunction": "off" },
+          "performance": { "useTopLevelRegex": "off" },
+          "suspicious": { "noConsole": "off" }
+        }
+      }
+    },
+    {
+      // The CLI's job is stdout and env-driven config.
+      "includes": ["apps/agent/src/cli.ts"],
+      "linter": {
+        "rules": {
+          "style": { "noProcessEnv": "off" },
+          "suspicious": { "noConsole": "off" }
+        }
+      }
+    }
+  ],
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space"
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

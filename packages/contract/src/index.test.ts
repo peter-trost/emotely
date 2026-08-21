@@ -10,7 +10,7 @@ import {
 describe("ask_question input", () => {
   it("accepts question_id, question text, and a known answer_type", () => {
     const input = {
-      question_id: "NUy0Q6sAiHQjteaSyjz4",
+      question_id: "productivity",
       question: "How would you rate your day?",
       answer_type: "rating",
     };
@@ -52,7 +52,7 @@ describe("complete_session input", () => {
 describe("record_answer input", () => {
   it("accepts a value matching the answer_type discriminator", () => {
     const input = {
-      question_id: "NUy0Q6sAiHQjteaSyjz4",
+      question_id: "productivity",
       answer: { answer_type: "rating", value: 7 },
     };
     assert.deepEqual(recordAnswerInput.parse(input), input);
@@ -60,7 +60,7 @@ describe("record_answer input", () => {
 
   it("rejects a value whose shape belongs to a different answer_type", () => {
     const mismatched = {
-      question_id: "ZP1r3kAnMd9XZ1rU1sem",
+      question_id: "gratitude-list",
       answer: { answer_type: "text_list", value: 7 },
     };
     assert.equal(recordAnswerInput.safeParse(mismatched).success, false);

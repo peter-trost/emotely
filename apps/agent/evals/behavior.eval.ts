@@ -86,48 +86,52 @@ const scenarios: Scenario[] = [
   },
 ];
 
+/** One scenario run; returns null on pass, a failure description otherwise. */
+async function runScenarioOnce(scenario: Scenario): Promise<string | null> {
+  // A crashed run (model emitted malformed tool input, gateway error)
+  // counts as a failed run instead of aborting the scenario.
+  let result: Awaited<ReturnType<typeof runSession>>;
+  try {
+    result = await runSession({
+      questionSet: miniSet,
+      client: scriptedClient(scenario.answers),
+      model: modelUnderTest,
+    });
+  } catch (err) {
+    return `session crashed — ${String(err)}`;
+  }
+
+  const machineOk =
+    result.summary.length > 0 &&
+    miniSet.questions.every((q) => result.answers[q.id]);
+
+  const verdicts = await judgeSession({
+    model: judgeModel,
+    transcript: formatTranscript(result.messages),
+    rubrics: scenario.rubrics,
+  });
+  const failed = verdicts.filter((v) => !v.pass);
+
+  if (machineOk && failed.length === 0) {
+    return null;
+  }
+  return `${machineOk ? "" : "incomplete session; "}${failed
+    .map((v) => `"${v.rubric}" — ${v.reason}`)
+    .join("; ")}`;
+}
+
 describe(`behavior eval — ${modelUnderTest}, judge ${judgeModel}, runs ${evalRuns}`, () => {
   for (const scenario of scenarios) {
     it(scenario.name, async () => {
-      let passes = 0;
       const failures: string[] = [];
 
       for (let run = 1; run <= evalRuns; run++) {
-        // A crashed run (model emitted malformed tool input, gateway error)
-        // counts as a failed run instead of aborting the scenario.
-        let result: Awaited<ReturnType<typeof runSession>>;
-        try {
-          result = await runSession({
-            questionSet: miniSet,
-            client: scriptedClient(scenario.answers),
-            model: modelUnderTest,
-          });
-        } catch (err) {
-          failures.push(`run ${run}: session crashed — ${String(err)}`);
-          continue;
-        }
-
-        const machineOk =
-          result.summary.length > 0 &&
-          miniSet.questions.every((q) => result.answers[q.id]);
-
-        const verdicts = await judgeSession({
-          model: judgeModel,
-          transcript: formatTranscript(result.messages),
-          rubrics: scenario.rubrics,
-        });
-        const failed = verdicts.filter((v) => !v.pass);
-
-        if (machineOk && failed.length === 0) {
-          passes++;
-        } else {
-          failures.push(
-            `run ${run}: ${machineOk ? "" : "incomplete session; "}${failed
-              .map((v) => `"${v.rubric}" — ${v.reason}`)
-              .join("; ")}`,
-          );
+        const failure = await runScenarioOnce(scenario);
+        if (failure !== null) {
+          failures.push(`run ${run}: ${failure}`);
         }
       }
+      const passes = evalRuns - failures.length;
 
       console.log(
         `# eval-report scenario="${scenario.name}" passes=${passes}/${evalRuns}`,
