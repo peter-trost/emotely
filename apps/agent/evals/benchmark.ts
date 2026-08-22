@@ -53,6 +53,9 @@ type ModelReport = {
   reason: string;
 };
 
+const PRICE_DECIMALS = 3;
+const usdPerM = (v: number): string => `$${Number(v.toFixed(PRICE_DECIMALS))}`;
+
 const percentile = (sorted: number[], p: number): number =>
   sorted.length === 0
     ? NOT_MEASURED
@@ -266,7 +269,7 @@ function renderReport(
       : fresh
           .map(
             (m) =>
-              `- \`${m.id}\` — $${m.inputPerM}/M in, $${m.outputPerM}/M out, released ${new Date(m.released * 1000).toISOString().slice(0, 10)}`,
+              `- \`${m.id}\` — ${usdPerM(m.inputPerM)}/M in, ${usdPerM(m.outputPerM)}/M out, released ${new Date(m.released * 1000).toISOString().slice(0, 10)}`,
           )
           .join("\n"),
   ];
