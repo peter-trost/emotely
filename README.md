@@ -62,7 +62,7 @@ Tooling stays boring: pnpm workspaces for the TS side, Flutter's own tooling for
 |---|---|---|
 | **Client** | Flutter, iOS + Android only (no web) | Native GenUI story; VGV/Flutter-community audience |
 | **Agent runtime** | TypeScript · Vercel AI SDK · Vercel | Tools-first agent loop, streaming, the AI-eng showcase |
-| **Model access** | Gateway (Vercel AI Gateway **or** OpenRouter) | Swap models via config; benchmark cheap models on real sessions |
+| **Model access** | Vercel AI Gateway | Swap models via config (bare `creator/model` strings); 0% fees; benchmarked monthly |
 | **Data + auth** | Supabase (Postgres + Auth) | Fresh schema, no Firebase baggage |
 | **Observability** | PostHog (full bundle, see below) | LLM obs, flags, experiments, error tracking, Max AI |
 | **Subscriptions** | RevenueCat | Known quantity from the original app |
@@ -109,22 +109,30 @@ its own model choice; you get pinged instead of dashboard-staring.
 Set **billing limits / spike protection** per product on day one — a retry storm
 must not surprise-bill.
 
-## Cost model (the hard constraint)
+## Cost model (the constraint) and model choice
 
-A daily poweruser (~30 sessions/month, ~10 questions each) must cost **well under
-50¢/month**, ideally a few cents, inside a 5€ sub with high margins.
+A daily poweruser (~30 sessions/month, ~10 questions each) must cost
+**≤ €1/month** (≈ $0.036/session) inside a 5€ subscription — margins are fine at
+that level. Within that ceiling, **the fastest reliable model wins**: GenUI
+latency is what the user feels between widgets, so models are ranked by median
+per-round latency with cost as the tiebreak. We start reliable and fast, and
+optimize toward cheaper models with real usage data.
 
-- Frontier models (Claude Sonnet/Opus) — **out**, blow the budget per session.
-- Haiku-class — borderline (~$1.50–2.70/mo).
-- **Gemini Flash-Lite / GLM-4.x-class** — a few cents to ~60¢/mo, and the only
-  tier that hits "a few cents."
-- **Prompt caching** on the static context prompt cuts session cost 3–5× — this
-  matters more than the exact model.
-- The task is narrow and well-specified (a fixed question set, extract → summarize) —
-  a cheap model with good tool-calling is enough. No frontier reasoning needed.
+- The cheap tier (Qwen/GLM/DeepSeek flash-class, Gemini Flash-Lite) runs a full
+  session for well under a cent — ~10¢/month.
+- Haiku-class and small frontier tiers (e.g. GPT-5.6 Luna at $0.20/M input) are
+  eligible candidates, not excluded.
+- **Prompt caching** needs no code — every gateway candidate is implicitly
+  cached, and the win is the growing conversation prefix across ~25 rounds.
+  It is measured per model, not assumed.
+- The task is narrow and well-specified (a fixed question set, extract →
+  summarize) — good tool calling matters more than frontier reasoning.
 
-Final model is chosen **empirically** at build time via the eval harness + a
-PostHog LLM prompt experiment, not from memory.
+The model is chosen **empirically** by the benchmark (`pnpm --filter
+@emotely/agent benchmark`): eligible = protocol eval 3/3, every behavior
+scenario 2-of-3, within budget. A monthly workflow re-runs it and opens an issue
+with the ranking plus any new tool-capable models in the gateway catalog. See
+[ADR 0003](docs/adr/0003-model-gateway-and-cost-ceiling.md).
 
 ## Two layers of evaluation
 
@@ -145,10 +153,8 @@ the wild*.
 2. **Offline eval harness** — port the original prompt + `promptfoo` conversation
    fixtures into `evals/`. CI gate: replay, assert correctness, measure cost per
    candidate.
-3. **Benchmark** — run evals across GLM-4.x / Gemini Flash-Lite / Haiku; pick the
-   cheapest that passes. Add prompt caching. Confirm poweruser cost. **Decide the
-   gateway here** (OpenRouter has a dedicated PostHog install path; Vercel AI
-   Gateway is "supported" — pick by integration cleanliness).
+3. **Benchmark** — rank candidates on latency within the cost ceiling; pick the
+   fastest reliable one. Gateway decided: Vercel AI Gateway (ADR 0003 amendment).
 4. **PostHog online** — `@posthog/ai` (privacyMode on), flag-driven model
    selection, first LLM prompt experiment.
 5. **`apps/app`** — Flutter shell rendering a widget per tool call, Supabase auth +
@@ -162,7 +168,6 @@ Per project convention, research the latest before pinning:
 - Vercel AI SDK, `@posthog/ai`, `posthog-node`, `posthog_flutter` versions.
 - Current GLM and Gemini Flash-Lite model IDs (note: "GLM 5.2" does not exist —
   current is the GLM-4.x line; confirm exact version).
-- Gateway choice (OpenRouter vs Vercel AI Gateway) — settle at step 3 empirically.
 
 ## Legacy
 
