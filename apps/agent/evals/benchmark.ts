@@ -187,7 +187,12 @@ async function benchmarkModel(
   rates: CatalogModel | undefined,
 ): Promise<ModelReport> {
   const protocol = await runProtocol(id, rates);
-  const scenarioPasses = await runScenarios(id);
+  // A model that fails every protocol run (e.g. loops to the round cap) is
+  // already ineligible; don't let it burn scenario budget or stall the pool.
+  const scenarioPasses =
+    protocol.passes === 0
+      ? Object.fromEntries(scenarios.map((sc) => [sc.name, 0]))
+      : await runScenarios(id);
   const sorted = [...protocol.latencies].sort((a, b) => a - b);
   const cost =
     protocol.costs.length === 0 ? NOT_MEASURED : median(protocol.costs);
