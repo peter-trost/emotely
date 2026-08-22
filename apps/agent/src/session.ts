@@ -11,9 +11,11 @@ import {
   isStepCount,
   type JSONValue,
   type LanguageModel,
+  type LanguageModelUsage,
   type ModelMessage,
   tool,
 } from "ai";
+import type { TokenUsage } from "./cost.ts";
 import { PROMPT_ID, sessionPrompt } from "./session-prompt.ts";
 
 type ListAnswerType = Extract<AnswerType, "color" | "emoji" | "text_list">;
@@ -40,7 +42,7 @@ export type SessionResult = {
   summary: string;
   answers: Record<string, Answer>;
   /** Token totals across every model round, for cost accounting. */
-  usage: { inputTokens: number; outputTokens: number };
+  usage: TokenUsage;
   /** The full conversation, for eval transcripts and debugging. */
   messages: ModelMessage[];
   /** Version id of the system prompt this session ran with. */
@@ -93,6 +95,12 @@ function buildSessionTools(
   };
 }
 
+function addUsage(total: TokenUsage, step: LanguageModelUsage): void {
+  total.inputTokens += step.inputTokens ?? 0;
+  total.cacheReadTokens += step.inputTokenDetails.cacheReadTokens ?? 0;
+  total.outputTokens += step.outputTokens ?? 0;
+}
+
 export async function runSession(opts: {
   questionSet: QuestionSet;
   client: SessionClient;
@@ -102,7 +110,11 @@ export async function runSession(opts: {
 }): Promise<SessionResult> {
   const { questionSet, client, model, temperature } = opts;
   const answers: SessionResult["answers"] = {};
-  const usage = { inputTokens: 0, outputTokens: 0 };
+  const usage: TokenUsage = {
+    inputTokens: 0,
+    cacheReadTokens: 0,
+    outputTokens: 0,
+  };
   let summary: string | undefined;
 
   const tools = buildSessionTools(questionSet, answers, (s) => {
@@ -132,8 +144,7 @@ export async function runSession(opts: {
       messages,
     });
     messages.push(...result.response.messages);
-    usage.inputTokens += result.totalUsage.inputTokens ?? 0;
-    usage.outputTokens += result.totalUsage.outputTokens ?? 0;
+    addUsage(usage, result.usage);
 
     if (result.finishReason !== "tool-calls") {
       continue;

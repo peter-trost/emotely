@@ -59,7 +59,8 @@ describe(`protocol eval — ${modelUnderTest}`, () => {
     const cost = sessionCostUsd([result.usage], rates);
     console.log(
       `# eval-report model=${modelUnderTest} prompt=${result.promptId} ` +
-        `tokens=${result.usage.inputTokens}/${result.usage.outputTokens} cost=$${cost.toFixed(5)}`,
+        `tokens=${result.usage.inputTokens}/${result.usage.outputTokens} ` +
+        `cached=${result.usage.cacheReadTokens} cost=$${cost.toFixed(5)}`,
     );
     // ponytail: order-of-magnitude ceiling, catches pathology not price drift;
     // tightened in #4 once the benchmark sets a baseline.

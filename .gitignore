@@ -20,6 +20,9 @@ apps/app/.flutter-plugins-dependencies
 apps/app/ios/Pods/
 apps/app/**/GeneratedPluginRegistrant.*
 
+# Agent worktrees (Claude Code isolation)
+.claude/worktrees/
+
 # IDE
 .idea/
 *.iml
