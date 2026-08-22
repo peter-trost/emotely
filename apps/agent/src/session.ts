@@ -47,6 +47,8 @@ export type SessionResult = {
   messages: ModelMessage[];
   /** Version id of the system prompt this session ran with. */
   promptId: string;
+  /** Wall-clock ms per model round — what the user waits between widgets. */
+  roundLatenciesMs: number[];
 };
 
 // ponytail: generous cap — a poweruser recording 20 gratitudes must never hit
@@ -101,6 +103,25 @@ function addUsage(total: TokenUsage, step: LanguageModelUsage): void {
   total.outputTokens += step.outputTokens ?? 0;
 }
 
+/** Client-executed tool: the client answers ask_question with the widget value. */
+async function answerAskQuestion(
+  call: { toolCallId: string; toolName: string; input: unknown },
+  client: SessionClient,
+): Promise<ModelMessage> {
+  const value = await client.askQuestion(call.input as AskQuestionInput);
+  return {
+    role: "tool",
+    content: [
+      {
+        type: "tool-result",
+        toolCallId: call.toolCallId,
+        toolName: call.toolName,
+        output: { type: "json", value: { answer: value } },
+      },
+    ],
+  };
+}
+
 export async function runSession(opts: {
   questionSet: QuestionSet;
   client: SessionClient;
@@ -110,6 +131,7 @@ export async function runSession(opts: {
 }): Promise<SessionResult> {
   const { questionSet, client, model, temperature } = opts;
   const answers: SessionResult["answers"] = {};
+  const roundLatenciesMs: number[] = [];
   const usage: TokenUsage = {
     inputTokens: 0,
     cacheReadTokens: 0,
@@ -135,6 +157,7 @@ export async function runSession(opts: {
         `Session round limit reached (${maxRounds}) without complete_session.`,
       );
     }
+    const startedAt = performance.now();
     const result = await generateText({
       model,
       instructions: sessionPrompt(questionSet),
@@ -143,6 +166,7 @@ export async function runSession(opts: {
       temperature,
       messages,
     });
+    roundLatenciesMs.push(performance.now() - startedAt);
     messages.push(...result.response.messages);
     addUsage(usage, result.usage);
 
@@ -151,23 +175,18 @@ export async function runSession(opts: {
     }
 
     for (const call of result.toolCalls) {
-      if (call.toolName !== "ask_question") {
-        continue;
+      if (call.toolName === "ask_question") {
+        messages.push(await answerAskQuestion(call, client));
       }
-      const value = await client.askQuestion(call.input as AskQuestionInput);
-      messages.push({
-        role: "tool",
-        content: [
-          {
-            type: "tool-result",
-            toolCallId: call.toolCallId,
-            toolName: call.toolName,
-            output: { type: "json", value: { answer: value } },
-          },
-        ],
-      });
     }
   }
 
-  return { summary, answers, usage, messages, promptId: PROMPT_ID };
+  return {
+    summary,
+    answers,
+    usage,
+    messages,
+    promptId: PROMPT_ID,
+    roundLatenciesMs,
+  };
 }

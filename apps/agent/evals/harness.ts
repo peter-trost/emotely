@@ -1,6 +1,9 @@
 import process from "node:process";
-import type { JSONValue, ModelMessage } from "ai";
+import type { JSONValue, LanguageModel, ModelMessage } from "ai";
+import { judgeSession } from "../src/judge.ts";
 import type { SessionClient } from "../src/session.ts";
+import { runSession } from "../src/session.ts";
+import { miniSet, type Scenario } from "./scenarios.ts";
 
 try {
   process.loadEnvFile(new URL("../.env.local", import.meta.url).pathname);
@@ -61,3 +64,40 @@ export function formatTranscript(messages: ModelMessage[]): string {
 /** N runs with a 2/3 pass-rate gate (single runs must pass outright). */
 export const evalRuns = Number(process.env["EVAL_RUNS"] ?? "1");
 export const requiredPasses = Math.ceil((evalRuns * 2) / 3);
+
+/** One scenario run; returns null on pass, a failure description otherwise. */
+export async function runScenarioOnce(
+  scenario: Scenario,
+  model: LanguageModel,
+): Promise<string | null> {
+  // A crashed run (model emitted malformed tool input, gateway error)
+  // counts as a failed run instead of aborting the scenario.
+  let result: Awaited<ReturnType<typeof runSession>>;
+  try {
+    result = await runSession({
+      questionSet: miniSet,
+      client: scriptedClient(scenario.answers),
+      model,
+    });
+  } catch (err) {
+    return `session crashed — ${String(err)}`;
+  }
+
+  const machineOk =
+    result.summary.length > 0 &&
+    miniSet.questions.every((q) => result.answers[q.id]);
+
+  const verdicts = await judgeSession({
+    model: judgeModel,
+    transcript: formatTranscript(result.messages),
+    rubrics: scenario.rubrics,
+  });
+  const failed = verdicts.filter((v) => !v.pass);
+
+  if (machineOk && failed.length === 0) {
+    return null;
+  }
+  return `${machineOk ? "" : "incomplete session; "}${failed
+    .map((v) => `"${v.rubric}" — ${v.reason}`)
+    .join("; ")}`;
+}

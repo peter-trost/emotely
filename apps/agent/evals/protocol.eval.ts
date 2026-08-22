@@ -4,23 +4,13 @@ import { MODEL_RATES, sessionCostUsd } from "../src/cost.ts";
 import { defaultQuestionSet } from "../src/default-question-set.ts";
 import { runSession } from "../src/session.ts";
 import { modelUnderTest, scriptedClient } from "./harness.ts";
+import { fullSessionAnswers } from "./scenarios.ts";
 
 // Deterministic PR gate: a benign full session against the live model must
 // uphold the protocol. Judged (fuzzy) behavior lives in behavior.eval.ts.
 describe(`protocol eval — ${modelUnderTest}`, () => {
   it("completes a full 10-question session within the cost ceiling", async () => {
-    const answers = {
-      "learned-today": ["how the eval harness works"],
-      "best-thing": "Shipped the offline eval gate.",
-      "day-colors": ["#00FF88"],
-      "mood-emojis": ["🔥", "😌"],
-      productivity: 8,
-      satisfaction: 9,
-      appreciation: 7,
-      "gratitude-list": ["my wife", "green CI", "cheap models"],
-      "goal-alignment": 8,
-      "gratitude-person": "My wife supported the late debugging.",
-    };
+    const answers = fullSessionAnswers;
 
     // temperature 0 for stability; one retry absorbs residual variance.
     let result = await runSession({

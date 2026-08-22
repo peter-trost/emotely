@@ -208,5 +208,8 @@ describe("runSession", () => {
     assert.ok(roles.includes("tool"));
     // Evals and PostHog events pin against the versioned prompt id.
     assert.equal(result.promptId, PROMPT_ID);
+    // One latency sample per model round, for the benchmark's p50/p95.
+    assert.equal(result.roundLatenciesMs.length, 5);
+    assert.ok(result.roundLatenciesMs.every((ms) => ms >= 0));
   });
 });
