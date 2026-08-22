@@ -2,6 +2,16 @@ import process from "node:process";
 import { sessionCostUsd } from "../src/cost.ts";
 import { defaultQuestionSet } from "../src/default-question-set.ts";
 import { runSession } from "../src/session.ts";
+import {
+  BUDGET_USD_PER_MONTH,
+  type ModelReport,
+  NOT_MEASURED,
+  PROTOCOL_RUNS,
+  SCENARIO_REQUIRED,
+  SCENARIO_RUNS,
+  SESSIONS_PER_MONTH,
+} from "./benchmark-config.ts";
+import { newModels, renderReport } from "./benchmark-report.ts";
 import { type CatalogModel, fetchCatalog } from "./catalog.ts";
 import { runScenarioOnce, scriptedClient } from "./harness.ts";
 import { fullSessionAnswers, scenarios } from "./scenarios.ts";
@@ -27,34 +37,9 @@ const DEFAULT_CANDIDATES = [
   "google/gemini-3.7-flash",
   "openai/gpt-5-mini",
 ];
-const PROTOCOL_RUNS = 3;
-const SCENARIO_RUNS = 3;
-const SCENARIO_REQUIRED = 2;
-const SESSIONS_PER_MONTH = 30;
-const BUDGET_USD_PER_MONTH = 1.08; // ≈ €1
-const NEW_MODEL_WINDOW_DAYS = 30;
-const NEW_MODEL_MAX_INPUT_PER_M = 1;
 const CONCURRENCY = 3;
-const SECONDS_PER_DAY = 86_400;
-const MS_PER_DAY = SECONDS_PER_DAY * 1000;
 const P50 = 0.5;
 const P95 = 0.95;
-const NOT_MEASURED = Number.POSITIVE_INFINITY;
-
-type ModelReport = {
-  id: string;
-  protocolPasses: number;
-  scenarioPasses: Record<string, number>;
-  p50Ms: number;
-  p95Ms: number;
-  sessionCostUsd: number;
-  cachedShare: number;
-  eligible: boolean;
-  reason: string;
-};
-
-const PRICE_DECIMALS = 3;
-const usdPerM = (v: number): string => `$${Number(v.toFixed(PRICE_DECIMALS))}`;
 
 const percentile = (sorted: number[], p: number): number =>
   sorted.length === 0
@@ -85,10 +70,13 @@ function protocolOk(
 
 type ProtocolStats = {
   passes: number;
+  crashes: number;
   latencies: number[];
   costs: number[];
   cachedShares: number[];
 };
+
+const CRASH_RETRIES = 1;
 
 async function runProtocol(
   id: string,
@@ -96,18 +84,23 @@ async function runProtocol(
 ): Promise<ProtocolStats> {
   const stats: ProtocolStats = {
     passes: 0,
+    crashes: 0,
     latencies: [],
     costs: [],
     cachedShares: [],
   };
   for (let i = 0; i < PROTOCOL_RUNS; i++) {
     try {
-      const result = await runSession({
-        questionSet: defaultQuestionSet,
-        client: scriptedClient(fullSessionAnswers),
-        model: id,
-        temperature: 0,
-      });
+      // Gateway 503s and malformed tool calls are retried once so an
+      // infrastructure blip does not decide eligibility.
+      const result = await withCrashRetry(id, () =>
+        runSession({
+          questionSet: defaultQuestionSet,
+          client: scriptedClient(fullSessionAnswers),
+          model: id,
+          temperature: 0,
+        }),
+      );
       stats.latencies.push(...result.roundLatenciesMs);
       if (rates) {
         stats.costs.push(sessionCostUsd([result.usage], rates));
@@ -121,10 +114,27 @@ async function runProtocol(
         stats.passes++;
       }
     } catch (err) {
+      stats.crashes++;
       process.stderr.write(`  ${id} protocol run crashed: ${String(err)}\n`);
     }
   }
   return stats;
+}
+
+async function withCrashRetry<T>(
+  id: string,
+  attempt: () => Promise<T>,
+): Promise<T> {
+  let lastError: unknown;
+  for (let tries = 0; tries <= CRASH_RETRIES; tries++) {
+    try {
+      return await attempt();
+    } catch (err) {
+      lastError = err;
+      process.stderr.write(`  ${id} crashed, retrying: ${String(err)}\n`);
+    }
+  }
+  throw lastError;
 }
 
 async function runScenarios(id: string): Promise<Record<string, number>> {
@@ -132,7 +142,11 @@ async function runScenarios(id: string): Promise<Record<string, number>> {
   for (const scenario of scenarios) {
     let count = 0;
     for (let i = 0; i < SCENARIO_RUNS; i++) {
-      if ((await runScenarioOnce(scenario, id)) === null) {
+      let failure = await runScenarioOnce(scenario, id);
+      if (failure?.startsWith("session crashed")) {
+        failure = await runScenarioOnce(scenario, id);
+      }
+      if (failure === null) {
         count++;
       }
     }
@@ -161,6 +175,9 @@ function ineligibilityReasons(
   }
   if (monthlyUsd > BUDGET_USD_PER_MONTH) {
     reasons.push(`$${monthlyUsd.toFixed(2)}/month over budget`);
+  }
+  if (protocol.crashes > 0) {
+    reasons.push(`${protocol.crashes} protocol run(s) crashed after retry`);
   }
   return reasons;
 }
@@ -211,69 +228,6 @@ async function runPool<T, R>(
   });
   await Promise.all(lanes);
   return results;
-}
-
-function newModels(catalog: Map<string, CatalogModel>, known: Set<string>) {
-  const cutoff = (Date.now() - NEW_MODEL_WINDOW_DAYS * MS_PER_DAY) / 1000;
-  return [...catalog.values()]
-    .filter(
-      (m) =>
-        !known.has(m.id) &&
-        m.tags.includes("tool-use") &&
-        m.released >= cutoff &&
-        m.inputPerM <= NEW_MODEL_MAX_INPUT_PER_M,
-    )
-    .sort((a, b) => a.inputPerM - b.inputPerM);
-}
-
-function renderReport(
-  reports: ModelReport[],
-  fresh: CatalogModel[],
-  promptId: string,
-): string {
-  const rank = (r: ModelReport): [number, number, number] => [
-    r.eligible ? 0 : 1,
-    r.p50Ms,
-    r.sessionCostUsd,
-  ];
-  const sorted = [...reports].sort((a, b) => {
-    const [ea, pa, ca] = rank(a);
-    const [eb, pb, cb] = rank(b);
-    return ea - eb || pa - pb || ca - cb;
-  });
-  const ms = (v: number) => (v === NOT_MEASURED ? "—" : `${Math.round(v)}`);
-  const usd = (v: number) => (v === NOT_MEASURED ? "—" : `$${v.toFixed(4)}`);
-  const pct = (v: number) => `${Math.round(v * 100)}%`;
-  const lines = [
-    `## Model benchmark — ${new Date().toISOString().slice(0, 10)}, prompt ${promptId}`,
-    "",
-    `Eligible = protocol ${PROTOCOL_RUNS}/${PROTOCOL_RUNS}, every scenario ≥ ${SCENARIO_REQUIRED}/${SCENARIO_RUNS}, ≤ $${BUDGET_USD_PER_MONTH}/month at ${SESSIONS_PER_MONTH} sessions. Ranked by p50 round latency, cost as tiebreak.`,
-    "",
-    "| # | Model | Eligible | p50 ms | p95 ms | $/session | $/month | cached | Protocol | Scenarios | Notes |",
-    "|---|---|---|---|---|---|---|---|---|---|---|",
-    ...sorted.map((r, i) => {
-      const scen = Object.values(r.scenarioPasses).join("/");
-      const monthly =
-        r.sessionCostUsd === NOT_MEASURED
-          ? "—"
-          : `$${(r.sessionCostUsd * SESSIONS_PER_MONTH).toFixed(2)}`;
-      return `| ${i + 1} | \`${r.id}\` | ${r.eligible ? "✅" : "❌"} | ${ms(r.p50Ms)} | ${ms(r.p95Ms)} | ${usd(r.sessionCostUsd)} | ${monthly} | ${pct(r.cachedShare)} | ${r.protocolPasses}/${PROTOCOL_RUNS} | ${scen} | ${r.reason} |`;
-    }),
-    "",
-    `Scenarios column order: ${scenarios.map((s) => s.name.split(":")[0]).join(" / ")}.`,
-    "",
-    `### New tool-capable models in the catalog (last ${NEW_MODEL_WINDOW_DAYS} days, ≤ $${NEW_MODEL_MAX_INPUT_PER_M}/M input)`,
-    "",
-    fresh.length === 0
-      ? "_none_"
-      : fresh
-          .map(
-            (m) =>
-              `- \`${m.id}\` — ${usdPerM(m.inputPerM)}/M in, ${usdPerM(m.outputPerM)}/M out, released ${new Date(m.released * 1000).toISOString().slice(0, 10)}`,
-          )
-          .join("\n"),
-  ];
-  return lines.join("\n");
 }
 
 const candidates = (process.env["EMOTELY_BENCH_MODELS"] ?? "")
