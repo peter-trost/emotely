@@ -7,8 +7,8 @@
     "typecheck": "tsc --build && tsc -p evals",
     "test": "tsc --build && node --test \"src/*.test.ts\"",
     "session": "node src/cli.ts",
-    "eval": "node --test \"evals/protocol.eval.ts\"",
-    "eval:behavior": "node --test \"evals/behavior.eval.ts\""
+    "eval": "tsc --build && node --test \"evals/protocol.eval.ts\"",
+    "eval:behavior": "tsc --build && node --test \"evals/behavior.eval.ts\""
   },
   "dependencies": {
     "@emotely/contract": "workspace:*",
