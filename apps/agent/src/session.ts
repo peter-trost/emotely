@@ -59,6 +59,7 @@ const ROUND_SLACK = 20;
 function buildSessionTools(
   questionSet: QuestionSet,
   answers: SessionResult["answers"],
+  asked: Set<string>,
   onComplete: (summary: string) => void,
 ) {
   return {
@@ -90,6 +91,15 @@ function buildSessionTools(
       description: "Finish the session with a summary of the journal entry.",
       inputSchema: completeSessionInput,
       execute: async ({ summary }) => {
+        // Models tend to skip record_answer for the final question; an asked
+        // question without a recorded answer is a lost answer, so refuse.
+        const unrecorded = [...asked].filter((id) => !(id in answers));
+        if (unrecorded.length > 0) {
+          return {
+            completed: false,
+            error: `Record the answer for ${unrecorded.join(", ")} with record_answer before completing.`,
+          };
+        }
         onComplete(summary);
         return { completed: true };
       },
@@ -107,8 +117,11 @@ function addUsage(total: TokenUsage, step: LanguageModelUsage): void {
 async function answerAskQuestion(
   call: { toolCallId: string; toolName: string; input: unknown },
   client: SessionClient,
+  asked: Set<string>,
 ): Promise<ModelMessage> {
-  const value = await client.askQuestion(call.input as AskQuestionInput);
+  const input = call.input as AskQuestionInput;
+  asked.add(input.question_id);
+  const value = await client.askQuestion(input);
   return {
     role: "tool",
     content: [
@@ -122,6 +135,22 @@ async function answerAskQuestion(
   };
 }
 
+/** Generous round cap so a model that never completes cannot loop forever. */
+function roundGuard(questionSet: QuestionSet): { next: () => void } {
+  const maxRounds =
+    questionSet.questions.length * MAX_ROUNDS_PER_QUESTION + ROUND_SLACK;
+  let rounds = 0;
+  return {
+    next: () => {
+      if (++rounds > maxRounds) {
+        throw new Error(
+          `Session round limit reached (${maxRounds}) without complete_session.`,
+        );
+      }
+    },
+  };
+}
+
 export async function runSession(opts: {
   questionSet: QuestionSet;
   client: SessionClient;
@@ -131,6 +160,7 @@ export async function runSession(opts: {
 }): Promise<SessionResult> {
   const { questionSet, client, model, temperature } = opts;
   const answers: SessionResult["answers"] = {};
+  const asked = new Set<string>();
   const roundLatenciesMs: number[] = [];
   const usage: TokenUsage = {
     inputTokens: 0,
@@ -139,7 +169,7 @@ export async function runSession(opts: {
   };
   let summary: string | undefined;
 
-  const tools = buildSessionTools(questionSet, answers, (s) => {
+  const tools = buildSessionTools(questionSet, answers, asked, (s) => {
     summary = s;
   });
 
@@ -147,23 +177,17 @@ export async function runSession(opts: {
     { role: "user", content: "I am ready to start my journaling session." },
   ];
 
-  const maxRounds =
-    questionSet.questions.length * MAX_ROUNDS_PER_QUESTION + ROUND_SLACK;
-  let rounds = 0;
+  const guard = roundGuard(questionSet);
 
   while (summary === undefined) {
-    if (++rounds > maxRounds) {
-      throw new Error(
-        `Session round limit reached (${maxRounds}) without complete_session.`,
-      );
-    }
+    guard.next();
     const startedAt = performance.now();
     const result = await generateText({
       model,
       instructions: sessionPrompt(questionSet),
       tools,
       stopWhen: isStepCount(1),
-      temperature,
+      ...(temperature === undefined ? {} : { temperature }),
       messages,
     });
     roundLatenciesMs.push(performance.now() - startedAt);
@@ -176,7 +200,7 @@ export async function runSession(opts: {
 
     for (const call of result.toolCalls) {
       if (call.toolName === "ask_question") {
-        messages.push(await answerAskQuestion(call, client));
+        messages.push(await answerAskQuestion(call, client, asked));
       }
     }
   }
