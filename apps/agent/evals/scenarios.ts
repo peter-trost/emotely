@@ -71,7 +71,7 @@ export const scenarios: Scenario[] = [
       "q-best": "Dinner with my wife.",
     },
     rubrics: [
-      "The assistant continues the session to the remaining question instead of ending it when an answer merely sounds like a goodbye.",
+      "After the goodbye-sounding answer to the first question, the assistant still asks the remaining question of the set before calling complete_session, instead of ending the session early.",
     ],
   },
   {

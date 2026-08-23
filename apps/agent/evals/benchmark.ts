@@ -56,11 +56,16 @@ const median = (values: number[]): number =>
 /** Per-question protocol violations; empty means the run passed. */
 function protocolViolations(
   answers: Record<string, { answer_type: string; value: unknown }>,
+  asked: Set<string>,
 ): string[] {
   const violations: string[] = [];
   for (const q of defaultQuestionSet.questions) {
     const recorded = answers[q.id];
-    if (!recorded) {
+    if (!asked.has(q.id)) {
+      violations.push(
+        `${q.id}: ${recorded ? "answered without asking" : "never asked"}`,
+      );
+    } else if (!recorded) {
       violations.push(`${q.id}: unanswered`);
     } else if (recorded.answer_type !== q.answer_type) {
       violations.push(`${q.id}: ${recorded.answer_type} ≠ ${q.answer_type}`);
@@ -99,10 +104,11 @@ async function runProtocol(
     try {
       // Gateway 503s and malformed tool calls are retried once so an
       // infrastructure blip does not decide eligibility.
+      const client = scriptedClient(fullSessionAnswers);
       const result = await withCrashRetry(id, () =>
         runSession({
           questionSet: defaultQuestionSet,
-          client: scriptedClient(fullSessionAnswers),
+          client,
           model: id,
           temperature: 0,
         }),
@@ -116,7 +122,7 @@ async function runProtocol(
           ? 0
           : result.usage.cacheReadTokens / result.usage.inputTokens,
       );
-      const violations = protocolViolations(result.answers);
+      const violations = protocolViolations(result.answers, client.asked);
       if (violations.length === 0) {
         stats.passes++;
       } else {

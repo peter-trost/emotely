@@ -10,27 +10,32 @@ import { fullSessionAnswers } from "./scenarios.ts";
 // uphold the protocol. Judged (fuzzy) behavior lives in behavior.eval.ts.
 describe(`protocol eval — ${modelUnderTest}`, () => {
   it("completes a full 10-question session within the cost ceiling", async () => {
-    const answers = fullSessionAnswers;
-
     // temperature 0 for stability; one retry absorbs residual variance.
-    let result = await runSession({
-      questionSet: defaultQuestionSet,
-      client: scriptedClient(answers),
-      model: modelUnderTest,
-      temperature: 0,
-    });
-    if (defaultQuestionSet.questions.some((q) => !result.answers[q.id])) {
-      console.log("# eval-report protocol retry after incomplete first run");
-      result = await runSession({
+    const attempt = () => {
+      const scripted = scriptedClient(fullSessionAnswers);
+      return runSession({
         questionSet: defaultQuestionSet,
-        client: scriptedClient(answers),
+        client: scripted,
         model: modelUnderTest,
         temperature: 0,
-      });
+      }).then((session) => ({ result: session, client: scripted }));
+    };
+    const complete = (candidate: Awaited<ReturnType<typeof attempt>>) =>
+      defaultQuestionSet.questions.every(
+        (q) =>
+          candidate.client.asked.has(q.id) && candidate.result.answers[q.id],
+      );
+    let run = await attempt();
+    if (!complete(run)) {
+      console.log("# eval-report protocol retry after incomplete first run");
+      run = await attempt();
     }
+    const { result, client } = run;
 
-    // Every question answered with the type its question declares.
+    // Every question asked (no fabricated answers) and answered with the
+    // type its question declares.
     for (const q of defaultQuestionSet.questions) {
+      assert.ok(client.asked.has(q.id), `question ${q.id} was never asked`);
       const recorded = result.answers[q.id];
       assert.ok(recorded, `question ${q.id} has no recorded answer`);
       assert.equal(recorded.answer_type, q.answer_type);
