@@ -56,3 +56,13 @@ prompt. Measured, not assumed: the first live reading for glm-4.7-flash was
 
 Selection is re-run monthly by a scheduled benchmark that also lists new
 tool-capable models from the live catalog (issue #4).
+
+**2026-08-23 benchmark outcome:** `openai/gpt-oss-120b` is the default — the
+only candidate near 600 ms p50 (runners-up `gpt-5.6-luna-fast`, `gpt-5-nano`,
+`gpt-5.6-luna` sit at 1.1–1.2 s), ~$0.11/month, 97% cache hits, clean
+behavior scores once the session loop refused `complete_session` with an
+asked-but-unrecorded answer (a protocol gap the benchmark exposed). The
+previous default `zai/glm-4.7-flash` failed protocol or behavior in every
+run. Haiku 4.5 and Gemini 3.7 Flash pass everything but exceed the ceiling
+without explicit cache markers, and are 3× slower.
+

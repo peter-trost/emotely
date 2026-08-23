@@ -12,7 +12,7 @@ try {
 }
 
 export const modelUnderTest =
-  process.env["EMOTELY_MODEL"] ?? "zai/glm-4.7-flash";
+  process.env["EMOTELY_MODEL"] ?? "openai/gpt-oss-120b";
 // Judge: open source, cheap, and from a different family than the candidates
 // it grades (avoids same-family self-preference). Benched 2026-08-21 for
 // schema reliability + verdict quality: qwen3.7-plus 5/5 on both; deepseek

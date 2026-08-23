@@ -14,10 +14,12 @@ export type TokenUsage = {
   outputTokens: number;
 };
 
-// Verified against the gateway model catalog on 2026-08-20; re-verify in #4's
-// benchmark rather than trusting these to stay current.
+// Rates for the default model only, verified against the gateway catalog on
+// 2026-08-23; the benchmark reads live prices, this is for the PR-gate eval.
+// gpt-oss-120b publishes no cache-read rate, so cached tokens bill at the
+// input rate here (conservative — the live reading was 97% cached).
 export const MODEL_RATES: Record<string, ModelRates> = {
-  "zai/glm-4.7-flash": { inputPerM: 0.07, outputPerM: 0.4 },
+  "openai/gpt-oss-120b": { inputPerM: 0.1, outputPerM: 0.5 },
 };
 
 const TOKENS_PER_MILLION = 1_000_000;
