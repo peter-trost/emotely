@@ -173,7 +173,7 @@ function ineligibilityReasons(
       reasons.push(`${name.split(":")[0]} ${passes}/${SCENARIO_RUNS}`);
     }
   }
-  if (monthlyUsd > BUDGET_USD_PER_MONTH) {
+  if (monthlyUsd !== NOT_MEASURED && monthlyUsd > BUDGET_USD_PER_MONTH) {
     reasons.push(`$${monthlyUsd.toFixed(2)}/month over budget`);
   }
   if (protocol.crashes > 0) {
@@ -246,7 +246,7 @@ const benchmarkReports = await runPool(models, async (id) => {
   process.stderr.write(`benchmarking ${id}…\n`);
   const report = await benchmarkModel(id, liveCatalog.get(id));
   process.stderr.write(
-    `  ${id}: ${report.eligible ? "eligible" : report.reason} p50=${Math.round(report.p50Ms)}ms\n`,
+    `  ${id}: ${report.eligible ? "eligible" : report.reason} p50=${report.p50Ms === NOT_MEASURED ? "—" : `${Math.round(report.p50Ms)}ms`}\n`,
   );
   return report;
 });
