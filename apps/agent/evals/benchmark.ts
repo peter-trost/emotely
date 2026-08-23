@@ -159,6 +159,10 @@ async function runScenarios(id: string): Promise<Record<string, number>> {
       }
       if (failure === null) {
         count++;
+      } else {
+        process.stderr.write(
+          `  ${id} ${scenario.name.split(":")[0]} run ${i + 1}: ${failure}\n`,
+        );
       }
     }
     passes[scenario.name] = count;
