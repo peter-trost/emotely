@@ -53,19 +53,25 @@ const median = (values: number[]): number =>
     P50,
   );
 
-function protocolOk(
+/** Per-question protocol violations; empty means the run passed. */
+function protocolViolations(
   answers: Record<string, { answer_type: string; value: unknown }>,
-): boolean {
-  return defaultQuestionSet.questions.every((q) => {
+): string[] {
+  const violations: string[] = [];
+  for (const q of defaultQuestionSet.questions) {
     const recorded = answers[q.id];
-    if (!recorded || recorded.answer_type !== q.answer_type) {
-      return false;
+    if (!recorded) {
+      violations.push(`${q.id}: unanswered`);
+    } else if (recorded.answer_type !== q.answer_type) {
+      violations.push(`${q.id}: ${recorded.answer_type} ≠ ${q.answer_type}`);
+    } else if (
+      q.min_answers !== undefined &&
+      !(Array.isArray(recorded.value) && recorded.value.length >= q.min_answers)
+    ) {
+      violations.push(`${q.id}: fewer than ${q.min_answers} answers`);
     }
-    return (
-      q.min_answers === undefined ||
-      (Array.isArray(recorded.value) && recorded.value.length >= q.min_answers)
-    );
-  });
+  }
+  return violations;
 }
 
 type ProtocolStats = {
@@ -110,8 +116,13 @@ async function runProtocol(
           ? 0
           : result.usage.cacheReadTokens / result.usage.inputTokens,
       );
-      if (protocolOk(result.answers)) {
+      const violations = protocolViolations(result.answers);
+      if (violations.length === 0) {
         stats.passes++;
+      } else {
+        process.stderr.write(
+          `  ${id} protocol violations: ${violations.join(", ")}\n`,
+        );
       }
     } catch (err) {
       stats.crashes++;
