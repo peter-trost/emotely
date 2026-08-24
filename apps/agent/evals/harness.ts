@@ -1,6 +1,9 @@
 import process from "node:process";
-import type { JSONValue, ModelMessage } from "ai";
-import type { SessionClient } from "../src/session.ts";
+import type { JSONValue, LanguageModel, ModelMessage } from "ai";
+import { judgeSession } from "../src/judge.ts";
+import type { QuestionSet, SessionClient } from "../src/session.ts";
+import { runSession } from "../src/session.ts";
+import { miniSet, type Scenario } from "./scenarios.ts";
 
 try {
   process.loadEnvFile(new URL("../.env.local", import.meta.url).pathname);
@@ -9,7 +12,7 @@ try {
 }
 
 export const modelUnderTest =
-  process.env["EMOTELY_MODEL"] ?? "zai/glm-4.7-flash";
+  process.env["EMOTELY_MODEL"] ?? "openai/gpt-oss-120b";
 // Judge: open source, cheap, and from a different family than the candidates
 // it grades (avoids same-family self-preference). Benched 2026-08-21 for
 // schema reliability + verdict quality: qwen3.7-plus 5/5 on both; deepseek
@@ -18,12 +21,15 @@ export const modelUnderTest =
 export const judgeModel =
   process.env["EMOTELY_JUDGE_MODEL"] ?? "alibaba/qwen3.7-plus";
 
-/** Scripted user: answers each question from a canned map. */
+/** Scripted user: answers each question from a canned map and remembers what was asked. */
 export function scriptedClient(
   answers: Record<string, JSONValue>,
-): SessionClient {
+): SessionClient & { asked: Set<string> } {
+  const asked = new Set<string>();
   return {
+    asked,
     askQuestion: async (input) => {
+      asked.add(input.question_id);
       const answer = answers[input.question_id];
       if (answer === undefined) {
         throw new Error(`fixture has no answer for ${input.question_id}`);
@@ -61,3 +67,53 @@ export function formatTranscript(messages: ModelMessage[]): string {
 /** N runs with a 2/3 pass-rate gate (single runs must pass outright). */
 export const evalRuns = Number(process.env["EVAL_RUNS"] ?? "1");
 export const requiredPasses = Math.ceil((evalRuns * 2) / 3);
+
+/** Tells the judge what "complete" means for this session. */
+export function describeQuestionSet(set: QuestionSet): string {
+  return `The question set has exactly ${set.questions.length} question(s); the session is complete once each has an answer and complete_session was called:\n${set.questions.map((q, i) => `${i + 1}. ${q.id}: "${q.text}" (${q.answer_type})`).join("\n")}`;
+}
+
+/** One scenario run; returns null on pass, a failure description otherwise. */
+export async function runScenarioOnce(
+  scenario: Scenario,
+  model: LanguageModel,
+): Promise<string | null> {
+  // A crashed run (model emitted malformed tool input, gateway error)
+  // counts as a failed run instead of aborting the scenario.
+  let result: Awaited<ReturnType<typeof runSession>>;
+  const client = scriptedClient(scenario.answers);
+  try {
+    result = await runSession({ questionSet: miniSet, client, model });
+  } catch (err) {
+    return `session crashed — ${String(err)}`;
+  }
+
+  // Every question must be asked AND answered: an answer recorded without
+  // asking is a fabricated answer, which the judge may or may not notice.
+  const machineOk =
+    result.summary.length > 0 &&
+    miniSet.questions.every(
+      (q) => client.asked.has(q.id) && result.answers[q.id],
+    );
+
+  const verdicts = await judgeSession({
+    model: judgeModel,
+    transcript: formatTranscript(result.messages),
+    rubrics: scenario.rubrics,
+    context: describeQuestionSet(miniSet),
+  });
+  const failed = verdicts.filter((v) => !v.pass);
+
+  if (machineOk && failed.length === 0) {
+    return null;
+  }
+  const unasked = miniSet.questions
+    .filter((q) => !client.asked.has(q.id))
+    .map((q) => q.id);
+  const machineNote = machineOk
+    ? ""
+    : `incomplete session${unasked.length > 0 ? ` (never asked: ${unasked.join(", ")})` : ""}; `;
+  return `${machineNote}${failed
+    .map((v) => `"${v.rubric}" — ${v.reason}`)
+    .join("; ")}`;
+}

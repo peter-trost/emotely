@@ -5,6 +5,7 @@
       "**",
       "!**/dist",
       "!apps/app",
+      "!.claude/worktrees",
       "!**/.vercel",
       "!.entire/logs",
       "!.entire/metadata",

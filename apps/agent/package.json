@@ -8,7 +8,8 @@
     "test": "tsc --build && node --test \"src/*.test.ts\"",
     "session": "node src/cli.ts",
     "eval": "tsc --build && node --test \"evals/protocol.eval.ts\"",
-    "eval:behavior": "tsc --build && node --test \"evals/behavior.eval.ts\""
+    "eval:behavior": "tsc --build && node --test \"evals/behavior.eval.ts\"",
+    "benchmark": "tsc --build && node evals/benchmark.ts"
   },
   "dependencies": {
     "@emotely/contract": "workspace:*",

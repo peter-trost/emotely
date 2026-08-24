@@ -1,0 +1,34 @@
+name: Monthly model benchmark
+
+on:
+  schedule:
+    - cron: "0 4 1 * *"
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    environment: ci
+    permissions:
+      contents: read
+      issues: write
+    env:
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Ranks the candidate models (ADR 0003) and lists new tool-capable models
+      # from the live catalog; the report lands as an issue to decide on.
+      - run: pnpm --filter @emotely/agent benchmark > report.md
+      - run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Model benchmark $(date -u +%Y-%m) — review ranking + new models" \
+            --label enhancement \
+            --body-file report.md

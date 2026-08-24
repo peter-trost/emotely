@@ -11,7 +11,7 @@ try {
 }
 
 // ponytail: model swap is one env var; PostHog flag payload takes over in issue #5.
-const model = process.env["EMOTELY_MODEL"] ?? "zai/glm-4.7-flash";
+const model = process.env["EMOTELY_MODEL"] ?? "openai/gpt-oss-120b";
 
 // Piped stdin (the scripted driver) EOF-closes readline before the first
 // question, so pre-read all lines in that case; interactive keeps readline.

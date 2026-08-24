@@ -93,10 +93,14 @@ const complete = (id: string, summary: string): MockContent => ({
 
 describe("runSession", () => {
   it("rejects an answer below min_answers back to the model without storing it", async () => {
+    // Too few answers are rejected; completing is refused until the asked
+    // question has a recorded answer, so the model must retry with enough.
     const model = scriptedModel([
       [ask("c1", qGrateful)],
       [record("c2", "q-grateful", "text_list", ["just one", "and two"])],
-      [complete("c3", "Gave up after the rejection.")],
+      [complete("c3", "Tried to give up after the rejection.")],
+      [record("c4", "q-grateful", "text_list", ["one", "two", "three"])],
+      [complete("c5", "Three things after a nudge.")],
       [{ type: "text", text: "Done." }],
     ]);
     const client: SessionClient = {
@@ -105,7 +109,11 @@ describe("runSession", () => {
 
     const result = await runSession({ questionSet: set, client, model });
 
-    assert.equal(result.answers["q-grateful"], undefined);
+    assert.equal(result.summary, "Three things after a nudge.");
+    assert.deepEqual(result.answers["q-grateful"], {
+      answer_type: "text_list",
+      value: ["one", "two", "three"],
+    });
   });
 
   it("halts with an error when the model never calls complete_session", async () => {
@@ -132,6 +140,26 @@ describe("runSession", () => {
       runSession({ questionSet: set, client, model }),
       /round limit/,
     );
+  });
+
+  it("rejects complete_session while an asked question has no recorded answer", async () => {
+    // Model asks, gets the answer, then tries to complete without recording.
+    const model = scriptedModel([
+      [ask("c1", qRate)],
+      [complete("c2", "Done early.")],
+      [record("c3", "q-rate", "rating", 6)],
+      [complete("c4", "Rated 6.")],
+      [{ type: "text", text: "Done." }],
+    ]);
+    const client: SessionClient = { askQuestion: async () => 6 };
+
+    const result = await runSession({ questionSet: set, client, model });
+
+    assert.equal(result.summary, "Rated 6.");
+    assert.deepEqual(result.answers["q-rate"], {
+      answer_type: "rating",
+      value: 6,
+    });
   });
 
   it("a repeated record_answer for the same question overwrites (last write wins)", async () => {
@@ -195,7 +223,11 @@ describe("runSession", () => {
       },
     });
     // 5 model rounds (ask, record, ask, record, complete) at 1+1 mock tokens
-    assert.deepEqual(result.usage, { inputTokens: 5, outputTokens: 5 });
+    assert.deepEqual(result.usage, {
+      inputTokens: 5,
+      cacheReadTokens: 0,
+      outputTokens: 5,
+    });
     // Full conversation is exposed for eval judging: initial user message,
     // model tool calls, and the client's tool results all present.
     assert.equal(result.messages[0]?.role, "user");
@@ -204,5 +236,8 @@ describe("runSession", () => {
     assert.ok(roles.includes("tool"));
     // Evals and PostHog events pin against the versioned prompt id.
     assert.equal(result.promptId, PROMPT_ID);
+    // One latency sample per model round, for the benchmark's p50/p95.
+    assert.equal(result.roundLatenciesMs.length, 5);
+    assert.ok(result.roundLatenciesMs.every((ms) => ms >= 0));
   });
 });
