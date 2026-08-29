@@ -15,6 +15,25 @@ for the load-bearing decisions.
   requires an in-config justification comment next to the override. Never
   fix a diagnostic by weakening a rule without that justification.
 
+## Billing
+
+- **MUST upgrade Vercel to Pro before taking any payment.** The account hosting
+  `emotely-agent` is on **Hobby** as of 2026-08-29 (downgraded from Pro during
+  the IAKUVO shutdown to cut costs). Before emotely accepts its first payment —
+  or advertises a paid tier, runs ads, or asks for donations — it MUST be back
+  on Pro. Hobby is non-commercial-only: Vercel defines commercial usage as any
+  deployment "used for the purpose of financial gain of anyone involved in any
+  part of the production of the project", with no de-minimis threshold, and
+  reserves the right to terminate Hobby projects without notice. Treat this as a
+  release-blocking item on the payments work, not background cleanup. Source:
+  [Fair Use Guidelines](https://vercel.com/docs/limits/fair-use-guidelines)
+  § "Commercial usage"; [Terms of Service](https://vercel.com/legal/terms) § 4.
+- **AI Gateway is not plan-gated** and works on Hobby, so the agent runtime
+  ([ADR 0003](docs/adr/0003-model-gateway-and-cost-ceiling.md)) is unaffected by
+  the downgrade. Only peripheral features are Pro-gated (team-wide provider
+  allowlist, Zero Data Retention, Trace Drains). The downgrade is not a reason to
+  move off the gateway.
+
 ## Tooling
 
 - [Entire](docs/tooling/entire.md) — captures agent sessions and links them to
