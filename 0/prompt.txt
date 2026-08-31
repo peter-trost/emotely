@@ -1,0 +1,4 @@
+Public project token: REDACTED
+project ID: 262464
+
+API key is in clipboard.
