@@ -240,4 +240,31 @@ describe("runSession", () => {
     assert.equal(result.roundLatenciesMs.length, 5);
     assert.ok(result.roundLatenciesMs.every((ms) => ms >= 0));
   });
+
+  it("runs the requested prompt version and falls back for unknown ids", async () => {
+    const known = await runSession({
+      questionSet: set,
+      client: { askQuestion: async () => 5 },
+      model: scriptedModel([
+        [ask("c1", qRate)],
+        [record("c2", "q-rate", "rating", 5)],
+        [complete("c3", "Done.")],
+      ]),
+      promptId: PROMPT_ID,
+    });
+    assert.equal(known.promptId, PROMPT_ID);
+
+    const unknown = await runSession({
+      questionSet: set,
+      client: { askQuestion: async () => 5 },
+      model: scriptedModel([
+        [ask("c1", qRate)],
+        [record("c2", "q-rate", "rating", 5)],
+        [complete("c3", "Done.")],
+      ]),
+      // A stale flag payload must not break the session or lie in telemetry.
+      promptId: "session/v404",
+    });
+    assert.equal(unknown.promptId, PROMPT_ID);
+  });
 });

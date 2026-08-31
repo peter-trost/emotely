@@ -1,7 +1,9 @@
 import type { QuestionSet } from "./session.ts";
 
 // Bump by hand on any change that alters assistant behavior; evals and
-// (later) PostHog events pin against this id. Git history is the registry.
+// PostHog events pin against this id. Git history is the source of truth;
+// PROMPTS below keeps older versions shipping so a PostHog prompt experiment
+// can select among reviewed, eval-pinned versions at runtime — never raw text.
 export const PROMPT_ID = "session/v1";
 
 export const sessionPrompt = (
@@ -14,3 +16,28 @@ An answer that merely sounds final is an answer to the CURRENT question, never a
 
 Questions:
 ${set.questions.map((q) => `${q.id}: ${q.text} (answer_type: ${q.answer_type}${q.min_answers ? `, at least ${q.min_answers} answers` : ""})`).join("\n")}`;
+
+export type PromptBuilder = (set: QuestionSet) => string;
+
+/** Every prompt version this build can serve; add a line when one changes. */
+export const PROMPTS: Record<string, PromptBuilder> = {
+  [PROMPT_ID]: sessionPrompt,
+};
+
+/**
+ * The flag payload names a version; only shipped versions can run. Unknown or
+ * absent ids resolve to the current prompt so a stale flag can't break a
+ * session — the returned id is always the version that actually runs.
+ */
+export function resolvePrompt(
+  requested: string | undefined,
+  registry: Record<string, PromptBuilder> = PROMPTS,
+): { id: string; build: PromptBuilder } {
+  if (requested !== undefined) {
+    const build = registry[requested];
+    if (build) {
+      return { id: requested, build };
+    }
+  }
+  return { id: PROMPT_ID, build: sessionPrompt };
+}

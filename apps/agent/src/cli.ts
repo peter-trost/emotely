@@ -6,7 +6,7 @@ import { PostHog } from "posthog-node";
 import { defaultQuestionSet } from "./default-question-set.ts";
 import { runSession, type SessionClient } from "./session.ts";
 import { resolveSessionConfig } from "./session-config.ts";
-import { PROMPT_ID } from "./session-prompt.ts";
+import { PROMPTS } from "./session-prompt.ts";
 import { initTelemetry } from "./telemetry.ts";
 
 try {
@@ -44,9 +44,9 @@ const config = await resolveSessionConfig({
   },
 });
 const model = process.env["EMOTELY_MODEL"] ?? config.model;
-if (config.promptId !== PROMPT_ID) {
+if (!(config.promptId in PROMPTS)) {
   console.warn(
-    `warning: flag payload wants prompt ${config.promptId}, this build ships ${PROMPT_ID}`,
+    `warning: flag payload wants prompt ${config.promptId}, which this build does not ship — using the current prompt`,
   );
 }
 const sessionId = randomUUID();
@@ -116,6 +116,7 @@ try {
     client,
     model,
     attribution: { distinctId: config.distinctId, sessionId },
+    promptId: config.promptId,
   });
 } catch (err) {
   posthog?.captureException(err, config.distinctId, { model, sessionId });
