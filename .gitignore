@@ -12,6 +12,7 @@ dist/
 .vercel/
 
 # Flutter / Dart
+coverage/
 .fvm/
 apps/app/.dart_tool/
 apps/app/build/

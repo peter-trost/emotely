@@ -86,6 +86,10 @@ jobs:
       - run: flutter pub get
       - run: dart format --set-exit-if-changed .
       - run: flutter analyze --fatal-infos
+      # Hard coverage gate; main.dart is the composition root and carries
+      # a coverage:ignore-file marker.
+      - run: dart pub global activate very_good_cli
+      - run: dart pub global run very_good_cli:very_good test --coverage --min-coverage 100
 
   # The single required check. Green only if every job succeeded or was skipped.
   ci-ok:
