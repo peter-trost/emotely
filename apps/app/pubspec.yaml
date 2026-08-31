@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.2
+  sdk: ^3.13.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -32,6 +32,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
+  flutter_bloc: ^9.1.1
+  material_ui: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -49,6 +51,13 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  fonts:
+    - family: Baskervville
+      fonts:
+        - asset: assets/fonts/Baskervville.ttf
+        - asset: assets/fonts/Baskervville-Italic.ttf
+          style: italic
 
   # To add assets to your application, add an assets section, like this:
   # assets:
