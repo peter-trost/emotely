@@ -1,0 +1,5 @@
+# The agent deploy needs the TS workspace only.
+apps/app
+docs
+.github
+*.log

@@ -39,9 +39,7 @@ const handler = createAdvanceSessionHandler({
     }),
 });
 
-export default function advanceSessionEndpoint(
-  request: Request,
-): Promise<Response> {
+export function POST(request: Request): Promise<Response> {
   const response = handler(request);
   waitUntil(response.then(() => flushTelemetry()));
   return response;

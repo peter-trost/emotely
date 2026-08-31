@@ -31,3 +31,5 @@ apps/app/**/GeneratedPluginRegistrant.*
 # OS / editor
 .DS_Store
 *.log
+.vercel
+.env*

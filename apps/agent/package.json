@@ -9,7 +9,9 @@
     "session": "node src/cli.ts",
     "eval": "tsc --build && node --test \"evals/protocol.eval.ts\"",
     "eval:behavior": "tsc --build && node --test \"evals/behavior.eval.ts\"",
-    "benchmark": "tsc --build && node evals/benchmark.ts"
+    "benchmark": "tsc --build && node evals/benchmark.ts",
+    "build": "tsc --build",
+    "smoke": "node scripts/live-smoke.ts"
   },
   "dependencies": {
     "@ai-sdk/otel": "1.0.77",

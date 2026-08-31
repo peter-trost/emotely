@@ -6,7 +6,7 @@
     "rewriteRelativeImportExtensions": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "api/**/*.ts"],
+  "include": ["src/**/*.ts", "api/**/*.ts", "scripts/**/*.ts"],
   "references": [
     {
       "path": "../../packages/contract"

@@ -78,12 +78,17 @@
       }
     },
     {
-      // Vercel functions must default-export their handler, and function
-      // entry points are env-driven composition roots like the CLI.
-      "includes": ["apps/agent/api/**"],
+      // Vercel functions must default-export their handler; function entry
+      // points and ops scripts are env-driven and speak via stdout.
+      "includes": ["apps/agent/api/**", "apps/agent/scripts/**"],
       "linter": {
         "rules": {
-          "style": { "noDefaultExport": "off", "noProcessEnv": "off" }
+          "style": {
+            "noDefaultExport": "off",
+            "noProcessEnv": "off",
+            "noMagicNumbers": "off"
+          },
+          "suspicious": { "noConsole": "off" }
         }
       }
     },
