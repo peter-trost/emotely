@@ -1,0 +1,16 @@
+Public project token: REDACTED
+project ID: 262464
+
+API key is in clipboard.
+
+---
+
+address the review feedback
+
+---
+
+can you elaborate on "If you want the flag to genuinely select prompt versions" – isn't that the flag's purpose? Configuring the model and prompt to use?
+
+---
+
+merge #25 and ship the selection mechanism as a follow-up. Prompt experiments are definitely something we want to have
