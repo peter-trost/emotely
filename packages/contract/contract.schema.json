@@ -13,10 +13,20 @@
       },
       "answer_type": {
         "type": "string",
-        "enum": ["color", "emoji", "longtext", "rating", "text_list"]
+        "enum": [
+          "color",
+          "emoji",
+          "longtext",
+          "rating",
+          "text_list"
+        ]
       }
     },
-    "required": ["question_id", "question", "answer_type"]
+    "required": [
+      "question_id",
+      "question",
+      "answer_type"
+    ]
   },
   "record_answer": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -44,7 +54,10 @@
                 }
               }
             },
-            "required": ["answer_type", "value"]
+            "required": [
+              "answer_type",
+              "value"
+            ]
           },
           {
             "type": "object",
@@ -62,7 +75,10 @@
                 }
               }
             },
-            "required": ["answer_type", "value"]
+            "required": [
+              "answer_type",
+              "value"
+            ]
           },
           {
             "type": "object",
@@ -76,7 +92,10 @@
                 "minLength": 1
               }
             },
-            "required": ["answer_type", "value"]
+            "required": [
+              "answer_type",
+              "value"
+            ]
           },
           {
             "type": "object",
@@ -91,7 +110,10 @@
                 "maximum": 10
               }
             },
-            "required": ["answer_type", "value"]
+            "required": [
+              "answer_type",
+              "value"
+            ]
           },
           {
             "type": "object",
@@ -109,12 +131,18 @@
                 }
               }
             },
-            "required": ["answer_type", "value"]
+            "required": [
+              "answer_type",
+              "value"
+            ]
           }
         ]
       }
     },
-    "required": ["question_id", "answer"]
+    "required": [
+      "question_id",
+      "answer"
+    ]
   },
   "complete_session": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -125,6 +153,8 @@
         "minLength": 1
       }
     },
-    "required": ["summary"]
+    "required": [
+      "summary"
+    ]
   }
 }
