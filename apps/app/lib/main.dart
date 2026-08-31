@@ -1,3 +1,5 @@
+// coverage:ignore-file
+// Composition root; behavior lives in EmotelyApp and is tested there.
 import 'package:emotely/app/theme.dart';
 import 'package:material_ui/material_ui.dart';
 
