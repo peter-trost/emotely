@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1CVDBPGQXM47RTKQEH724PM",
+  "strategy": "manual-commit",
+  "branch": "feat/advance-session",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".github/workflows/nightly-evals.yml"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 6547,
+    "cache_creation_tokens": 3143485,
+    "cache_read_tokens": 221207596,
+    "output_tokens": 411373,
+    "api_call_count": 545
+  }
+}
