@@ -12,8 +12,15 @@
     "benchmark": "tsc --build && node evals/benchmark.ts"
   },
   "dependencies": {
+    "@ai-sdk/otel": "1.0.77",
     "@emotely/contract": "workspace:*",
-    "ai": "7.0.70",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/resources": "^2.10.0",
+    "@opentelemetry/sdk-trace-base": "^2.10.0",
+    "@opentelemetry/sdk-trace-node": "^2.10.0",
+    "@posthog/ai": "8.8.0",
+    "ai": "7.0.77",
+    "posthog-node": "5.51.1",
     "zod": "4.4.3"
   },
   "devDependencies": {

@@ -7,7 +7,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "lint": "biome ci .",
+    "lint": "biome ci --error-on-warnings .",
     "format": "biome check --write .",
     "typecheck": "tsc --build"
   },

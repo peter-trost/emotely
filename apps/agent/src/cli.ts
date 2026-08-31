@@ -1,8 +1,13 @@
+import { randomUUID } from "node:crypto";
 import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import type { JSONValue } from "ai";
+import { PostHog } from "posthog-node";
 import { defaultQuestionSet } from "./default-question-set.ts";
 import { runSession, type SessionClient } from "./session.ts";
+import { resolveSessionConfig } from "./session-config.ts";
+import { PROMPT_ID } from "./session-prompt.ts";
+import { initTelemetry } from "./telemetry.ts";
 
 try {
   process.loadEnvFile(new URL("../.env.local", import.meta.url).pathname);
@@ -10,8 +15,41 @@ try {
   // fine — key may come from the environment
 }
 
-// ponytail: model swap is one env var; PostHog flag payload takes over in issue #5.
-const model = process.env["EMOTELY_MODEL"] ?? "openai/gpt-oss-120b";
+const posthogKey = process.env["POSTHOG_KEY"];
+const posthogHost = process.env["POSTHOG_HOST"];
+if (posthogKey && !posthogHost) {
+  throw new Error("POSTHOG_KEY is set but POSTHOG_HOST is not — set both.");
+}
+const shutdownTelemetry = initTelemetry(
+  posthogKey && posthogHost
+    ? { posthog: { projectToken: posthogKey, host: posthogHost } }
+    : {},
+);
+const posthog =
+  posthogKey && posthogHost
+    ? new PostHog(posthogKey, {
+        host: posthogHost,
+        enableExceptionAutocapture: false,
+      })
+    : undefined;
+
+// Model priority: env override → 'agent-model' flag payload (cached) → default.
+const config = await resolveSessionConfig({
+  fetchPayload: async (distinctId) => {
+    if (!posthog) {
+      return;
+    }
+    const flags = await posthog.evaluateFlags(distinctId);
+    return flags.getFlagPayload("agent-model");
+  },
+});
+const model = process.env["EMOTELY_MODEL"] ?? config.model;
+if (config.promptId !== PROMPT_ID) {
+  console.warn(
+    `warning: flag payload wants prompt ${config.promptId}, this build ships ${PROMPT_ID}`,
+  );
+}
+const sessionId = randomUUID();
 
 // Piped stdin (the scripted driver) EOF-closes readline before the first
 // question, so pre-read all lines in that case; interactive keeps readline.
@@ -71,12 +109,23 @@ const client: SessionClient = {
 console.log(
   `emotely journaling session — set "${defaultQuestionSet.name}", model ${model}`,
 );
-const result = await runSession({
-  questionSet: defaultQuestionSet,
-  client,
-  model,
-});
-rl?.close();
+let result: Awaited<ReturnType<typeof runSession>>;
+try {
+  result = await runSession({
+    questionSet: defaultQuestionSet,
+    client,
+    model,
+    attribution: { distinctId: config.distinctId, sessionId },
+  });
+} catch (err) {
+  posthog?.captureException(err, config.distinctId, { model, sessionId });
+  throw err;
+} finally {
+  rl?.close();
+  // Both clients queue in memory; an unflushed CLI exit silently loses events.
+  await shutdownTelemetry();
+  await posthog?.shutdown();
+}
 
 console.log("\n--- journal entry ---");
 console.log(result.summary);

@@ -21,7 +21,7 @@ The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
 2. [Tools-first harness](docs/adr/0002-tools-first-harness.md) — tool calls, not prompted JSON
 3. [Model gateway + cost ceiling](docs/adr/0003-model-gateway-and-cost-ceiling.md) — provider-agnostic, cheap-model constraint
 4. [PostHog observability stack](docs/adr/0004-posthog-observability-stack.md) — full bundle, no Sentry
-5. [Journal content privacy](docs/adr/0005-journal-content-privacy-mode.md) — `privacyMode` on, metadata only
+5. [Journal content privacy](docs/adr/0005-journal-content-privacy-mode.md) — content never recorded, metadata only (leak-tested)
 6. [Flutter iOS + Android only](docs/adr/0006-flutter-ios-android-only.md) — no web, demand-driven expansion
 7. [Protected `main`](docs/adr/0007-protected-main-for-autonomous-agents.md) — PR + CI gate, because agents write here
 
@@ -90,8 +90,9 @@ Adopted day one (all free at our scale, ~0€ at 1k MAU):
 - **Product analytics** — `posthog_flutter` (app) + `posthog-node` (agent).
 - **LLM observability** — `@posthog/ai` with `experimental_telemetry` on AI SDK
   calls → `$ai_generation` events (tokens, cost, latency, traces per model).
-  **`privacyMode` ON** — journal text never leaves the device to PostHog; only
-  metadata is captured. Non-negotiable for a journaling app.
+  **content recording OFF at the source** (`recordInputs`/`recordOutputs`
+  false; a CI leak test proves no journal text reaches spans). Only metadata
+  is captured. Non-negotiable for a journaling app.
 - **Feature flags + experiments** — a flag payload `{ model, prompt }` drives
   **server-side model selection** in the agent, no deploy. PostHog's **LLM prompt
   experiments** auto-attribute cost + quality per variant.
@@ -155,7 +156,7 @@ the wild*.
    candidate.
 3. **Benchmark** — rank candidates on latency within the cost ceiling; pick the
    fastest reliable one. Gateway decided: Vercel AI Gateway (ADR 0003 amendment).
-4. **PostHog online** — `@posthog/ai` (privacyMode on), flag-driven model
+4. **PostHog online** — OTel span processor (content recording off), flag-driven model
    selection, first LLM prompt experiment.
 5. **`apps/app`** — Flutter shell rendering a widget per tool call, Supabase auth +
    entry persistence, `posthog_flutter`.
