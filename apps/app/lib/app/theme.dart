@@ -8,10 +8,10 @@ ThemeData _theme(Brightness brightness) {
     seedColor: emotelyOrange,
     brightness: brightness,
   );
-  final base = ThemeData(colorScheme: scheme);
-  return base.copyWith(
-    textTheme: base.textTheme.apply(fontFamily: 'Baskervville'),
-    appBarTheme: base.appBarTheme.copyWith(
+  final seeded = ThemeData(colorScheme: scheme);
+  return seeded.copyWith(
+    textTheme: seeded.textTheme.apply(fontFamily: 'Baskervville'),
+    appBarTheme: seeded.appBarTheme.copyWith(
       elevation: 0,
       scrolledUnderElevation: 4,
     ),
