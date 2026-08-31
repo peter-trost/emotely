@@ -12,16 +12,15 @@ import { scriptedSessionModel } from "./test-helpers.ts";
 
 const SENTINEL = "SENTINEL_JOURNAL_TEXT_9f4e";
 
+const bestQuestion = {
+  id: "q-best",
+  text: "What was the best thing today?",
+  answer_type: "longtext",
+} satisfies QuestionSet["questions"][number];
 const set: QuestionSet = {
   id: "leak-set",
   name: "Leak set",
-  questions: [
-    {
-      id: "q-best",
-      text: "What was the best thing today?",
-      answer_type: "longtext",
-    },
-  ],
+  questions: [bestQuestion],
 };
 
 const exporter = new InMemorySpanExporter();
@@ -35,9 +34,9 @@ describe("telemetry privacy", () => {
     const model = scriptedSessionModel([
       {
         ask: {
-          questionId: "q-best",
-          question: set.questions[0]?.text ?? "",
-          answerType: "longtext",
+          questionId: bestQuestion.id,
+          question: bestQuestion.text,
+          answerType: bestQuestion.answer_type,
         },
       },
       {

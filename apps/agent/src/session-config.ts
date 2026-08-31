@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -16,21 +16,24 @@ type FlagPayload = z.infer<typeof payloadSchema>;
 
 export type SessionConfig = FlagPayload & { distinctId: string };
 
+function readText(path: string): string | undefined {
+  return existsSync(path) ? readFileSync(path, "utf8") : undefined;
+}
+
 function readJson(path: string): unknown {
+  const raw = readText(path);
   try {
-    return JSON.parse(readFileSync(path, "utf8"));
-  } catch {}
+    return raw === undefined ? undefined : JSON.parse(raw);
+  } catch {
+    return null; // malformed cache — schema validation rejects null downstream
+  }
 }
 
 function stableDistinctId(stateDir: string): string {
   const path = join(stateDir, ID_FILE);
-  try {
-    const existing = readFileSync(path, "utf8").trim();
-    if (existing) {
-      return existing;
-    }
-  } catch {
-    // first run — fall through and create one
+  const existing = readText(path)?.trim();
+  if (existing) {
+    return existing;
   }
   const id = randomUUID();
   writeFileSync(path, `${id}\n`);

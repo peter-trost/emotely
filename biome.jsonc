@@ -56,6 +56,7 @@
         }
       },
       "suspicious": {
+        "noEmptyBlockStatements": "error",
         // Interface-mandated async implementations often need no await
         // (tool execute callbacks, scripted clients).
         "useAwait": "off"

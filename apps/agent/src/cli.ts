@@ -6,6 +6,7 @@ import { PostHog } from "posthog-node";
 import { defaultQuestionSet } from "./default-question-set.ts";
 import { runSession, type SessionClient } from "./session.ts";
 import { resolveSessionConfig } from "./session-config.ts";
+import { PROMPT_ID } from "./session-prompt.ts";
 import { initTelemetry } from "./telemetry.ts";
 
 try {
@@ -15,18 +16,22 @@ try {
 }
 
 const posthogKey = process.env["POSTHOG_KEY"];
-const posthogHost = process.env["POSTHOG_HOST"] ?? "https://eu.i.posthog.com";
+const posthogHost = process.env["POSTHOG_HOST"];
+if (posthogKey && !posthogHost) {
+  throw new Error("POSTHOG_KEY is set but POSTHOG_HOST is not — set both.");
+}
 const shutdownTelemetry = initTelemetry(
-  posthogKey
+  posthogKey && posthogHost
     ? { posthog: { projectToken: posthogKey, host: posthogHost } }
     : {},
 );
-const posthog = posthogKey
-  ? new PostHog(posthogKey, {
-      host: posthogHost,
-      enableExceptionAutocapture: false,
-    })
-  : undefined;
+const posthog =
+  posthogKey && posthogHost
+    ? new PostHog(posthogKey, {
+        host: posthogHost,
+        enableExceptionAutocapture: false,
+      })
+    : undefined;
 
 // Model priority: env override → 'agent-model' flag payload (cached) → default.
 const config = await resolveSessionConfig({
@@ -39,6 +44,11 @@ const config = await resolveSessionConfig({
   },
 });
 const model = process.env["EMOTELY_MODEL"] ?? config.model;
+if (config.promptId !== PROMPT_ID) {
+  console.warn(
+    `warning: flag payload wants prompt ${config.promptId}, this build ships ${PROMPT_ID}`,
+  );
+}
 const sessionId = randomUUID();
 
 // Piped stdin (the scripted driver) EOF-closes readline before the first
@@ -105,11 +115,7 @@ try {
     questionSet: defaultQuestionSet,
     client,
     model,
-    attribution: {
-      distinctId: config.distinctId,
-      sessionId,
-      promptId: config.promptId,
-    },
+    attribution: { distinctId: config.distinctId, sessionId },
   });
 } catch (err) {
   posthog?.captureException(err, config.distinctId, { model, sessionId });

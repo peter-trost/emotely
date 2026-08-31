@@ -164,7 +164,7 @@ export async function runSession(opts: {
   /** Sampling temperature; evals pin 0 for stability, product uses default. */
   temperature?: number;
   /** Joins spans to a person + session in PostHog; absent = anonymous. */
-  attribution?: { distinctId: string; sessionId: string; promptId: string };
+  attribution?: { distinctId: string; sessionId: string };
 }): Promise<SessionResult> {
   const { questionSet, client, model, temperature, attribution } = opts;
   const answers: SessionResult["answers"] = {};
@@ -196,7 +196,9 @@ export async function runSession(opts: {
       tools,
       stopWhen: isStepCount(1),
       ...(temperature === undefined ? {} : { temperature }),
-      ...(attribution === undefined ? {} : { runtimeContext: attribution }),
+      ...(attribution === undefined
+        ? {}
+        : { runtimeContext: { ...attribution, promptId: PROMPT_ID } }),
       telemetry: SESSION_TELEMETRY,
       messages,
     });

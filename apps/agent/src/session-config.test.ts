@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { DEFAULT_MODEL, resolveSessionConfig } from "./session-config.ts";
+import { PROMPT_ID } from "./session-prompt.ts";
 
 const dir = () => mkdtempSync(join(tmpdir(), "emotely-config-"));
 
@@ -23,6 +24,7 @@ describe("resolveSessionConfig", () => {
       readFileSync(join(stateDir, "agent-model.json"), "utf8"),
     );
     assert.equal(cached.model, "test/flag-model");
+    assert.equal(cached.promptId, "session/v9");
   });
 
   it("falls back to the hardcoded default when PostHog is unreachable", async () => {
@@ -33,6 +35,7 @@ describe("resolveSessionConfig", () => {
       },
     });
     assert.equal(config.model, DEFAULT_MODEL);
+    assert.equal(config.promptId, PROMPT_ID);
   });
 
   it("falls back to the default when the fetch exceeds the timeout", async () => {
@@ -45,6 +48,7 @@ describe("resolveSessionConfig", () => {
         ),
     });
     assert.equal(config.model, DEFAULT_MODEL);
+    assert.equal(config.promptId, PROMPT_ID);
   });
 
   it("serves the cached payload when the current fetch fails", async () => {
@@ -60,6 +64,7 @@ describe("resolveSessionConfig", () => {
       },
     });
     assert.equal(config.model, "test/cached-model");
+    assert.equal(config.promptId, "session/v8");
   });
 
   it("ignores malformed payloads", async () => {
@@ -68,6 +73,7 @@ describe("resolveSessionConfig", () => {
       fetchPayload: async () => ({ model: 42 }),
     });
     assert.equal(config.model, DEFAULT_MODEL);
+    assert.equal(config.promptId, PROMPT_ID);
   });
 
   it("generates a stable anonymous distinct id per state dir", async () => {
