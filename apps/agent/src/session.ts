@@ -17,6 +17,7 @@ import {
 } from "ai";
 import type { TokenUsage } from "./cost.ts";
 import { PROMPT_ID, sessionPrompt } from "./session-prompt.ts";
+import { PRIVACY_TELEMETRY } from "./telemetry.ts";
 
 type ListAnswerType = Extract<AnswerType, "color" | "emoji" | "text_list">;
 type ScalarAnswerType = Exclude<AnswerType, ListAnswerType>;
@@ -151,14 +152,21 @@ function roundGuard(questionSet: QuestionSet): { next: () => void } {
   };
 }
 
+const SESSION_TELEMETRY = {
+  ...PRIVACY_TELEMETRY,
+  includeRuntimeContext: { distinctId: true, sessionId: true, promptId: true },
+} as const;
+
 export async function runSession(opts: {
   questionSet: QuestionSet;
   client: SessionClient;
   model: LanguageModel;
   /** Sampling temperature; evals pin 0 for stability, product uses default. */
   temperature?: number;
+  /** Joins spans to a person + session in PostHog; absent = anonymous. */
+  attribution?: { distinctId: string; sessionId: string; promptId: string };
 }): Promise<SessionResult> {
-  const { questionSet, client, model, temperature } = opts;
+  const { questionSet, client, model, temperature, attribution } = opts;
   const answers: SessionResult["answers"] = {};
   const asked = new Set<string>();
   const roundLatenciesMs: number[] = [];
@@ -188,6 +196,8 @@ export async function runSession(opts: {
       tools,
       stopWhen: isStepCount(1),
       ...(temperature === undefined ? {} : { temperature }),
+      ...(attribution === undefined ? {} : { runtimeContext: attribution }),
+      telemetry: SESSION_TELEMETRY,
       messages,
     });
     roundLatenciesMs.push(performance.now() - startedAt);
