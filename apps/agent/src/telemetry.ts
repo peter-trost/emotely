@@ -27,6 +27,13 @@ export const PRIVACY_TELEMETRY = {
  * Returns a shutdown hook that flushes queued spans; a CLI that exits without
  * awaiting it silently loses events.
  */
+let activeProcessor: SpanProcessor | undefined;
+
+/** Flush queued spans without tearing the pipeline down (serverless use). */
+export async function flushTelemetry(): Promise<void> {
+  await activeProcessor?.forceFlush();
+}
+
 export function initTelemetry(
   opts: {
     posthog?: { projectToken: string; host: string };
@@ -37,7 +44,9 @@ export function initTelemetry(
   if (opts.testExporter) {
     processors.push(new SimpleSpanProcessor(opts.testExporter));
   } else if (opts.posthog) {
-    processors.push(new PostHogSpanProcessor(opts.posthog));
+    const processor = new PostHogSpanProcessor(opts.posthog);
+    activeProcessor = processor;
+    processors.push(processor);
   } else {
     return async () => {
       // telemetry disabled — nothing to flush

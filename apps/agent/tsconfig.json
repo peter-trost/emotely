@@ -1,11 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "rewriteRelativeImportExtensions": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../../packages/contract" }]
+  "include": ["src/**/*.ts", "api/**/*.ts"],
+  "references": [
+    {
+      "path": "../../packages/contract"
+    }
+  ]
 }

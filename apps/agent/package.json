@@ -19,6 +19,7 @@
     "@opentelemetry/sdk-trace-base": "^2.10.0",
     "@opentelemetry/sdk-trace-node": "^2.10.0",
     "@posthog/ai": "8.8.0",
+    "@vercel/functions": "^3.9.5",
     "ai": "7.0.77",
     "posthog-node": "5.51.1",
     "zod": "4.4.3"

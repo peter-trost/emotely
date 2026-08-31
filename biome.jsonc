@@ -78,6 +78,16 @@
       }
     },
     {
+      // Vercel functions must default-export their handler, and function
+      // entry points are env-driven composition roots like the CLI.
+      "includes": ["apps/agent/api/**"],
+      "linter": {
+        "rules": {
+          "style": { "noDefaultExport": "off", "noProcessEnv": "off" }
+        }
+      }
+    },
+    {
       // The CLI's job is stdout and env-driven config.
       "includes": ["apps/agent/src/cli.ts"],
       "linter": {
