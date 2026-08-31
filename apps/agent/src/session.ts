@@ -16,7 +16,7 @@ import {
   tool,
 } from "ai";
 import type { TokenUsage } from "./cost.ts";
-import { PROMPT_ID, sessionPrompt } from "./session-prompt.ts";
+import { resolvePrompt } from "./session-prompt.ts";
 import { PRIVACY_TELEMETRY } from "./telemetry.ts";
 
 type ListAnswerType = Extract<AnswerType, "color" | "emoji" | "text_list">;
@@ -108,6 +108,10 @@ function buildSessionTools(
   };
 }
 
+function emptyUsage(): TokenUsage {
+  return { inputTokens: 0, cacheReadTokens: 0, outputTokens: 0 };
+}
+
 function addUsage(total: TokenUsage, step: LanguageModelUsage): void {
   total.inputTokens += step.inputTokens ?? 0;
   total.cacheReadTokens += step.inputTokenDetails.cacheReadTokens ?? 0;
@@ -165,16 +169,15 @@ export async function runSession(opts: {
   temperature?: number;
   /** Joins spans to a person + session in PostHog; absent = anonymous. */
   attribution?: { distinctId: string; sessionId: string };
+  /** Prompt version to run (flag payload); unknown ids fall back to current. */
+  promptId?: string;
 }): Promise<SessionResult> {
   const { questionSet, client, model, temperature, attribution } = opts;
+  const prompt = resolvePrompt(opts.promptId);
   const answers: SessionResult["answers"] = {};
   const asked = new Set<string>();
   const roundLatenciesMs: number[] = [];
-  const usage: TokenUsage = {
-    inputTokens: 0,
-    cacheReadTokens: 0,
-    outputTokens: 0,
-  };
+  const usage = emptyUsage();
   let summary: string | undefined;
 
   const tools = buildSessionTools(questionSet, answers, asked, (s) => {
@@ -192,13 +195,13 @@ export async function runSession(opts: {
     const startedAt = performance.now();
     const result = await generateText({
       model,
-      instructions: sessionPrompt(questionSet),
+      instructions: prompt.build(questionSet),
       tools,
       stopWhen: isStepCount(1),
       ...(temperature === undefined ? {} : { temperature }),
       ...(attribution === undefined
         ? {}
-        : { runtimeContext: { ...attribution, promptId: PROMPT_ID } }),
+        : { runtimeContext: { ...attribution, promptId: prompt.id } }),
       telemetry: SESSION_TELEMETRY,
       messages,
     });
@@ -222,7 +225,7 @@ export async function runSession(opts: {
     answers,
     usage,
     messages,
-    promptId: PROMPT_ID,
+    promptId: prompt.id,
     roundLatenciesMs,
   };
 }
