@@ -9,7 +9,9 @@
     "session": "node src/cli.ts",
     "eval": "tsc --build && node --test \"evals/protocol.eval.ts\"",
     "eval:behavior": "tsc --build && node --test \"evals/behavior.eval.ts\"",
-    "benchmark": "tsc --build && node evals/benchmark.ts"
+    "benchmark": "tsc --build && node evals/benchmark.ts",
+    "build": "tsc --build",
+    "smoke": "node scripts/live-smoke.ts"
   },
   "dependencies": {
     "@ai-sdk/otel": "1.0.77",
@@ -19,6 +21,7 @@
     "@opentelemetry/sdk-trace-base": "^2.10.0",
     "@opentelemetry/sdk-trace-node": "^2.10.0",
     "@posthog/ai": "8.8.0",
+    "@vercel/functions": "^3.9.5",
     "ai": "7.0.77",
     "posthog-node": "5.51.1",
     "zod": "4.4.3"

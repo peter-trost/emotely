@@ -11,7 +11,8 @@
   },
   "scripts": {
     "typecheck": "tsc --build",
-    "test": "node --test \"src/*.test.ts\""
+    "test": "node --test \"src/*.test.ts\"",
+    "schema": "node src/emit-schema.ts"
   },
   "dependencies": {
     "zod": "4.4.3"

@@ -56,6 +56,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm -r --if-present test
+      # Contract tripwire: the committed JSON Schema must match the zod source.
+      - run: pnpm --filter @emotely/contract schema && git diff --exit-code packages/contract/contract.schema.json
       # Live-model protocol eval (deterministic assertions; judged behavior
       # evals run nightly). Fork PRs have no secrets and skip; anywhere else
       # a missing key is a broken 'ci' environment and fails loudly.
