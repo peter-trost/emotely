@@ -24,6 +24,7 @@ The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
 5. [Journal content privacy](docs/adr/0005-journal-content-privacy-mode.md) — content never recorded, metadata only (leak-tested)
 6. [Flutter iOS + Android only](docs/adr/0006-flutter-ios-android-only.md) — no web, demand-driven expansion
 7. [Protected `main`](docs/adr/0007-protected-main-for-autonomous-agents.md) — PR + CI gate, because agents write here
+8. [Public endpoint abuse controls](docs/adr/0008-public-endpoint-abuse-controls.md) — signed transcripts, caps, WAF rate limit, budget ceiling
 
 The project's language is defined in [`CONTEXT.md`](CONTEXT.md).
 
