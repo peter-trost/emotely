@@ -606,3 +606,28 @@ Then merged #28 and continue with part 2.
 You have access to the chrome tool and can do the dashboard work around rate limiting there, too. Also vercel cli if that helps. (can you rename my team to "peter-trost" when you're on it, please).
 
 #29 looks good, you can merge that.
+
+---
+
+<task-notification>
+<task-id>bq4jos7nq</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/tasks/bq4jos7nq.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for CI on PR #32 to finish and report results" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+upgrade global flutter to 3.47 – that should fix the vgv issue. Then wait for me to review the PRs.
+
+---
+
+#31 is merged.
+
+Read the review comments on #32, then let's discuss the things that need discussion. Once we made the decision there, execute on everything and babysit the PR until it's green again.
+
+---
+
+1. skip for now actually. I'm creating a dedicated open source package for very strict lint rules that we can later add in a refactoring.
+2. agreed on bumping vg analysis now and already address those.
