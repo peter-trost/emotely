@@ -1,3 +1,4 @@
+import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/bloc/session_bloc.dart';
@@ -10,9 +11,10 @@ import 'package:material_ui/material_ui.dart';
 class const SessionPage({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (context) =>
-        SessionBloc(agentClient: context.read<AgentClient>())
-          ..add(const SessionEvent.started()),
+    create: (context) => SessionBloc(
+      agentClient: context.read<AgentClient>(),
+      analytics: context.read<SessionAnalytics>(),
+    )..add(const SessionEvent.started()),
     child: const SessionView(),
   );
 }

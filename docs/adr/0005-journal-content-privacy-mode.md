@@ -26,3 +26,11 @@ errors. Verified live 2026-08-24: zero journal text across all event
 properties in PostHog; tokens, cost, latency, traces, promptId and session
 attribution all present.
 
+The same rule holds on the client (2026-09-05). `posthog_flutter` events are
+built by one class, `SessionAnalytics`, that only ever receives question ids,
+answer types, counts and HTTP status codes — it has no access to question text,
+answer values or the summary, so a leak would be a type error before it was a
+bug. Its CI test walks a whole session with sentinel strings in the question,
+the typed answer, the summary and the recorded answers, and asserts none of them
+appears in any captured event name or property.
+

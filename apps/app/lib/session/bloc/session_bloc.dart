@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/contract/contract.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:emotely/session/agent/agent_client.dart';
@@ -11,8 +14,13 @@ part 'session_state.dart';
 /// Drives one journaling session: start, answer question after question,
 /// finish with the entry. All state the server needs travels in the signed
 /// transcript this bloc holds between rounds.
-class SessionBloc({required final AgentClient _agentClient})
-    extends Bloc<SessionEvent, SessionState> {
+///
+/// Analytics calls are fire-and-forget: they describe the session, they
+/// never gate it.
+class SessionBloc({
+  required final AgentClient _agentClient,
+  required final SessionAnalytics _analytics,
+}) extends Bloc<SessionEvent, SessionState> {
   this : super(const SessionState.initial()) {
     on<SessionStarted>(_onStarted);
     on<SessionAnswered>(_onAnswered);
@@ -27,14 +35,17 @@ class SessionBloc({required final AgentClient _agentClient})
   /// so replaying the exact same request is always safe.
   late Future<AdvanceResponse> Function() _lastRound;
 
-  Future<void> _onStarted(SessionStarted event, Emitter<SessionState> emit) =>
-      _round(emit, _agentClient.advance);
+  Future<void> _onStarted(SessionStarted event, Emitter<SessionState> emit) {
+    unawaited(_analytics.sessionStarted());
+    return _round(emit, _agentClient.advance);
+  }
 
   Future<void> _onAnswered(
     SessionAnswered event,
     Emitter<SessionState> emit,
   ) async {
     if (state case SessionAwaitingAnswer(:final pending)) {
+      unawaited(_analytics.answerSubmitted(question: pending.question));
       await _round(
         emit,
         () => _agentClient.advance(
@@ -49,8 +60,10 @@ class SessionBloc({required final AgentClient _agentClient})
     }
   }
 
-  Future<void> _onRetried(SessionRetried event, Emitter<SessionState> emit) =>
-      _round(emit, _lastRound);
+  Future<void> _onRetried(SessionRetried event, Emitter<SessionState> emit) {
+    unawaited(_analytics.sessionRetried());
+    return _round(emit, _lastRound);
+  }
 
   Future<void> _round(
     Emitter<SessionState> emit,
@@ -64,14 +77,13 @@ class SessionBloc({required final AgentClient _agentClient})
       _signature = response.signature;
       emit(switch (response) {
         AwaitingAnswer(:final pending) => _await(pending),
-        Completed(:final entry) => SessionState.completed(
-          entry: entry,
-          questions: Map<String, AskQuestion>.unmodifiable(_asked),
-        ),
+        Completed(:final entry) => _complete(entry),
       });
     } on AgentException catch (error) {
+      unawaited(_analytics.sessionFailed(statusCode: error.statusCode));
       emit(SessionState.failure(message: error.message));
     } on Exception {
+      unawaited(_analytics.sessionFailed());
       emit(
         const SessionState.failure(
           message: 'Could not reach the journaling assistant.',
@@ -81,10 +93,19 @@ class SessionBloc({required final AgentClient _agentClient})
   }
 
   SessionState _await(PendingQuestion pending) {
+    final index = _asked.length;
     _asked[pending.question.questionId] = pending.question;
-    return SessionState.awaitingAnswer(
-      pending: pending,
-      answered: _asked.length - 1,
+    unawaited(
+      _analytics.questionAsked(question: pending.question, index: index),
+    );
+    return SessionState.awaitingAnswer(pending: pending, answered: index);
+  }
+
+  SessionState _complete(JournalEntry entry) {
+    unawaited(_analytics.sessionCompleted(answers: entry.answers.length));
+    return SessionState.completed(
+      entry: entry,
+      questions: Map<String, AskQuestion>.unmodifiable(_asked),
     );
   }
 }
