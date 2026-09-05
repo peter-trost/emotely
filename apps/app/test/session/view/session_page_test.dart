@@ -87,6 +87,24 @@ void main() {
       expect(find.text('Shipping the session screen.'), findsOneWidget);
     });
 
+    testWidgets('posts wire values, never Dart objects', (tester) async {
+      // Colors are the one type whose Dart value is not its JSON value; the
+      // request body must be encodable, and the agent must see #RRGGBB.
+      final agent = AgentStub()
+        ..script([
+          awaiting(toolCallId: 'c1', question: SessionRobot.colors),
+          awaiting(toolCallId: 'c2', question: SessionRobot.rate),
+        ]);
+      final robot = SessionRobot(tester, agent);
+      await robot.launch();
+      await robot.settle();
+
+      await robot.answerColor('teal');
+
+      expect(robot.lastPostedValue, ['#00897B']);
+      expect(robot.questionText, 'How would you rate your day?');
+    });
+
     testWidgets('a new question never inherits the previous draft', (
       tester,
     ) async {

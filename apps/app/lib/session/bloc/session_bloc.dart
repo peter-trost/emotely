@@ -40,7 +40,10 @@ class SessionBloc({required final AgentClient _agentClient})
         () => _agentClient.advance(
           transcript: _transcript,
           signature: _signature,
-          answer: (toolCallId: pending.toolCallId, value: event.answer.value),
+          answer: (
+            toolCallId: pending.toolCallId,
+            value: event.answer.wireValue,
+          ),
         ),
       );
     }

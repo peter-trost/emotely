@@ -3,6 +3,7 @@ import 'package:emotely/main.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:emotely/session/widgets/answer_input.dart';
+import 'package:emotely/session/widgets/color_input.dart';
 import 'package:emotely/session/widgets/longtext_input.dart';
 import 'package:emotely/session/widgets/rating_input.dart';
 import 'package:emotely/session/widgets/text_list_input.dart';
@@ -55,6 +56,13 @@ class SessionRobot(final WidgetTester tester, final AgentStub agent) {
     await settle();
   }
 
+  Future<void> answerColor(String paletteName) async {
+    await tester.tap(find.byKey(ColorInput.paletteKey(paletteName)));
+    await tester.pump();
+    await tapSubmit(tester, ColorInput.submitKey);
+    await settle();
+  }
+
   Future<void> tapRetry() async {
     await tester.tap(retry);
     await settle();
@@ -78,6 +86,11 @@ class SessionRobot(final WidgetTester tester, final AgentStub agent) {
     questionId: 'q-grateful',
     question: 'What are you grateful for?',
     answerType: AnswerType.textList,
+  );
+  static const colors = AskQuestion(
+    questionId: 'q-colors',
+    question: 'Which colors were your day?',
+    answerType: AnswerType.color,
   );
   static const best = AskQuestion(
     questionId: 'q-best',
