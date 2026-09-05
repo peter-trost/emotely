@@ -17,6 +17,11 @@ analyzer:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+  errors:
+    # freezed places @JsonSerializable / @JsonKey on factory constructors
+    # and parameters by design (its README asks for exactly this override);
+    # the annotations are read by the generator, not the analyzer.
+    invalid_annotation_target: ignore
 
 linter:
   rules:

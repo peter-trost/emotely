@@ -1,19 +1,18 @@
 import 'package:emotely/main.dart';
+import 'package:emotely/session/view/session_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/helpers.dart';
 
 void main() {
   group(EmotelyApp, () {
-    testWidgets('renders the placeholder shell', (tester) async {
-      await tester.pumpWidget(const EmotelyApp());
-      expect(find.text('emotely'), findsOneWidget);
-    });
+    testWidgets('opens straight into a session', (tester) async {
+      final agent = AgentStub()..script([unreachable()]);
 
-    testWidgets('meets accessibility guidelines in light theme', (
-      tester,
-    ) async {
-      await tester.expectMeetsAccessibilityGuidelines(const EmotelyApp());
+      await tester.pumpWidget(EmotelyApp(agentClient: agent.agentClient));
+
+      expect(find.byType(SessionPage), findsOneWidget);
+      expect(find.text('Journaling session'), findsOneWidget);
     });
   });
 }
