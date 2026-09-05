@@ -61,6 +61,11 @@ void main() {
       );
     });
 
+    test('wireValue is what the agent receives', () {
+      expect(const Answer.rating(7).wireValue, 7);
+      expect(const Answer.color([Color(0xFF00AAFF)]).wireValue, ['#00AAFF']);
+    });
+
     test('value is the typed widget output', () {
       expect(const Answer.rating(7).value, 7);
       expect(const Answer.color([Color(0xFF00AAFF)]).value, [

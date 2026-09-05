@@ -13,3 +13,8 @@ targets:
           # `.toJson` references; keys follow the agent's snake_case wire names.
           explicit_to_json: true
           field_rename: snake
+      # Mocks come from the single test/mocks.dart; never scan lib/.
+      mockito|mockBuilder:
+        generate_for:
+          - test/**.dart
+          - integration_test/**.dart
