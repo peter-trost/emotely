@@ -1,0 +1,36 @@
+PODS:
+  - Flutter (1.0.0)
+  - integration_test (0.0.1):
+    - Flutter
+  - PostHog (3.71.4)
+  - posthog_flutter (0.0.1):
+    - Flutter
+    - FlutterMacOS
+    - PostHog (< 4.0.0, >= 3.70.0)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - posthog_flutter (from `.symlinks/plugins/posthog_flutter/darwin`)
+
+SPEC REPOS:
+  trunk:
+    - PostHog
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+  posthog_flutter:
+    :path: ".symlinks/plugins/posthog_flutter/darwin"
+
+SPEC CHECKSUMS:
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  PostHog: c7ccef4afb1d3e5aeb6b02df5a04964cf93f0df4
+  posthog_flutter: 13a620733dbcf7232442d238a80c967cfd2be79d
+
+PODFILE CHECKSUM: 3ba3a73b1b12adcf321a227a745625fe0888cc82
+
+COCOAPODS: 1.16.2

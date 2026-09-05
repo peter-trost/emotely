@@ -176,6 +176,10 @@ cd apps/app && flutter run --dart-define=POSTHOG_KEY=phc_… --dart-define=EMOTE
 Without `POSTHOG_KEY` the SDK skips setup entirely; without `EMOTELY_AGENT_URL`
 the app uses `https://emotely-agent.vercel.app/api/advance-session`.
 
+The on-device acceptance run — a whole session on a simulator or phone against
+the deployed agent — is `flutter test integration_test -d <device>` with the
+same defines. It is a nightly / pre-release check, never a per-PR one.
+
 ## Verify-at-build-time (do NOT pin from memory)
 
 Per project convention, research the latest before pinning:
