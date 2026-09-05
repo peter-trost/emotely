@@ -163,6 +163,19 @@ the wild*.
    entry persistence, `posthog_flutter`.
 6. **Subscription + polish** — RevenueCat, paywall, ship to TestFlight.
 
+## Running the app
+
+`apps/app` talks to the deployed agent by default and runs with analytics off
+unless a PostHog project token is passed. Both are `--dart-define`s, so nothing
+environment-specific is committed:
+
+```bash
+cd apps/app && flutter run --dart-define=POSTHOG_KEY=phc_… --dart-define=EMOTELY_AGENT_URL=http://localhost:3000/api/advance-session
+```
+
+Without `POSTHOG_KEY` the SDK skips setup entirely; without `EMOTELY_AGENT_URL`
+the app uses `https://emotely-agent.vercel.app/api/advance-session`.
+
 ## Verify-at-build-time (do NOT pin from memory)
 
 Per project convention, research the latest before pinning:

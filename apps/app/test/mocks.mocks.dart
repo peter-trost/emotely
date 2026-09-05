@@ -4,13 +4,18 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 
-import 'dart:async' as _i3;
-import 'dart:convert' as _i4;
-import 'dart:typed_data' as _i6;
+import 'dart:async' as _i4;
+import 'dart:convert' as _i5;
+import 'dart:typed_data' as _i7;
 
 import 'package:http/http.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i5;
+import 'package:mockito/src/dummies.dart' as _i6;
+import 'package:posthog_flutter/src/feature_flag_result.dart' as _i11;
+import 'package:posthog_flutter/src/logs/posthog_log_severity.dart' as _i10;
+import 'package:posthog_flutter/src/logs/posthog_logger.dart' as _i3;
+import 'package:posthog_flutter/src/posthog.dart' as _i8;
+import 'package:posthog_flutter/src/posthog_config.dart' as _i9;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -39,59 +44,64 @@ class _FakeStreamedResponse_1 extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
+class _FakePostHogLogger_2 extends _i1.SmartFake implements _i3.PostHogLogger {
+  _FakePostHogLogger_2(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
 /// A class which mocks [Client].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockClient extends _i1.Mock implements _i2.Client {
   @override
-  _i3.Future<_i2.Response> head(Uri? url, {Map<String, String>? headers}) =>
+  _i4.Future<_i2.Response> head(Uri? url, {Map<String, String>? headers}) =>
       (super.noSuchMethod(
         Invocation.method(#head, [url], {#headers: headers}),
-        returnValue: _i3.Future<_i2.Response>.value(
+        returnValue: _i4.Future<_i2.Response>.value(
           _FakeResponse_0(
             this,
             Invocation.method(#head, [url], {#headers: headers}),
           ),
         ),
-        returnValueForMissingStub: _i3.Future<_i2.Response>.value(
+        returnValueForMissingStub: _i4.Future<_i2.Response>.value(
           _FakeResponse_0(
             this,
             Invocation.method(#head, [url], {#headers: headers}),
           ),
         ),
-      ) as _i3.Future<_i2.Response>);
+      ) as _i4.Future<_i2.Response>);
 
   @override
-  _i3.Future<_i2.Response> get(Uri? url, {Map<String, String>? headers}) =>
+  _i4.Future<_i2.Response> get(Uri? url, {Map<String, String>? headers}) =>
       (super.noSuchMethod(
         Invocation.method(#get, [url], {#headers: headers}),
-        returnValue: _i3.Future<_i2.Response>.value(
+        returnValue: _i4.Future<_i2.Response>.value(
           _FakeResponse_0(
             this,
             Invocation.method(#get, [url], {#headers: headers}),
           ),
         ),
-        returnValueForMissingStub: _i3.Future<_i2.Response>.value(
+        returnValueForMissingStub: _i4.Future<_i2.Response>.value(
           _FakeResponse_0(
             this,
             Invocation.method(#get, [url], {#headers: headers}),
           ),
         ),
-      ) as _i3.Future<_i2.Response>);
+      ) as _i4.Future<_i2.Response>);
 
   @override
-  _i3.Future<_i2.Response> post(
+  _i4.Future<_i2.Response> post(
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i4.Encoding? encoding,
+    _i5.Encoding? encoding,
   }) => (super.noSuchMethod(
     Invocation.method(
       #post,
       [url],
       {#headers: headers, #body: body, #encoding: encoding},
     ),
-    returnValue: _i3.Future<_i2.Response>.value(
+    returnValue: _i4.Future<_i2.Response>.value(
       _FakeResponse_0(
         this,
         Invocation.method(
@@ -101,7 +111,7 @@ class MockClient extends _i1.Mock implements _i2.Client {
         ),
       ),
     ),
-    returnValueForMissingStub: _i3.Future<_i2.Response>.value(
+    returnValueForMissingStub: _i4.Future<_i2.Response>.value(
       _FakeResponse_0(
         this,
         Invocation.method(
@@ -111,21 +121,21 @@ class MockClient extends _i1.Mock implements _i2.Client {
         ),
       ),
     ),
-  ) as _i3.Future<_i2.Response>);
+  ) as _i4.Future<_i2.Response>);
 
   @override
-  _i3.Future<_i2.Response> put(
+  _i4.Future<_i2.Response> put(
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i4.Encoding? encoding,
+    _i5.Encoding? encoding,
   }) => (super.noSuchMethod(
     Invocation.method(
       #put,
       [url],
       {#headers: headers, #body: body, #encoding: encoding},
     ),
-    returnValue: _i3.Future<_i2.Response>.value(
+    returnValue: _i4.Future<_i2.Response>.value(
       _FakeResponse_0(
         this,
         Invocation.method(
@@ -135,7 +145,7 @@ class MockClient extends _i1.Mock implements _i2.Client {
         ),
       ),
     ),
-    returnValueForMissingStub: _i3.Future<_i2.Response>.value(
+    returnValueForMissingStub: _i4.Future<_i2.Response>.value(
       _FakeResponse_0(
         this,
         Invocation.method(
@@ -145,21 +155,21 @@ class MockClient extends _i1.Mock implements _i2.Client {
         ),
       ),
     ),
-  ) as _i3.Future<_i2.Response>);
+  ) as _i4.Future<_i2.Response>);
 
   @override
-  _i3.Future<_i2.Response> patch(
+  _i4.Future<_i2.Response> patch(
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i4.Encoding? encoding,
+    _i5.Encoding? encoding,
   }) => (super.noSuchMethod(
     Invocation.method(
       #patch,
       [url],
       {#headers: headers, #body: body, #encoding: encoding},
     ),
-    returnValue: _i3.Future<_i2.Response>.value(
+    returnValue: _i4.Future<_i2.Response>.value(
       _FakeResponse_0(
         this,
         Invocation.method(
@@ -169,7 +179,7 @@ class MockClient extends _i1.Mock implements _i2.Client {
         ),
       ),
     ),
-    returnValueForMissingStub: _i3.Future<_i2.Response>.value(
+    returnValueForMissingStub: _i4.Future<_i2.Response>.value(
       _FakeResponse_0(
         this,
         Invocation.method(
@@ -179,21 +189,21 @@ class MockClient extends _i1.Mock implements _i2.Client {
         ),
       ),
     ),
-  ) as _i3.Future<_i2.Response>);
+  ) as _i4.Future<_i2.Response>);
 
   @override
-  _i3.Future<_i2.Response> delete(
+  _i4.Future<_i2.Response> delete(
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i4.Encoding? encoding,
+    _i5.Encoding? encoding,
   }) => (super.noSuchMethod(
     Invocation.method(
       #delete,
       [url],
       {#headers: headers, #body: body, #encoding: encoding},
     ),
-    returnValue: _i3.Future<_i2.Response>.value(
+    returnValue: _i4.Future<_i2.Response>.value(
       _FakeResponse_0(
         this,
         Invocation.method(
@@ -203,7 +213,7 @@ class MockClient extends _i1.Mock implements _i2.Client {
         ),
       ),
     ),
-    returnValueForMissingStub: _i3.Future<_i2.Response>.value(
+    returnValueForMissingStub: _i4.Future<_i2.Response>.value(
       _FakeResponse_0(
         this,
         Invocation.method(
@@ -213,53 +223,453 @@ class MockClient extends _i1.Mock implements _i2.Client {
         ),
       ),
     ),
-  ) as _i3.Future<_i2.Response>);
+  ) as _i4.Future<_i2.Response>);
 
   @override
-  _i3.Future<String> read(Uri? url, {Map<String, String>? headers}) =>
+  _i4.Future<String> read(Uri? url, {Map<String, String>? headers}) =>
       (super.noSuchMethod(
         Invocation.method(#read, [url], {#headers: headers}),
-        returnValue: _i3.Future<String>.value(
-          _i5.dummyValue<String>(
+        returnValue: _i4.Future<String>.value(
+          _i6.dummyValue<String>(
             this,
             Invocation.method(#read, [url], {#headers: headers}),
           ),
         ),
-        returnValueForMissingStub: _i3.Future<String>.value(
-          _i5.dummyValue<String>(
+        returnValueForMissingStub: _i4.Future<String>.value(
+          _i6.dummyValue<String>(
             this,
             Invocation.method(#read, [url], {#headers: headers}),
           ),
         ),
-      ) as _i3.Future<String>);
+      ) as _i4.Future<String>);
 
   @override
-  _i3.Future<_i6.Uint8List> readBytes(
+  _i4.Future<_i7.Uint8List> readBytes(
     Uri? url, {
     Map<String, String>? headers,
   }) => (super.noSuchMethod(
     Invocation.method(#readBytes, [url], {#headers: headers}),
-    returnValue: _i3.Future<_i6.Uint8List>.value(_i6.Uint8List(0)),
-    returnValueForMissingStub: _i3.Future<_i6.Uint8List>.value(
-      _i6.Uint8List(0),
+    returnValue: _i4.Future<_i7.Uint8List>.value(_i7.Uint8List(0)),
+    returnValueForMissingStub: _i4.Future<_i7.Uint8List>.value(
+      _i7.Uint8List(0),
     ),
-  ) as _i3.Future<_i6.Uint8List>);
+  ) as _i4.Future<_i7.Uint8List>);
 
   @override
-  _i3.Future<_i2.StreamedResponse> send(_i2.BaseRequest? request) =>
+  _i4.Future<_i2.StreamedResponse> send(_i2.BaseRequest? request) =>
       (super.noSuchMethod(
         Invocation.method(#send, [request]),
-        returnValue: _i3.Future<_i2.StreamedResponse>.value(
+        returnValue: _i4.Future<_i2.StreamedResponse>.value(
           _FakeStreamedResponse_1(this, Invocation.method(#send, [request])),
         ),
-        returnValueForMissingStub: _i3.Future<_i2.StreamedResponse>.value(
+        returnValueForMissingStub: _i4.Future<_i2.StreamedResponse>.value(
           _FakeStreamedResponse_1(this, Invocation.method(#send, [request])),
         ),
-      ) as _i3.Future<_i2.StreamedResponse>);
+      ) as _i4.Future<_i2.StreamedResponse>);
 
   @override
   void close() => super.noSuchMethod(
     Invocation.method(#close, []),
     returnValueForMissingStub: null,
   );
+}
+
+/// A class which mocks [Posthog].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockPosthog extends _i1.Mock implements _i8.Posthog {
+  @override
+  _i3.PostHogLogger get logger => (super.noSuchMethod(
+    Invocation.getter(#logger),
+    returnValue: _FakePostHogLogger_2(this, Invocation.getter(#logger)),
+    returnValueForMissingStub: _FakePostHogLogger_2(
+      this,
+      Invocation.getter(#logger),
+    ),
+  ) as _i3.PostHogLogger);
+
+  @override
+  _i4.Future<void> setup(_i9.PostHogConfig? config) => (super.noSuchMethod(
+    Invocation.method(#setup, [config]),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> identify({
+    required String? userId,
+    Map<String, Object>? userProperties,
+    Map<String, Object>? userPropertiesSetOnce,
+  }) => (super.noSuchMethod(
+    Invocation.method(#identify, [], {
+      #userId: userId,
+      #userProperties: userProperties,
+      #userPropertiesSetOnce: userPropertiesSetOnce,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> setPersonProperties({
+    Map<String, Object>? userPropertiesToSet,
+    Map<String, Object>? userPropertiesToSetOnce,
+  }) => (super.noSuchMethod(
+    Invocation.method(#setPersonProperties, [], {
+      #userPropertiesToSet: userPropertiesToSet,
+      #userPropertiesToSetOnce: userPropertiesToSetOnce,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> capture({
+    required String? eventName,
+    Map<String, Object>? properties,
+    Map<String, Object>? userProperties,
+    Map<String, Object>? userPropertiesSetOnce,
+  }) => (super.noSuchMethod(
+    Invocation.method(#capture, [], {
+      #eventName: eventName,
+      #properties: properties,
+      #userProperties: userProperties,
+      #userPropertiesSetOnce: userPropertiesSetOnce,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> screen({
+    required String? screenName,
+    Map<String, Object>? properties,
+  }) => (super.noSuchMethod(
+    Invocation.method(#screen, [], {
+      #screenName: screenName,
+      #properties: properties,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> captureLog({
+    required String? body,
+    _i10.PostHogLogSeverity? level = _i10.PostHogLogSeverity.info,
+    Map<String, Object>? attributes,
+    String? traceId,
+    String? spanId,
+    int? traceFlags,
+  }) => (super.noSuchMethod(
+    Invocation.method(#captureLog, [], {
+      #body: body,
+      #level: level,
+      #attributes: attributes,
+      #traceId: traceId,
+      #spanId: spanId,
+      #traceFlags: traceFlags,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> alias({required String? alias}) => (super.noSuchMethod(
+    Invocation.method(#alias, [], {#alias: alias}),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<String> getDistinctId() => (super.noSuchMethod(
+    Invocation.method(#getDistinctId, []),
+    returnValue: _i4.Future<String>.value(
+      _i6.dummyValue<String>(this, Invocation.method(#getDistinctId, [])),
+    ),
+    returnValueForMissingStub: _i4.Future<String>.value(
+      _i6.dummyValue<String>(this, Invocation.method(#getDistinctId, [])),
+    ),
+  ) as _i4.Future<String>);
+
+  @override
+  _i4.Future<void> reset() => (super.noSuchMethod(
+    Invocation.method(#reset, []),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> disable() => (super.noSuchMethod(
+    Invocation.method(#disable, []),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> enable() => (super.noSuchMethod(
+    Invocation.method(#enable, []),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<bool> isOptOut() => (super.noSuchMethod(
+    Invocation.method(#isOptOut, []),
+    returnValue: _i4.Future<bool>.value(false),
+    returnValueForMissingStub: _i4.Future<bool>.value(false),
+  ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<void> debug(bool? enabled) => (super.noSuchMethod(
+    Invocation.method(#debug, [enabled]),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> register(String? key, Object? value) => (super.noSuchMethod(
+    Invocation.method(#register, [key, value]),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> unregister(String? key) => (super.noSuchMethod(
+    Invocation.method(#unregister, [key]),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<bool> isFeatureEnabled(String? key) => (super.noSuchMethod(
+    Invocation.method(#isFeatureEnabled, [key]),
+    returnValue: _i4.Future<bool>.value(false),
+    returnValueForMissingStub: _i4.Future<bool>.value(false),
+  ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<void> reloadFeatureFlags() => (super.noSuchMethod(
+    Invocation.method(#reloadFeatureFlags, []),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> setPersonPropertiesForFlags(
+    Map<String, Object>? userProperties, {
+    bool? reloadFeatureFlags = true,
+  }) => (super.noSuchMethod(
+    Invocation.method(
+      #setPersonPropertiesForFlags,
+      [userProperties],
+      {#reloadFeatureFlags: reloadFeatureFlags},
+    ),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> resetPersonPropertiesForFlags({
+    bool? reloadFeatureFlags = true,
+  }) => (super.noSuchMethod(
+    Invocation.method(#resetPersonPropertiesForFlags, [], {
+      #reloadFeatureFlags: reloadFeatureFlags,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> setGroupPropertiesForFlags(
+    String? groupType,
+    Map<String, Object>? groupProperties, {
+    bool? reloadFeatureFlags = true,
+  }) => (super.noSuchMethod(
+    Invocation.method(
+      #setGroupPropertiesForFlags,
+      [groupType, groupProperties],
+      {#reloadFeatureFlags: reloadFeatureFlags},
+    ),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> resetGroupPropertiesForFlags({
+    String? groupType,
+    bool? reloadFeatureFlags = true,
+  }) => (super.noSuchMethod(
+    Invocation.method(#resetGroupPropertiesForFlags, [], {
+      #groupType: groupType,
+      #reloadFeatureFlags: reloadFeatureFlags,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> group({
+    required String? groupType,
+    required String? groupKey,
+    Map<String, Object>? groupProperties,
+  }) => (super.noSuchMethod(
+    Invocation.method(#group, [], {
+      #groupType: groupType,
+      #groupKey: groupKey,
+      #groupProperties: groupProperties,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> registerPushNotificationToken(
+    String? deviceToken, {
+    String? appId,
+  }) => (super.noSuchMethod(
+    Invocation.method(
+      #registerPushNotificationToken,
+      [deviceToken],
+      {#appId: appId},
+    ),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> unregisterPushNotificationToken() => (super.noSuchMethod(
+    Invocation.method(#unregisterPushNotificationToken, []),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> capturePushNotificationOpened({
+    String? title,
+    String? subtitle,
+    String? body,
+    Map<String, Object?>? payload,
+    String? action,
+  }) => (super.noSuchMethod(
+    Invocation.method(#capturePushNotificationOpened, [], {
+      #title: title,
+      #subtitle: subtitle,
+      #body: body,
+      #payload: payload,
+      #action: action,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<Object?> getFeatureFlag(String? key) => (super.noSuchMethod(
+    Invocation.method(#getFeatureFlag, [key]),
+    returnValue: _i4.Future<Object?>.value(),
+    returnValueForMissingStub: _i4.Future<Object?>.value(),
+  ) as _i4.Future<Object?>);
+
+  @override
+  _i4.Future<_i11.PostHogFeatureFlagResult?> getFeatureFlagResult(
+    String? key, {
+    bool? sendEvent = true,
+  }) => (super.noSuchMethod(
+    Invocation.method(#getFeatureFlagResult, [key], {#sendEvent: sendEvent}),
+    returnValue: _i4.Future<_i11.PostHogFeatureFlagResult?>.value(),
+    returnValueForMissingStub:
+        _i4.Future<_i11.PostHogFeatureFlagResult?>.value(),
+  ) as _i4.Future<_i11.PostHogFeatureFlagResult?>);
+
+  @override
+  _i4.Future<Object?> getFeatureFlagPayload(String? key) => (super.noSuchMethod(
+    Invocation.method(#getFeatureFlagPayload, [key]),
+    returnValue: _i4.Future<Object?>.value(),
+    returnValueForMissingStub: _i4.Future<Object?>.value(),
+  ) as _i4.Future<Object?>);
+
+  @override
+  _i4.Future<void> flush() => (super.noSuchMethod(
+    Invocation.method(#flush, []),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> captureException({
+    required Object? error,
+    StackTrace? stackTrace,
+    Map<String, Object>? properties,
+  }) => (super.noSuchMethod(
+    Invocation.method(#captureException, [], {
+      #error: error,
+      #stackTrace: stackTrace,
+      #properties: properties,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> captureRunZonedGuardedError({
+    required Object? error,
+    StackTrace? stackTrace,
+    Map<String, Object>? properties,
+  }) => (super.noSuchMethod(
+    Invocation.method(#captureRunZonedGuardedError, [], {
+      #error: error,
+      #stackTrace: stackTrace,
+      #properties: properties,
+    }),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> addExceptionStep(
+    String? message, {
+    Map<String, Object>? properties,
+  }) => (super.noSuchMethod(
+    Invocation.method(#addExceptionStep, [message], {#properties: properties}),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> close() => (super.noSuchMethod(
+    Invocation.method(#close, []),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<String?> getSessionId() => (super.noSuchMethod(
+    Invocation.method(#getSessionId, []),
+    returnValue: _i4.Future<String?>.value(),
+    returnValueForMissingStub: _i4.Future<String?>.value(),
+  ) as _i4.Future<String?>);
+
+  @override
+  _i4.Future<void> startSessionRecording({bool? resumeCurrent = true}) =>
+      (super.noSuchMethod(
+        Invocation.method(#startSessionRecording, [], {
+          #resumeCurrent: resumeCurrent,
+        }),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> stopSessionRecording() => (super.noSuchMethod(
+    Invocation.method(#stopSessionRecording, []),
+    returnValue: _i4.Future<void>.value(),
+    returnValueForMissingStub: _i4.Future<void>.value(),
+  ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<bool> isSessionReplayActive() => (super.noSuchMethod(
+    Invocation.method(#isSessionReplayActive, []),
+    returnValue: _i4.Future<bool>.value(false),
+    returnValueForMissingStub: _i4.Future<bool>.value(false),
+  ) as _i4.Future<bool>);
 }
