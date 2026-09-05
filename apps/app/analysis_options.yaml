@@ -17,3 +17,9 @@ analyzer:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+
+linter:
+  rules:
+    # Experimental in the SDK and not yet part of very_good_analysis; enabled
+    # so hand-written classes use Dart 3.13 primary constructors.
+    use_primary_constructors: true

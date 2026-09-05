@@ -7,12 +7,17 @@ part of 'answer.dart';
 // **************************************************************************
 
 ColorAnswer _$ColorAnswerFromJson(Map<String, dynamic> json) => ColorAnswer(
-  (json['value'] as List<dynamic>).map((e) => e as String).toList(),
+  (json['value'] as List<dynamic>)
+      .map((e) => const HexColorConverter().fromJson(e as String))
+      .toList(),
   $type: json['answer_type'] as String?,
 );
 
 Map<String, dynamic> _$ColorAnswerToJson(ColorAnswer instance) =>
-    <String, dynamic>{'value': instance.value, 'answer_type': instance.$type};
+    <String, dynamic>{
+      'value': instance.value.map(const HexColorConverter().toJson).toList(),
+      'answer_type': instance.$type,
+    };
 
 EmojiAnswer _$EmojiAnswerFromJson(Map<String, dynamic> json) => EmojiAnswer(
   (json['value'] as List<dynamic>).map((e) => e as String).toList(),

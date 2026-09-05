@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:emotely/contract/contract.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -6,7 +8,7 @@ void main() {
   group(Answer, () {
     const samples = <(Answer, Map<String, dynamic>)>[
       (
-        Answer.color(['#FF8800', '#00AAFF']),
+        Answer.color([Color(0xFFFF8800), Color(0xFF00AAFF)]),
         {
           'answer_type': 'color',
           'value': ['#FF8800', '#00AAFF'],
@@ -59,9 +61,11 @@ void main() {
       );
     });
 
-    test('value is the raw widget output the client posts back', () {
+    test('value is the typed widget output', () {
       expect(const Answer.rating(7).value, 7);
-      expect(const Answer.textList(['a']).value, ['a']);
+      expect(const Answer.color([Color(0xFF00AAFF)]).value, [
+        const Color(0xFF00AAFF),
+      ]);
     });
   });
 }

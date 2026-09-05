@@ -51,7 +51,7 @@ Answer _$AnswerFromJson(
 /// @nodoc
 mixin _$Answer {
 
- Object get value;
+@HexColorConverter() Object get value;
 
   /// Serializes this Answer to a JSON map.
   Map<String, dynamic> toJson();
@@ -172,7 +172,7 @@ return textList(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( List<String> value)?  color,TResult Function( List<String> value)?  emoji,TResult Function( String value)?  longtext,TResult Function( int value)?  rating,TResult Function( List<String> value)?  textList,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function(@HexColorConverter()  List<Color> value)?  color,TResult Function( List<String> value)?  emoji,TResult Function( String value)?  longtext,TResult Function( int value)?  rating,TResult Function( List<String> value)?  textList,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ColorAnswer() when color != null:
 return color(_that.value);case EmojiAnswer() when emoji != null:
@@ -197,7 +197,7 @@ return textList(_that.value);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( List<String> value)  color,required TResult Function( List<String> value)  emoji,required TResult Function( String value)  longtext,required TResult Function( int value)  rating,required TResult Function( List<String> value)  textList,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function(@HexColorConverter()  List<Color> value)  color,required TResult Function( List<String> value)  emoji,required TResult Function( String value)  longtext,required TResult Function( int value)  rating,required TResult Function( List<String> value)  textList,}) {final _that = this;
 switch (_that) {
 case ColorAnswer():
 return color(_that.value);case EmojiAnswer():
@@ -218,7 +218,7 @@ return textList(_that.value);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( List<String> value)?  color,TResult? Function( List<String> value)?  emoji,TResult? Function( String value)?  longtext,TResult? Function( int value)?  rating,TResult? Function( List<String> value)?  textList,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function(@HexColorConverter()  List<Color> value)?  color,TResult? Function( List<String> value)?  emoji,TResult? Function( String value)?  longtext,TResult? Function( int value)?  rating,TResult? Function( List<String> value)?  textList,}) {final _that = this;
 switch (_that) {
 case ColorAnswer() when color != null:
 return color(_that.value);case EmojiAnswer() when emoji != null:
@@ -236,12 +236,12 @@ return textList(_that.value);case _:
 /// @nodoc
 @JsonSerializable()
 
-class ColorAnswer extends Answer {
-  const ColorAnswer( List<String> value, { String? $type}): _value = value,$type = $type ?? 'color',super._();
+class ColorAnswer implements Answer {
+  const ColorAnswer(@HexColorConverter()  List<Color> value, { String? $type}): _value = value,$type = $type ?? 'color';
   factory ColorAnswer.fromJson(Map<String, dynamic> json) => _$ColorAnswerFromJson(json);
 
- final  List<String> _value;
-@override List<String> get value {
+ final  List<Color> _value;
+@override@HexColorConverter() List<Color> get value {
   if (_value is EqualUnmodifiableListView) return _value;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_value);
@@ -287,7 +287,7 @@ abstract mixin class $ColorAnswerCopyWith<$Res> implements $AnswerCopyWith<$Res>
   factory $ColorAnswerCopyWith(ColorAnswer value, $Res Function(ColorAnswer) _then) = _$ColorAnswerCopyWithImpl;
 @useResult
 $Res call({
- List<String> value
+@HexColorConverter() List<Color> value
 });
 
 
@@ -307,7 +307,7 @@ class _$ColorAnswerCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? value = null,}) {
   return _then(ColorAnswer(
 null == value ? _self._value : value // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<Color>,
   ));
 }
 
@@ -317,8 +317,8 @@ as List<String>,
 /// @nodoc
 @JsonSerializable()
 
-class EmojiAnswer extends Answer {
-  const EmojiAnswer( List<String> value, { String? $type}): _value = value,$type = $type ?? 'emoji',super._();
+class EmojiAnswer implements Answer {
+  const EmojiAnswer( List<String> value, { String? $type}): _value = value,$type = $type ?? 'emoji';
   factory EmojiAnswer.fromJson(Map<String, dynamic> json) => _$EmojiAnswerFromJson(json);
 
  final  List<String> _value;
@@ -398,8 +398,8 @@ as List<String>,
 /// @nodoc
 @JsonSerializable()
 
-class LongtextAnswer extends Answer {
-  const LongtextAnswer(this.value, { String? $type}): $type = $type ?? 'longtext',super._();
+class LongtextAnswer implements Answer {
+  const LongtextAnswer(this.value, { String? $type}): $type = $type ?? 'longtext';
   factory LongtextAnswer.fromJson(Map<String, dynamic> json) => _$LongtextAnswerFromJson(json);
 
 @override final  String value;
@@ -473,8 +473,8 @@ as String,
 /// @nodoc
 @JsonSerializable()
 
-class RatingAnswer extends Answer {
-  const RatingAnswer(this.value, { String? $type}): $type = $type ?? 'rating',super._();
+class RatingAnswer implements Answer {
+  const RatingAnswer(this.value, { String? $type}): $type = $type ?? 'rating';
   factory RatingAnswer.fromJson(Map<String, dynamic> json) => _$RatingAnswerFromJson(json);
 
 @override final  int value;
@@ -548,8 +548,8 @@ as int,
 /// @nodoc
 @JsonSerializable()
 
-class TextListAnswer extends Answer {
-  const TextListAnswer( List<String> value, { String? $type}): _value = value,$type = $type ?? 'text_list',super._();
+class TextListAnswer implements Answer {
+  const TextListAnswer( List<String> value, { String? $type}): _value = value,$type = $type ?? 'text_list';
   factory TextListAnswer.fromJson(Map<String, dynamic> json) => _$TextListAnswerFromJson(json);
 
  final  List<String> _value;

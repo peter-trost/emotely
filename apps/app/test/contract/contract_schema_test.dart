@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:emotely/contract/contract.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,23 +9,24 @@ import 'package:flutter_test/flutter_test.dart';
 /// source (`packages/contract/contract.schema.json`, regenerated and diffed
 /// in CI). A schema change that the Dart side does not mirror fails here, so
 /// producer and consumer drift breaks one CI run, not a session on a device.
+///
+/// Wire names are taken from the real serialization path (`toJson`), never
+/// restated by hand, so the pin cannot drift from the code it protects.
 void main() {
   final schema = jsonDecode(
-    File(
-      '../../packages/contract/contract.schema.json',
-    ).readAsStringSync(),
+    File('../../packages/contract/contract.schema.json').readAsStringSync(),
   ) as Map<String, dynamic>;
 
-  /// One encoded sample per Dart variant, keyed by wire name.
+  /// One encoded sample per Dart variant, keyed by its wire name.
   final samples = <String, Answer>{
     for (final answer in const <Answer>[
-      Answer.color(['#FF8800']),
+      Answer.color([Color(0xFFFF8800)]),
       Answer.emoji(['😊']),
       Answer.longtext('text'),
       Answer.rating(5),
       Answer.textList(['one']),
     ])
-      answer.answerType.wireName: answer,
+      answer.toJson()['answer_type']! as String: answer,
   };
 
   group('contract.schema.json', () {
@@ -35,7 +37,7 @@ void main() {
 
       expect(
         answerType['enum'],
-        unorderedEquals(AnswerType.values.map((t) => t.wireName)),
+        unorderedEquals(AnswerType.values.map(_wireNameOf)),
       );
     });
 
@@ -53,10 +55,7 @@ void main() {
     test('record_answer has exactly one variant per Dart Answer variant', () {
       final variants = _answerVariants(schema);
 
-      expect(
-        variants.map((v) => v.wireName),
-        unorderedEquals(samples.keys),
-      );
+      expect(variants.map((v) => v.wireName), unorderedEquals(samples.keys));
     });
 
     test('each record_answer variant matches its Dart encoding', () {
@@ -69,11 +68,6 @@ void main() {
           reason: variant.wireName,
         );
         expect(
-          encoded['answer_type'],
-          variant.wireName,
-          reason: variant.wireName,
-        );
-        expect(
           encoded['value'],
           _matchesJsonType(variant.valueType),
           reason: '${variant.wireName} value should be ${variant.valueType}',
@@ -82,6 +76,15 @@ void main() {
     });
   });
 }
+
+/// The wire name of [type] as `ask_question` actually serializes it.
+String _wireNameOf(AnswerType type) =>
+    AskQuestion(
+          questionId: 'q',
+          question: 'Q?',
+          answerType: type,
+        ).toJson()['answer_type']!
+        as String;
 
 typedef _Variant = ({
   String wireName,

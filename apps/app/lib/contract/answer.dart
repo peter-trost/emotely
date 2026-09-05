@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:emotely/contract/answer_type.dart';
+import 'package:emotely/contract/hex_color_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'answer.freezed.dart';
@@ -11,27 +14,27 @@ part 'answer.g.dart';
 /// full object comes back in the completed entry.
 @Freezed(unionKey: 'answer_type')
 sealed class Answer with _$Answer {
-  /// One or more `#RRGGBB` colors.
-  const factory Answer.color(List<String> value) = ColorAnswer;
+  /// One or more colors (`#RRGGBB` on the wire).
+  const factory color(@HexColorConverter() List<Color> value) = ColorAnswer;
 
   /// One or more emoji.
-  const factory Answer.emoji(List<String> value) = EmojiAnswer;
+  const factory emoji(List<String> value) = EmojiAnswer;
 
   /// A single free-text paragraph.
-  const factory Answer.longtext(String value) = LongtextAnswer;
+  const factory longtext(String value) = LongtextAnswer;
 
   /// An integer from 1 to 10.
-  const factory Answer.rating(int value) = RatingAnswer;
+  const factory rating(int value) = RatingAnswer;
 
   /// One or more short text items.
-  @FreezedUnionValue('text_list')
-  const factory Answer.textList(List<String> value) = TextListAnswer;
-
-  const Answer._();
+  const factory textList(List<String> value) = TextListAnswer;
 
   /// Decodes a `record_answer` answer object.
-  factory Answer.fromJson(Map<String, dynamic> json) => _$AnswerFromJson(json);
+  factory fromJson(Map<String, dynamic> json) => _$AnswerFromJson(json);
+}
 
+/// Behavior on [Answer] lives here so editing it never needs regeneration.
+extension AnswerX on Answer {
   /// The answer type this variant carries.
   AnswerType get answerType => switch (this) {
     ColorAnswer() => AnswerType.color,
