@@ -191,13 +191,123 @@ void main() {
       expect(find.bySemanticsLabel('#FF8800 #00AAFF'), findsOneWidget);
     });
 
+    group('analytics', () {
+      testWidgets('narrates the session with ids, types and counts only', (
+        tester,
+      ) async {
+        final agent = AgentStub()
+          ..script([
+            awaiting(toolCallId: 'c1', question: SessionRobot.rate),
+            awaiting(toolCallId: 'c2', question: SessionRobot.best),
+            completed(
+              summary: 'Done.',
+              answers: const {
+                'q-rate': Answer.rating(7),
+                'q-best': Answer.longtext('Shipping.'),
+              },
+            ),
+          ]);
+        final robot = SessionRobot(tester, agent);
+        await robot.launch();
+        await robot.settle();
+        await robot.answerRating(7);
+        await robot.answerLongtext('Shipping.');
+
+        expect(robot.analytics.events, [
+          event('session_started'),
+          event('question_asked', {
+            'question_id': 'q-rate',
+            'answer_type': 'rating',
+            'index': 0,
+          }),
+          event('answer_submitted', {
+            'question_id': 'q-rate',
+            'answer_type': 'rating',
+          }),
+          event('question_asked', {
+            'question_id': 'q-best',
+            'answer_type': 'longtext',
+            'index': 1,
+          }),
+          event('answer_submitted', {
+            'question_id': 'q-best',
+            'answer_type': 'longtext',
+          }),
+          event('session_completed', {'answers': 2}),
+        ]);
+      });
+
+      testWidgets('never lets journal content leave the device', (
+        tester,
+      ) async {
+        // Needles in every place content can appear: question text, the
+        // typed answer, the agent's summary and the recorded answers.
+        const needle = 'NEEDLE';
+        final agent = AgentStub()
+          ..script([
+            awaiting(
+              toolCallId: 'c1',
+              question: SessionRobot.best.copyWith(
+                question: 'What was the $needle-best thing?',
+              ),
+            ),
+            completed(
+              summary: 'A $needle day.',
+              answers: const {'q-best': Answer.longtext('$needle answer')},
+            ),
+          ]);
+        final robot = SessionRobot(tester, agent);
+        await robot.launch();
+        await robot.settle();
+        await robot.answerLongtext('$needle answer');
+
+        expect(robot.summary, findsOneWidget);
+        expect(robot.analytics.events, hasLength(4));
+        for (final outgoing in robot.analytics.outgoingStrings) {
+          expect(outgoing, isNot(contains(needle)));
+        }
+      });
+
+      testWidgets('reports failures with the status code and retries', (
+        tester,
+      ) async {
+        final agent = AgentStub()
+          ..script([
+            refused(429, 'rate limited'),
+            unreachable(),
+            awaiting(toolCallId: 'c1', question: SessionRobot.rate),
+          ]);
+        final robot = SessionRobot(tester, agent);
+        await robot.launch();
+        await robot.settle();
+        await robot.tapRetry();
+        await robot.tapRetry();
+
+        expect(robot.analytics.events, [
+          event('session_started'),
+          event('session_failed', {'status_code': 429}),
+          event('session_retried'),
+          event('session_failed'),
+          event('session_retried'),
+          event('question_asked', {
+            'question_id': 'q-rate',
+            'answer_type': 'rating',
+            'index': 0,
+          }),
+        ]);
+      });
+    });
+
     group('meets accessibility guidelines', () {
       testWidgets('while asking', (tester) async {
         final agent = AgentStub()
           ..script([awaiting(toolCallId: 'c1', question: SessionRobot.rate)]);
 
         await tester.expectMeetsAccessibilityGuidelines(
-          EmotelyApp(agentClient: agent.agentClient),
+          EmotelyApp(
+            agentClient: agent.agentClient,
+            analytics: AnalyticsSpy().analytics,
+          ),
         );
       });
 
@@ -211,7 +321,10 @@ void main() {
           ]);
 
         await tester.expectMeetsAccessibilityGuidelines(
-          EmotelyApp(agentClient: agent.agentClient),
+          EmotelyApp(
+            agentClient: agent.agentClient,
+            analytics: AnalyticsSpy().analytics,
+          ),
         );
       });
 
@@ -219,7 +332,10 @@ void main() {
         final agent = AgentStub()..script([refused(500, 'boom')]);
 
         await tester.expectMeetsAccessibilityGuidelines(
-          EmotelyApp(agentClient: agent.agentClient),
+          EmotelyApp(
+            agentClient: agent.agentClient,
+            analytics: AnalyticsSpy().analytics,
+          ),
         );
       });
     });

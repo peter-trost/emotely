@@ -13,8 +13,16 @@ import 'package:material_ui/material_ui.dart';
 import '../helpers/helpers.dart';
 
 /// Drives a journaling session through the real app against a scripted
-/// agent. Finders are getters, actions settle, tests read as prose.
-class SessionRobot(final WidgetTester tester, final AgentStub agent) {
+/// agent and a spied PostHog. Finders are getters, actions settle, tests
+/// read as prose.
+class SessionRobot(
+  final WidgetTester tester,
+  final AgentStub agent, {
+  final AnalyticsSpy? spy,
+}) {
+  /// Set up by [launch]; the spy every test can inspect.
+  late final AnalyticsSpy analytics = spy ?? AnalyticsSpy();
+
   Finder get thinking => find.byType(CircularProgressIndicator);
   Finder get question => find.byKey(SessionView.questionKey);
   Finder get answerInput => find.byType(AnswerInput);
@@ -25,7 +33,12 @@ class SessionRobot(final WidgetTester tester, final AgentStub agent) {
 
   /// Launches the app; the first round is in flight until [settle].
   Future<void> launch() async {
-    await tester.pumpWidget(EmotelyApp(agentClient: agent.agentClient));
+    await tester.pumpWidget(
+      EmotelyApp(
+        agentClient: agent.agentClient,
+        analytics: analytics.analytics,
+      ),
+    );
     await tester.pump();
   }
 
