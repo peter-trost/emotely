@@ -36,6 +36,8 @@ jobs:
               - '.github/workflows/ci.yml'
             app:
               - 'apps/app/**'
+              # The Dart contract is pinned against the emitted JSON Schema.
+              - 'packages/contract/contract.schema.json'
               - '.github/workflows/ci.yml'
 
   agent:
@@ -86,12 +88,15 @@ jobs:
           flutter-version-file: apps/app/.fvmrc
           cache: true
       - run: flutter pub get
+      # Generated code (freezed / json_serializable / mockito) is committed;
+      # fail if it no longer matches its source.
+      - run: dart run build_runner build --only-check
       - run: dart format --set-exit-if-changed .
       - run: flutter analyze --fatal-infos
-      # Hard coverage gate; main.dart is the composition root and carries
-      # a coverage:ignore-file marker.
+      # Hard coverage gate on hand-written code; generated files are excluded
+      # and main.dart (composition root) carries a coverage:ignore-file marker.
       - run: dart pub global activate very_good_cli
-      - run: dart pub global run very_good_cli:very_good test --coverage --min-coverage 100
+      - run: dart pub global run very_good_cli:very_good test --coverage --min-coverage 100 --exclude-coverage '**/*.{freezed,g,mocks}.dart'
 
   # The single required check. Green only if every job succeeded or was skipped.
   ci-ok:
