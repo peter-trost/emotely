@@ -1,0 +1,665 @@
+Public project token: REDACTED
+project ID: 262464
+
+API key is in clipboard.
+
+---
+
+address the review feedback
+
+---
+
+can you elaborate on "If you want the flag to genuinely select prompt versions" – isn't that the flag's purpose? Configuring the model and prompt to use?
+
+---
+
+merge #25 and ship the selection mechanism as a follow-up. Prompt experiments are definitely something we want to have
+
+---
+
+looks good, merge
+
+---
+
+go ahead
+
+---
+
+<task-notification>
+<task-id>ae8571149ceaf38c4</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/tasks/ae8571149ceaf38c4.output</output-file>
+<status>completed</status>
+<summary>Agent "Inventory legacy Flutter widgets and a11y" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>I have everything I need for the report.
+
+## (a) The five answer widgets
+
+All five live behind one dispatcher: `question_answer_dialog.dart` `_buildAnswers()`, which `.map()`s over the freezed `JournalContent` union (`text` / `longtext` / `rating` / `emoji` / `color`) and returns the matching widget. The type enum is `JournalQuestionAnswerType` in `/Users/petertrost/dev/emotely-legacy/app/lib/common/models/journal_question.dart` (JSON values `text`, `longtext`, `rating`, `emoji`, `color`).
+
+| # | Widget | Path | External packages | LOC | Portability |
+|---|---|---|---|---|---|
+| 1 | **Multitext** (`TextWidget`) — `ListView.separated` of `TextField`s | `app/lib/ui/widgets/multitext.dart` | none (pure Material) | 43 | **Clean.** Only dep is `context.intl` + `context.textScaleFactor` extensions. Takes `List&lt;TextEditingController&gt;` + `List&lt;FocusNode&gt;` as params — no state coupling. Copy-paste-able. |
+| 2 | **Long text** (`LongTextField`) | `app/lib/ui/widgets/long_textfield.dart` | none | 27 | **Clean.** Trivially portable; takes one controller. |
+| 3 | **Rating slider** (`_buildSlider`) — *not a widget*, a private method | `app/lib/ui/pages/journal_entry/widgets/question_answer_dialog.dart:424-451` | none (`HapticFeedback` from `flutter/services`) | ~28 | **Needs extraction.** Currently inlined in the dialog's `State`. Logic is trivial (0-10, 10 divisions, `''` == no answer, `semanticFormatterCallback`). Rewrite rather than port. A read-only sibling exists: `app/lib/ui/widgets/readonly_slider_value_display.dart`. |
+| 4 | **EmojiGrid** | `app/lib/ui/widgets/emoji_grid.dart` (+ `app/lib/ui/widgets/emoji_picker.dart`, 82 LOC) | `emoji_picker_flutter: ^3.0.0` | 175 + 82 | **Mostly clean, but tangled focus logic.** The grid tile + bottom sheet are self-contained. The gnarly part is the ~25 lines of one-shot `FocusNode` listener dance used to auto-append a new empty field after picking. **Drop that** — it exists only for the "grow the list as you type" UX. `EmotelyEmojiPicker` (theming wrapper over `EmojiPicker`) is clean. Note `emoji_picker_flutter` is now at v4.x — re-check the API before pinning. |
+| 5 | **ColorsGrid** | `app/lib/ui/widgets/colors_grid.dart` | `flutter_colorpicker: ^1.1.0`, `fpdart: ^1.1.0` | 320 | **Clean widget, bloated picker.** 140 lines are the grid; 175 are `_showColorPicker` duplicated twice (bottom sheet for narrow, `AlertDialog` for wide) with near-identical `ColorPicker` config. Collapse to one. Same focus-listener dance as EmojiGrid. Depends on `ColorStringUtils.fromString` (`app/lib/common/extensions/color_extension.dart`, ~28 LOC, `Either`-returning — trivially rewritable without `fpdart`). |
+| 5b | **ColorText / ColorTextEditingController** (inline `#RRGGBB` swatches) | `app/lib/ui/pages/journaling_assistant/widgets/color_text.dart` (92) + `color_text_editing_controller.dart` (193) | none beyond `flutter/material` | 285 | **The most portable and most valuable.** Zero package deps, pure `TextEditingController` subclass. `ColorText` is display-only (`Text.rich` + `WidgetSpan` `ColorBox`). The controller overrides `buildTextSpan` to render one 2.3×16px `WidgetSpan` **per character** of the hex string, and overrides `set value` calling `adjustSelection(...)` (`@visibleForTesting`) so the caret cannot land *inside* a swatch. That selection logic is genuinely subtle and already has a dedicated test file — **port it verbatim, tests included.** |
+
+Shared plumbing all five depend on: `context.intl` (generated `AppLocalizations`), `context.textScaleFactor`, `ResponsiveBuilder` / `EmotelyScreenType` (`app/lib/ui/widgets/responsive_builder.dart`, 30 LOC).
+
+**One structural note for the rebuild:** every widget takes `List&lt;TextEditingController&gt; + List&lt;FocusNode&gt;` and answers are read back as `_controllers.map((c) =&gt; c.text).where(isNotEmpty)`. The controller list *is* the state model. That's a legacy shape, not a good one — for a GenUI shell where the agent supplies the schema, pass values and an `onChanged` callback instead.
+
+## (b) State management verdict
+
+- **Riverpod won, decisively.** `flutter_riverpod ^2.3.10` + `riverpod_annotation` + `riverpod_generator` across **117 lib files**. `flutter_bloc ^8.1.6` appears in only **6 lib files** — 4 of them inside the separate `feature/onboarding` package (a `Cubit` + `flow_builder`), the other 2 just wiring `Bloc.observer` to Sentry/console.
+- **Architecture:** feature-per-directory under `app/lib/ui/pages/&lt;page&gt;/`, each with a consistent triple:
+  - `&lt;page&gt;_controller.dart` — `@riverpod class XControllerImpl extends _$XControllerImpl implements XController` with an async `build()`
+  - `&lt;page&gt;_model.dart` — freezed immutable state
+  - `&lt;page&gt;_view.dart` — `ConsumerWidget`, plus `widgets/` for leaf widgets
+  - The **`abstract interface class` declared in the view file, implemented by the controller** is the nice trick here — the view depends on the interface, tests inject a mock. Worth keeping.
+  - `services/` holds Firebase/nav/logging behind interfaces + `_implementation.dart`.
+- **Carry over:** Riverpod 2 codegen, freezed state models, the view-declares-interface / controller-implements pattern, the `services/` seam.
+- **Drop:** bloc entirely (it's one isolated onboarding feature — no reason to run two state systems); `fpdart` (`Either`/`Option` used for ~3 things a nullable + `try` covers); the whole Firebase/Sentry/RevenueCat/GoRouter service layer (rebuild targets a different backend).
+- Also note: Riverpod is now at 3.x with a substantially changed codegen story — verify the current API before pinning, don't port the v2 annotations verbatim.
+
+## (c) The a11y bar — what it actually is
+
+The README claim ("a11y tests for every view") is **generous**. The reality:
+
+- **One helper**, a `WidgetTester` extension in `/Users/petertrost/dev/emotely-legacy/app/test/unit/common/utils.dart` (lines 38-62).
+- **Used in 24 test files** out of 136 total test files. Coverage is dense on `question_sets/` and the auth/payment dialogs, thin elsewhere. Notably: **none of the five answer widgets has an a11y test.**
+- **No golden tests anywhere** (`matchesGoldenFile`: zero hits).
+- **No extra packages** — this is 100% stock `flutter_test`. The only test-side package is `patrol_finders: ^2.8.2` (the `$(...)` finder syntax, `patrolWidgetTest`), which is orthogonal to a11y.
+
+The helper checks exactly four Flutter built-in guidelines:
+
+```dart
+extension AccessibilityTesting on WidgetTester {
+  Future&lt;void&gt; testIfWidgetMeetsAccessibilityGuidelines(
+    final Widget widget, {
+    final AccessibilityFeatures? accessibilityFeatures,
+    final AsyncWidgetTesterCallback? preparationCallback,
+  }) async {
+    binding.platformDispatcher.accessibilityFeaturesTestValue =
+        accessibilityFeatures ?? const FakeAccessibilityFeatures();
+    addTearDown(() {
+      binding.platformDispatcher.clearAccessibilityFeaturesTestValue();
+    });
+
+    await pumpWidget(createTestWidget(widget));
+    await preparationCallback?.call(this);
+
+    await expectLater(this, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(this, meetsGuideline(iOSTapTargetGuideline));
+    await expectLater(this, meetsGuideline(labeledTapTargetGuideline));
+    await expectLater(this, meetsGuideline(textContrastGuideline));
+  }
+}
+```
+
+So the concrete checklist is:
+1. **Tap targets ≥ 48×48 dp** (Android) and **≥ 44×44 pt** (iOS)
+2. **Every tappable node has a semantics label** (`labeledTapTargetGuideline`)
+3. **Text contrast meets WCAG AA** (4.5:1 normal, 3:1 large) — `textContrastGuideline`
+4. Run with accessibility features **on** (`FakeAccessibilityFeatures`), torn down after
+
+Call site, three lines:
+
+```dart
+patrolWidgetTest('meets a11y guidelines', (final PatrolTester $) async {
+  await $.tester.testIfWidgetMeetsAccessibilityGuidelines(
+    createTestQuestionTile(question: question),
+  );
+});
+```
+
+Beyond the helper, three hand-rolled patterns appear:
+- **`matchesSemantics` / `containsSemantics`** — 12 uses in 7 files, asserting exact flags (`isLiveRegion`, `hasEnabledState`, `isButton`, `isEnabled`).
+- **`simulatedAccessibilityTraversal()` + `containsAllInOrder`** — focus-order test in `welcome_view_test.dart:112-131` (currently `skip: true`).
+- **`find.bySemanticsLabel`** — 13 uses.
+
+And in production code, `AccessibilityTools(child: child)` wraps `MaterialApp.router` in debug (`app/lib/app/emotely.dart:223`, package `accessibility_tools: ^2.2.1`) — a runtime overlay flagging violations while developing.
+
+The source widgets are genuinely well-annotated, which is what made the bar passable: `Semantics(identifier: 'emojiGrid.$index', button: true, label: ..., hint: ..., onTapHint: ..., excludeSemantics: true)`, `Slider(semanticFormatterCallback: ...)`, `Semantics(liveRegion: true)` on the progress text, `ExcludeSemantics` around the decorative progress bar, `Icon(semanticLabel: ...)`.
+
+**Porting the bar concretely means:** copy ~25 lines (`createTestWidget` + the extension) into `apps/app/test/`, and add a 3-line `meets a11y guidelines` test to every widget test. Cost is near-zero; adopt `patrol_finders` only if you want the `$` syntax, it's not required. Two gotchas worth pre-empting: `textContrastGuideline` will fail on the legacy orange seed (`#FF8800`) against light surfaces, and widgets with async init need the `preparationCallback` (`tester.idle()` → `pump()` → `pump(2s)`) — see `journaling_assistant_view_test.dart:118-126`. **The improvement over legacy is making it universal rather than 24/136**, and adding the focus-traversal check that legacy wrote once and skipped.
+
+## (d) Theming
+
+`/Users/petertrost/dev/emotely-legacy/app/lib/app/theme.dart` — 63 lines, two `ThemeData` top-level finals.
+
+- **Material 3** (`useMaterial3: true`), both themes.
+- **Seed color `Color.fromARGB(255, 255, 136, 0)`** — emotely orange — via `ColorScheme.fromSeed`. Also exported as `primaryColorEmotely` from `app/lib/theme/colors.dart` (a 3-line file, used for the slider's "no answer" thumb).
+- **Full light + dark pair**, `MaterialApp.router(theme:, darkTheme:)`, follows system.
+- **Distinctive:** `google_fonts` **Baskervville** (a serif) for the whole text theme *and* app bar titles — that's the app's signature and the one thing genuinely worth keeping. Dark uses `GoogleFonts.baskervvilleTextTheme(Typography.whiteCupertino)`. Fonts are also vendored under `assets/google_fonts/` with OFL licenses registered via `LicenseRegistry.addLicense`. A second face, Sacramento, is licensed too.
+- Custom `inputDecorationTheme`: 8px-radius `OutlineInputBorder`, 2px `deepOrange` focus ring.
+- Elevation: `elevation: 0` / `scrolledUnderElevation: 4` on app bars.
+
+Verdict: keep the seed + Baskervville + M3 `fromSeed`; the rest is 40 lines of input-decoration boilerplate you can regenerate. **Check the orange against `textContrastGuideline` before committing to it** — `ColorScheme.fromSeed` may produce an `onSurface`/`primary` pairing that fails.
+
+## (e) Current scaffold state
+
+`/Users/petertrost/dev/emotely/apps/app` is a **fresh `flutter create`, already de-countered**:
+
+- `lib/main.dart` — 23 lines. Not the counter app; someone stripped it to a `MaterialApp` with a centered `Text('emotely')` and the comment `/// Placeholder shell; the GenUI session screen lands with issue #6.` Still on the default `Colors.deepPurple` seed.
+- **No `test/` directory at all**, no widget_test.dart.
+- **Dependencies: `cupertino_icons` only.** Nothing from the legacy list is present — no riverpod, no emoji picker, no colorpicker, no google_fonts.
+- `dev_dependencies`: `very_good_analysis: ^10.3.0` only.
+- **Flutter pin: `3.44.8`** via `.fvmrc` (legacy was 3.32.5 — a big jump; expect API drift). SDK constraint `^3.12.2`.
+- `analysis_options.yaml` matches the CLAUDE.md deny-by-default policy: includes `very_good_analysis`, plus `strict-casts`, `strict-inference`, `strict-raw-types`. CI runs `flutter analyze --fatal-infos`. Zero rule overrides so far — worth preserving that.
+- Both `ios/` and `android/` platform folders are generated (bundle id `com.trostsystems.emotely`); no web, matching the README's "iOS + Android only".
+- The rebuild is a **workspace** (`pnpm-workspace.yaml` modified on the current branch), and there is no `apps/app/analysis_options` inheritance issue — it's self-contained.
+
+Practical consequence: everything in section (a) lands on bare metal. The first PR for issue #6 needs to add riverpod (v3 — verify the API), `google_fonts`, `emoji_picker_flutter` (v4 — verify), a color picker (or hand-roll; `flutter_colorpicker` is the legacy choice but a hue wheel is a lot of dependency for one field), create `test/`, and port the 25-line a11y helper before the first widget lands rather than after.</result>
+<usage><subagent_tokens>121255</subagent_tokens><tool_uses>36</tool_uses><duration_ms>186721</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a50bd99f2a48b73d9</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/tasks/a50bd99f2a48b73d9.output</output-file>
+<status>completed</status>
+<summary>Agent "Research Flutter-agent transport options" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>All findings verified against primary sources. Here is the report.
+
+## (a) Transport: use plain stateless JSON per round, not the UI Message Stream
+
+**Decisive facts:**
+
+- **No first-party Dart/Flutter support exists.** Nothing on ai-sdk.dev documents non-JS clients. The stream-protocol page's only non-JS mention is a FastAPI *backend* example — guidance for non-JS *clients* is absent.
+- **The `ai_sdk_dart` 2.0.0 family is not what it looks like.** Published by `hashstudios.dev` (not Vercel) despite branding itself a "port of Vercel AI SDK v6". I extracted the tarball: its `lib/src/` is `agent/core/messages/providers/...` — it **calls model providers directly**, so using it would put your AI Gateway key on the device. It contains **zero** references to `ui-message-stream`. Wrong tool entirely.
+- **`ai_sdk_flutter` 0.1.2 is the only package that does the client-tool round trip** (`addToolResult`, `tool-input-available`, `tool-output-available`) — but it targets **AI SDK v5** and was last published 2025-11-19, with **49 downloads/30d and zero likes**. I diffed its chunk coverage against your installed `ai@7.0.77`: it knows ~20 chunk types; v7 emits ~48, including `tool-approval-request`, `tool-output-denied`, `tool-input-error`, and `reset-step`. You would own that gap.
+- **The protocol is versioned but not stability-committed** (`x-vercel-ai-ui-message-stream: v1`); the docs state no deprecation policy.
+- **The clincher:** per the SDK's own client-side-tool docs, even the React path *already* sends the full message list back to the server on every round. SSE buys you token-by-token text — which your UI does not render, since `ask_question` pauses the loop and the client shows a **widget**. You would take on a hand-rolled SSE parser to stream something no one sees.
+
+**Recommendation:** POST `{messages, toolResult}` → server loops until the next `ask_question` or completion → returns `{messages, pendingCall}`. `dart:convert` + `package:http`, no new abstractions.
+
+## (b) Message serialization: verified clean
+
+I ran the real check against the shipped `ai@7.0.77`, building a 10-question transcript in the exact shape `session.ts` produces:
+
+```
+messages: 41
+bytes: 11058 = 10.8 KiB  (0.234% of the 4.5 MB body limit)
+modelMessageSchema round-trip: 41/41 valid
+```
+
+- **`ai@7.0.77` exports `modelMessageSchema`** (a runtime `ZodType&lt;ModelMessage&gt;`, `dist/index.d.ts:666`). Validate the inbound list with it at the trust boundary — that's your input validation, and it's one line.
+- **One real gotcha:** `DataContent = string | Uint8Array | ArrayBuffer | Buffer`. Binary parts don't survive JSON. Irrelevant today (your answers are text/color/emoji/lists) — it only bites if a question ever returns an image.
+- **Caching survives the stateless rebuild, confirmed.** Per Vercel's automatic-caching docs, **OpenAI, Google and DeepSeek cache implicitly — "no modification is needed and caching works automatically."** Your `DEFAULT_MODEL = "openai/gpt-oss-120b"` is in that bucket, matching the 97% hit rate already recorded in ADR 0003. Note for the future: if you ever flag over to Anthropic, caching becomes **explicit** and needs `providerOptions: { gateway: { caching: 'auto' } }`, with entries expiring in **5 minutes** by default — a pause between widgets could exceed that.
+
+## (c) Vercel limits (Hobby, verified 2026-08-24 docs)
+
+| Limit | Hobby | Note |
+|---|---|---|
+| Max duration | **300s** default *and* max | Fluid compute; Pro gets 800s/1800s |
+| Request/response body | **4.5 MB** | 413 `FUNCTION_PAYLOAD_TOO_LARGE` |
+| Memory / CPU | 2 GB / 1 vCPU | Not configurable on Hobby |
+| Streaming (Node) | Supported, on by default | The 25s rule is **Edge-only**, not Node |
+| Fluid compute | **Available**, default-on since 2025-04-23 | Bytecode caching + pre-warming cut cold starts |
+| Concurrency | 30,000 | — |
+
+One ~1–3s model round against a 300s ceiling is not close to a constraint — **~100× headroom**. Cold starts are mitigated by bytecode caching, though note it applies to **production only**, not preview deployments.
+
+## (d) posthog_flutter — verified from the 5.39.0 tarball, not just docs
+
+- **Version 5.39.0**, published **2026-08-31** (today) — actively maintained.
+- **Requirements:** Dart `&gt;=3.6.0`, Flutter `&gt;=3.27.0`, Android `minSdkVersion 21`, iOS `13.0`. **Flutter 3.44.x needs nothing special.**
+- **EU host:** default is `https://us.i.posthog.com`; set `config.host = 'https://eu.i.posthog.com'`. The setter trims whitespace and falls back to the default if blank.
+- **Anonymous id:** yes, auto-generated. Read it with `getDistinctId()` (returns `''` if the platform can't supply one).
+- **Linking to Supabase auth (#7):** `identify({required String userId, ...})` links past anonymous events to the identified person — exactly the #7 flow. `alias({required String alias})` is also available. Caveat: `identify()` reloads feature flags, issuing a `/flags` request **even when `preloadFeatureFlags` is false** — relevant to your `agent-model` flag.
+- Setup is `Posthog().setup(config)` in Dart; for Session Replay/Surveys you must disable `com.posthog.posthog.AUTO_INIT` natively.
+
+## (e) Contract sharing, ranked
+
+1. **Hand-written Dart + JSON Schema as a CI tripwire — recommended.** `z.toJSONSchema()` is **built into zod 4.4.3** (confirmed in shipped types at `zod/v4/core/to-json-schema.d.ts`). Emit, commit, `git diff --exit-code` in CI. ~150 lines of Dart written once.
+2. **Add `freezed` 4.0.1 + `json_serializable` 6.14.1 for the answer union only** — justified purely by the ~6 variants, where hand-rolled `fromJson` dispatch gets error-prone. `dart run build_runner build --only-check` (new in `build_runner` 2.16.0) fails CI on drift.
+3. **`quicktype` 26.0.0 as a one-shot scaffold**, then delete the pipeline — never in CI.
+4. **`swagger_parser` / `openapi_generator`** — over-engineered for 4 schemas.
+5. **`schema2dart`, `json_schema_to_freezed`** — sub-300 downloads/mo, ≤5 likes. Avoid.
+
+**Two traps:** `zod-to-json-schema` is **archived** (repo `archived: true`; README: no longer maintained as of Nov 2025) — don't add it, zod 4 covers it. And `z.toJSONSchema()` defaults to `io: "output"`, giving the *post-transform* shape; pass **`io: "input"`** for an input contract.
+
+**The through-line:** every leg of this points the same way — the stateless JSON round-trip needs no new dependency on either side, and the one Dart package that could have consumed SSE is a v5-era, 49-download hobby project against your v7 server. The laziest option is also the only one without a maintenance liability.</result>
+<usage><subagent_tokens>131727</subagent_tokens><tool_uses>46</tool_uses><duration_ms>314479</duration_ms></usage>
+</task-notification>
+
+---
+
+Q1: agreed
+Q2: fine with me for now
+Q3: (a) fine for now. We must move it to the server later in case app crashes or user closes it and wants to resume later
+Q4: let's go with bloc. I need some more practice with that anyways. Ignore the abstract interface class pattern, that's unnecessary overhead. – VGV has wingspan, which I remember as a plugin for agents building flutter apps. Install that and leverage it.
+Q5: agreed
+Q6: agreed
+Q7: new widgets. Make sure to go with flutter 3.47 and use the extracted material / cupertino widgets or if you think it's nicer already, use the raw widgets and build custom design on top already.
+Q8: agreed
+
+In general: Read my flutter-testing-concepts repository for how I like tests being written. In general drive tests through the UI and mock the external API / platform. Only unit test providers/blocs, if they have complex state which would significantly slow down the test suite using widget tests.
+
+Q9: agreed.
+
+Let's make sure we build a nice and proper app here and don't adapt bad legacy code from the legacy app. Keep in mind that I literally learned Flutter building that app, so there's code of all sorts of proficiency levels.
+
+---
+
+<task-notification>
+<task-id>a6f57c6a5991d0602</task-id>
+<tool-use-id>toolu_01KLU8Yuwz1JJ7gtSSRyJ12Z</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/tasks/a6f57c6a5991d0602.output</output-file>
+<status>completed</status>
+<summary>Agent "Research Flutter 3.47 and packages" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>That confirms the one real gotcha: `google_fonts` exposes `TextTheme` (a Material type) in its public API, so it's exactly the type-mismatch case the migration guide warns about.
+
+## Summary
+
+### (a) Exact Flutter pin
+
+**`3.47.2`** — Dart `3.13.2`, released 2026-08-27, hash `d3b14c876900e553bc736ca19295fc09e3853e8e`. Verified against the official release manifest (`storage.googleapis.com/flutter_infra_release/releases/releases_macos.json`), not a blog. 3.47 **is** current stable (3.47.0 shipped 2026-08-12; .1 and .2 are hotfixes).
+
+Update `/Users/petertrost/dev/emotely/apps/app/.fvmrc` → `{"flutter": "3.47.2"}` and bump `environment.sdk` in pubspec from `^3.12.2` to `^3.13.0`.
+
+**Breaking changes 3.44 → 3.47 that matter here:**
+- **iOS min 12 / macOS min 12** (Xcode 27 prep). The blog says iOS 15; release notes say the PR raised it to 12 — either way it's above the default iOS 12 template, so check `apps/app/ios/Podfile` + Xcode deployment target.
+- **Android requires AGP 9+** — regenerate/upgrade Gradle config. This is the one most likely to bite a 3.44-era scaffold.
+- **`describeEnum` removed** — unlikely to affect a fresh app.
+- Impeller now default on macOS/Windows/Linux (irrelevant for iOS+Android; already default there).
+- Semantics header/`headingLevel` behavior changed on iOS+Android.
+- Nothing that changes M3 seed theming defaults.
+
+### (b) Extracted vs bundled Material — verdict
+
+**State as of 3.47 (all verified on pub.dev, publisher `flutter.dev`):**
+
+| Package | Version | Published | Constraints |
+|---|---|---|---|
+| `material_ui` | **1.1.0** | 2026-08-24 | Dart `^3.12.0`, Flutter `&gt;=3.44.0` |
+| `cupertino_ui` | **1.0.1** | 2026-08-24 | Dart `^3.12.0`, Flutter `&gt;=3.44.0` |
+
+Both are **stable 1.0, not preview**. `material_ui` depends on `cupertino_ui`, so adding Material pulls Cupertino in anyway.
+
+**Flutter team's recommendation, verbatim from the migration guide:** for new applications, use the standalone packages immediately, to avoid adopting deprecated code paths. Timeline: contributions to in-framework Material/Cupertino were frozen in 3.44; formal deprecation lands in the **November 2026 stable**; removal date not yet announced. Migration is `dart fix --apply --code=migrate_design_widgets` plus `flutter pub add material_ui cupertino_ui`.
+
+**My recommendation for THIS app: go standalone `material_ui` (+ `cupertino_ui`), keep MaterialApp and M3 `ColorScheme.fromSeed`.** Reasoning:
+
+- It's a **greenfield app** — the migration cost is one import line, and you'd otherwise write code that gets deprecation warnings in ~10 weeks. Your repo is `flutter analyze --fatal-infos`, so November's deprecation warnings become **hard CI failures**. That converts this from "nice to have" into "do it now or do it under duress in November."
+- Design packages then ship **weekly**, decoupled from SDK bumps.
+
+**Do NOT go raw-widgets-only (`flutter/widgets.dart` + `WidgetsApp`).** There is **no first-party or blessed** widgets-layer design-system framework — I looked, and the ecosystem answer is third-party (Mix, shadcn-style copy-paste) or roll-your-own. Going raw means you hand-build text fields, scrolling physics glue, dialogs/routes, ink/press feedback, and — the expensive one — **accessibility and localization plumbing** that Material gives you free. A journaling app's identity comes from typography, color and spacing, all of which `ThemeData` already expresses. Custom design on top of Material widgets gets you the Baskervville serif identity at a fraction of the cost.
+
+&gt; ponytail: Material widgets + heavy `ThemeData` override is the lazy path to a custom look. Drop to `flutter/widgets.dart` per-component only if a specific Material widget actively fights the design — not wholesale up front.
+
+### (c) Versions table
+
+| Package | Pin | Notes |
+|---|---|---|
+| `flutter_bloc` | `^9.1.1` | Last published 2025-05-02. Stale date but stable and current; depends on `bloc ^9.0.0`, `provider ^6.0.0`. No 3.47 issues. |
+| `bloc` | `^9.2.1` | 2026-05-12. Pulled transitively; pin only if you have a pure-Dart domain package. |
+| `bloc_test` | `^10.0.0` | 2025-01-12. Current major. |
+| `emoji_picker_flutter` | `^4.5.3` | 2026-07-24. Flutter `&gt;=3.41.8`. **4.5.3 specifically fixes AGP 9 build failures** — required given 3.47's AGP 9 requirement. |
+| **color picker** | **`flex_color_picker ^4.0.0`** | Published **2026-08-30** (yesterday). Requires Flutter `&gt;=3.47.0`, and **depends directly on `material_ui ^1.0.0` + `cupertino_ui ^1.0.0`**. |
+| `google_fonts` | `^8.2.1` | 2026-07-31. Flutter `&gt;=3.38.0`. **See caveat below.** |
+| `posthog_flutter` | `^5.39.0` | 2026-08-31 (today). Flutter `&gt;=3.27.0`. |
+
+**Color picker verdict — don't hand-roll.** `flutter_colorpicker` is effectively **abandoned**: 1.1.0 from May 2024, and before that nothing since 2021. But `flex_color_picker` 4.0.0 landed yesterday explicitly built for Flutter 3.47 + the standalone packages. That's a maintained dependency that's already done your migration for you — cheaper than writing a swatch/hue picker and far cheaper than debugging one.
+
+**emoji_picker_flutter v4 vs v3:** small break — `progressIndicatorColor` removed in favour of a `loadingIndicator` property on `Config`. v4 also added localization (10 languages), `EmojiPickerController`, `rememberSkinTone`, SPM migration, and `universal_io` for Wasm. Not a painful upgrade; you're greenfield anyway.
+
+### (d) FVM / CI notes
+
+- **FVM 4.3.0** (published 2026-08-24) — FVM resolves any released version string from the Flutter release manifest, so 3.47.2 needs no FVM-specific support. No action beyond editing `.fvmrc`.
+- **CI needs no change.** `/Users/petertrost/dev/emotely/.github/workflows/ci.yml:81-85` already uses `subosito/flutter-action` (SHA-pinned to v2) with `flutter-version-file: apps/app/.fvmrc`. That input reads `.fvmrc` and requires an **exact** version (not a range) — yours is exact, so bumping `.fvmrc` is sufficient.
+- Latest flutter-action is **v2.23.0** (2026-03-25). Your pinned SHA `1a449444...` predates it; not required to move, but worth re-pinning to v2.23.0 while you're in there.
+
+### (e) Things that contradict or complicate jumping to 3.47
+
+Nothing blocks it, but four real snags:
+
+1. **`google_fonts` 8.2.1 is the one genuine incompatibility risk.** It still targets Flutter `&gt;=3.38.0`, has no `material_ui` support in its changelog, and its public API exposes **`TextTheme`** (I confirmed ~17k `TextTheme` references in its API docs). `TextTheme` is a *Material* type — this is precisely the type-mismatch case the official guide flags: `MaterialUiCompatibilityBridge` supplies theme/localization data but **cannot resolve type mismatches** across the two libraries. So `GoogleFonts.baskervvilleTextTheme()` may not assign to `material_ui`'s `ThemeData.textTheme`.
+   - **Mitigation is cheap and arguably better anyway:** for a single-family serif identity, use `GoogleFonts.baskervville()` which returns **`TextStyle`** (a widgets-layer type that crosses the boundary fine), and build your `TextTheme` yourself with `.copyWith`. Better still for a journaling app — **bundle the Baskervville TTFs as assets** and declare them in `pubspec.yaml`'s `fonts:` section, dropping `google_fonts` entirely. That removes the runtime HTTP font fetch, the `path_provider`/`crypto`/`http` transitive deps, the first-run flash of unstyled text, and this whole compatibility question. For one font family, the package is not carrying its weight.
+2. **AGP 9 requirement** is the most likely build breakage on the jump from 3.44 — budget time for Gradle config, and note `emoji_picker_flutter` must be at 4.5.3 for its AGP 9 fix.
+3. **iOS/macOS deployment target bump** needs Podfile + Xcode project edits.
+4. **`emoji_picker_flutter` and `posthog_flutter` have not migrated** to `material_ui`. Both are lower-risk than `google_fonts`: PostHog is mostly non-widget API surface, and the emoji picker's config types are its own. If either leaks a Material type at the boundary, wrap with `MaterialUiCompatibilityBridge` in `MaterialApp.builder`. Worth a `flutter analyze` spike before committing to the migration in one go.
+
+**Suggested order:** bump `.fvmrc` to 3.47.2 and get the plain 3.47 build green (AGP 9 + iOS target) *first*, then do the `material_ui` migration as a separate commit — so a Gradle failure and a type-mismatch failure never land in the same diff.
+
+Sources: [Flutter 3.47.0 release notes](https://docs.flutter.dev/release/release-notes/release-notes-3.47.0), [What's new in Flutter 3.47](https://flutter.dev/blog/whats-new-in-flutter-3-47), [Migrate to standalone material_ui and cupertino_ui](https://docs.flutter.dev/release/breaking-changes/material-ui-and-cupertino-ui), [Flutter breaking changes](https://docs.flutter.dev/release/breaking-changes), [material_ui](https://pub.dev/packages/material_ui), [cupertino_ui](https://pub.dev/packages/cupertino_ui), [flex_color_picker](https://pub.dev/packages/flex_color_picker), [emoji_picker_flutter changelog](https://pub.dev/packages/emoji_picker_flutter/changelog), [google_fonts](https://pub.dev/packages/google_fonts), [flutter_bloc](https://pub.dev/packages/flutter_bloc), [subosito/flutter-action](https://github.com/subosito/flutter-action), [FVM](https://pub.dev/packages/fvm)</result>
+<usage><subagent_tokens>88088</subagent_tokens><tool_uses>29</tool_uses><duration_ms>188959</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a76ccdcc888da1ad7</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/tasks/a76ccdcc888da1ad7.output</output-file>
+<status>completed</status>
+<summary>Agent "Distill user's Flutter testing conventions" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Research complete. Here are the findings.
+
+---
+
+# Flutter Test Conventions — distilled from `peter-trost/flutter-testing-concepts`
+
+Cloned to `/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/scratchpad/flutter-testing-concepts` (read-only, nothing modified). Repo has two parallel apps: `bloc_app/` and `riverpod_app/`, plus a shared `common/` package. Focus below is `bloc_app`.
+
+**Most valuable single file:** `/private/tmp/.../flutter-testing-concepts/.cursor/rules/testing-rules.mdc` — his own written testing rules. Copy it near-verbatim into the new project as an agent rule file. Everything below is that file cross-checked against what the code actually does.
+
+## 1. Packages
+
+- **`mockito` (^5.4.6) + `build_runner`** — not mocktail. (README says "mocktail" in one bullet; `pubspec.yaml` and every test say mockito. README is stale.)
+- **`bloc_test` (^10.0.0)** for cubit/bloc unit tests
+- **`very_good_analysis` (^10.0.0)**, `public_member_api_docs: false`, generated files excluded from analyzer
+- `integration_test` from SDK — **not patrol**
+- `build_verify` is in `dev_dependencies` but unused — skip it
+
+## 2. Widget test shape
+
+**Pump helper** — one `PumpApp` extension on `WidgetTester` in `test/helpers/pump_app.dart`, re-exported via `test/helpers/helpers.dart` (that file is literally one `export` line):
+
+```dart
+extension PumpApp on WidgetTester {
+  static const _locale = Locale('de');   // non-English default is deliberate — catches hardcoded strings
+  static const _localizationsDelegates = AppLocalizations.localizationsDelegates;
+  static const _supportedLocales = AppLocalizations.supportedLocales;
+
+  Future&lt;void&gt; pumpApp({required Widget widget, Locale? locale}) async {
+    await pumpWidget(MaterialApp(
+      locale: locale ?? _locale,
+      localizationsDelegates: _localizationsDelegates,
+      supportedLocales: _supportedLocales,
+      home: widget,
+    ));
+  }
+
+  Future&lt;void&gt; pumpAppWithRouter({required GoRouter router, Locale? locale}) async { /* MaterialApp.router */ }
+}
+```
+
+- **No theme injection.** Localization + locale only. `pumpAppWithRouter` is the second entry point for route tests.
+- The riverpod variant adds `List&lt;Override&gt; overrides = const []` and wraps in `ProviderScope`.
+
+**Per-test local helper is mandatory** — every test file defines a `pumpTestWidget(WidgetTester tester, {...})` closure inside `main()`, in the same scope as the mocks so the mocks don't have to be passed in. Named parameters carry the variation.
+
+**How blocs are provided — a clean two-tier split:**
+
+| Level | Bloc strategy |
+|---|---|
+| **Screen/view** (`*_view_test.dart`) | **Mocked cubit** via `BlocProvider.value` — stub `state`, stub `stream` as `Stream.empty()` |
+| **Leaf widget** (`challenge_card_test.dart`) | **Real cubit** (widget creates its own), assert via `context.read&lt;Cubit&gt;().state` |
+| **Route** (`*_route_test.dart`) | **Real cubit + mocked repository** registered in `GetIt`, real `GoRouter` |
+
+Mocked-cubit setup requires two things people forget:
+
+```dart
+void main() {
+  provideDummy(const ConceptsState.initial());   // mockito needs a dummy for the non-nullable state type
+  late MockConceptsCubit cubit;
+  late MockGoRouter router;
+
+  setUp(() {
+    cubit = MockConceptsCubit();
+    when(cubit.stream).thenAnswer((_) =&gt; const Stream.empty());  // else BlocBuilder hangs
+    router = MockGoRouter();
+    when(router.go(any)).thenAnswer((_) {});
+  });
+
+  Future&lt;void&gt; pumpTestWidget(WidgetTester tester) =&gt; tester.pumpApp(
+        widget: InheritedGoRouter(
+          goRouter: router,
+          child: BlocProvider&lt;ConceptsCubit&gt;.value(value: cubit, child: const ConceptsView()),
+        ),
+      );
+```
+
+`InheritedGoRouter(goRouter: mockRouter, child: ...)` is his standard trick for asserting navigation without a real router.
+
+**Route tests** register mocked repos into GetIt and tear down:
+
+```dart
+setUp(() {
+  mockConceptsRepository = MockConceptsRepository();
+  when(mockConceptsRepository.getConcepts()).thenAnswer((_) async =&gt; []);
+  GetIt.I.registerSingleton&lt;ConceptsRepository&gt;(mockConceptsRepository);
+});
+tearDown(() =&gt; GetIt.I.reset());
+```
+
+**Finder style** — by frequency across `bloc_app/test`: `find.byKey` 56, `find.byType` 41, `find.text` 39, `find.byIcon` 6, `find.ancestor` 1.
+- **Static `Key` constants live on the widget class**, not in the test: `static const submitButtonKey = Key('submitButton');` in `challenge_card.dart`. Tests do `find.byKey(ChallengeCard.submitButtonKey)`.
+- Localized strings are asserted through the real l10n object, never hardcoded: `final context = tester.element(find.byType(ConceptsView)); expect(find.text(context.l10n.conceptsViewTitle), findsOneWidget);` — `tester.element(find.byType(WidgetUnderTest))` is the standard way to get a context.
+- Widget properties read via `tester.widget&lt;FilledButton&gt;(finder).onPressed` for enabled/disabled checks.
+
+**`pump()` vs `pumpAndSettle()`** — strongly biased to explicit `pump()`. `challenge_card_test.dart` alone has 21 `tester.pump()` and zero `pumpAndSettle`. `pumpAndSettle` appears in only 5 files, reserved for animated page transitions (`sections_view_test.dart`: 10) and route/navigation tests.
+
+**Localization variants** — `ValueVariant` is his preferred way to run one test across locales, with the variant class declared **at the end of the file** and instantiated **outside** the test:
+
+```dart
+typedef ChallengeCardVariantSignature = ({Locale locale, String question, String option1, String option2});
+
+class ChallengeCardVariant extends ValueVariant&lt;ChallengeCardVariantSignature&gt; {
+  ChallengeCardVariant() : super({ (locale: const Locale('de'), question: 'Was ist Flutter?', ...), (locale: const Locale('en'), ...) });
+  @override String describeValue(v) =&gt; 'locale: ${v.locale.languageCode}';
+}
+
+testWidgets('displays question and options', variant: variant, (tester) async {
+  final (:locale, :question, :option1, :option2) = variant.currentValue!;
+  ...
+});
+```
+
+## 3. Mocking
+
+- **All mocks in one file: `test/mocks.dart`.** Explicit rule: *"Avoid adding the mocks to the respective test files. ONLY add them to the `mocks.dart` file."*
+
+```dart
+@GenerateMocks([CacheManager, Dio, GoRouter, HttpClientAdapter,
+  ConceptCubit, ConceptsCubit, ConceptsRepository, RestClient,
+  ChallengesCubit, ChallengesRepository])
+class GeneratedMocks {}
+```
+Tests import `'../../mocks.mocks.dart'`.
+
+- **What gets mocked:** repositories (in cubit + route tests), the retrofit `RestClient` (in repository tests), `Dio` itself (in rest_client tests), `GoRouter`, `CacheManager` (kills network image loading), and cubits (in view tests). Layer N's test mocks layer N+1 — a strict seam-per-layer discipline.
+- `build.yaml` must scope the mock builder, otherwise it won't generate for integration tests:
+
+```yaml
+builders:
+  mockito|mockBuilder:
+    generate_for: [ 'test/**.dart', 'integration_test/**.dart' ]
+```
+- Integration tests get their **own** `integration_test/mocks.dart` (only `CacheManager` there).
+- No hand-written fakes anywhere. No `registerFallbackValue` (mockito uses `provideDummy` instead).
+
+## 4. Bloc unit tests
+
+**Every cubit has a `blocTest` unit test** — 4 cubits, 4 test files, no exceptions. Style:
+
+```dart
+blocTest&lt;ConceptsCubit, ConceptsState&gt;(
+  'emits [loading, error] when fetchConcepts fails',
+  setUp: () =&gt; when(mockRepository.getConcepts()).thenThrow(Exception('Test error')),
+  build: () =&gt; ConceptsCubit(mockRepository),
+  act: (cubit) =&gt; cubit.fetchConcepts(),
+  expect: () =&gt; const [ConceptsState.loading(), ConceptsState.error('Failed to fetch concepts')],
+  verify: (_) =&gt; verify(mockRepository.getConcepts()).called(1),
+  errors: () =&gt; [isA&lt;Exception&gt;().having((e) =&gt; e.toString(), 'error', 'Exception: Test error')],
+);
+```
+
+- `expect:` matches **full freezed instances**, never individual properties (explicit rule).
+- Initial state gets a plain `test()`, not a `blocTest`.
+- Multi-step acts use cascade: `act: (cubit) =&gt; cubit..toggleAnswer('a1')..submit()`.
+- `build: ChallengeProgressCubit.new` tear-off when there are no deps.
+- Pure computed methods (`isCorrect`) get plain `test()` cases outside blocTest.
+- `errors:` is used alongside `expect:` when the cubit rethrows.
+
+## 5. Structure + naming
+
+- `test/` mirrors `lib/` exactly, including `test/features/&lt;feature&gt;/view/widgets/`. Same for `integration_test/`.
+- `test/helpers/pump_app.dart` + `test/helpers/helpers.dart` (barrel) + `test/mocks.dart` at the root of `test/`.
+- **`group()` takes a class reference, not a string**: `group(ConceptsView, () {...})`, `group(ChallengeProgressCubit, () {...})`. Strings only for non-class subjects (`group('router', ...)`, `group('usernameProvider', ...)`) because instances print as "Instance of [...]".
+- Nested groups per method: `group('toggleAnswer', ...)`, `group('submit', ...)`, `group('reset', ...)`.
+- Test names are **plain declarative behavior sentences** — no given/when/then, no "should":
+  - `'renders loading state'`, `'has correct title'`, `'shows empty state'`
+  - `'emits [loading, loaded] when fetchConcepts succeeds'`
+  - `'navigates to concept on concept tap'`
+  - `'submit button is disabled when no answer selected'`
+  - `'renders $ConceptView and fetches concept'` — string interpolation of the class name
+- **No structural comments.** Explicit rule against "// Arrange", "// Act", "// verify xyz". Comments only when non-obvious, e.g. `// Called twice, because ConceptsRoute is stacked on ConceptRoute`.
+- Shared fixture data (a `challenge`, a list of `concepts`) is a top-level `final` inside `main()` above the helper.
+
+## 6. Coverage discipline
+
+CI is `very_good test --coverage` + Codecov — **there is no hard 100% gate**:
+
+```yaml
+- run: dart pub global activate very_good_cli 0.25.0
+- run: dart pub global run very_good_cli:very_good test --coverage -- --file-reporter=json:reports/test_report.json
+- run: lcov --remove coverage/lcov.info '**.freezed.dart' '**.g.dart' '**/app_localizations*.dart' -o coverage/cleaned.info --ignore-errors unused
+```
+
+- `--min-coverage` appears **nowhere**. Codecov uses `target: auto, base: auto` (ratchet — don't regress vs. the base commit), not `target: 100%`.
+- Generated files (`.freezed.dart`, `.g.dart`, `app_localizations*.dart`) are stripped from lcov **and** excluded in `codecov.yml`; `integration_test/**` is excluded from coverage entirely.
+- Codecov flags + components per package (`bloc_app`, `riverpod_app`, `common`) with `carryforward: true`, so per-package CI can skip unchanged packages.
+- Also gated: `flutter analyze .` and `dart format . --set-exit-if-changed`.
+- Test results are converted to JUnit XML via `junitreport` and uploaded.
+
+## 7. Integration tests
+
+- Plain `integration_test` package + `IntegrationTestWidgetsFlutterBinding.ensureInitialized()`. Not patrol.
+- **Robot pattern** — a `ChallengesRobot` class per flow in `integration_test/challenges_robot.dart`, holding `WidgetTester`. Finders are getters, actions are `Future&lt;void&gt;` methods that each end in `pumpAndSettle()`. Tests read as prose:
+
+```dart
+final robot = ChallengesRobot(tester);
+await robot.pumpApp();
+expect(find.byType(ConceptsView), findsOneWidget);
+await robot.tapFirstConcept();
+expect(find.byType(ConceptView), findsOneWidget);
+await robot.navigateThroughSectionsToChallenges();
+await robot.tapSubmitButton();
+expect(robot.findIncorrectText, findsOneWidget);
+```
+Robot exposes `bool get isSubmitButtonEnabled =&gt; tester.widget&lt;FilledButton&gt;(findSubmitButton).onPressed != null;` and a `_findInFirstCard` scoping helper built on `find.descendant`.
+- Only two tests: one navigation flow, one interaction flow. Assertions are `findsOneWidget` on screen types — coarse-grained on purpose.
+- **The external API is NOT mocked in integration tests.** Real `Dio` + real `RestClient` hitting `https://raw.githubusercontent.com/peter-trost/flutter-testing-concepts/refs/heads/main/mock_concepts.json`. Only `CacheManager` is mocked (returns an empty `Stream&lt;FileResponse&gt;`) to stop image downloads. Real repos are registered into GetIt in `setUp`, unregistered in `tearDown`.
+
+---
+
+## Things that contradict his stated philosophy — ask, don't guess
+
+1. **"Only unit test blocs with complex state" is not what the repo does.** All 4 cubits have full `blocTest` suites, including `ConceptsCubit` — a ~15-line cubit whose entire job is `loading → repo call → loaded/error`, already fully exercised by `concepts_view_test.dart` and `concepts_route_test.dart`. `ChallengeProgressCubit` (set toggling, submit lock, `isCorrect`) is the only one that plausibly clears his "complex state" bar. **Ask: is the repo's bloc-test-everything the intent, or an artifact of it being a teaching repo demonstrating cubit testing? This is the single biggest decision for the new app's test-suite size.**
+
+2. **"Drive tests through the UI" — but view tests mock the cubit.** `concepts_view_test.dart` stubs `cubit.state` directly rather than driving a real cubit off a mocked repo. That's testing the view in isolation against hand-fed states, not driving through the UI. Only route tests (`*_route_test.dart`) do the real-cubit-mocked-repo thing, and there's exactly one thin test per route (`'renders $ConceptView and fetches concept'`). **Ask: for the new app, should the route-level test (real cubit + mocked repo, driven through the UI) become the primary shape and absorb the state-rendering assertions currently in view tests, collapsing three test files per feature into one?**
+
+3. **"Mock the external API" — integration tests hit the live network.** They fetch real JSON from raw.githubusercontent.com. Fine for a demo repo with static mock fixtures in-repo; flaky and unacceptable for a real app's CI. **Ask: for the new app, mock at the Dio `HttpClientAdapter` level in integration tests (`HttpClientAdapter` is already in his `@GenerateMocks` list but appears unused), or run a local fixture server?**
+
+4. **Three overlapping tests of the same behavior.** `getConcepts` is asserted at rest_client level (mocked Dio), repository level (mocked RestClient — the repo method is a one-line passthrough), and cubit level (mocked repository). The repository test in particular is ~90 lines asserting that a one-line delegation delegates. **Ask: keep the per-layer seam discipline, or drop the passthrough-repository tests?**
+
+5. **README says mocktail, code uses mockito.** Just stale docs — use mockito.
+
+## Minimum copy list for the new app
+
+1. `.cursor/rules/testing-rules.mdc` → adapt as an agent rule file (it is the highest-signal artifact in the repo)
+2. `test/helpers/pump_app.dart` + `test/helpers/helpers.dart` barrel
+3. `test/mocks.dart` single `@GenerateMocks` file + the `build.yaml` `mockito|mockBuilder.generate_for` scoping
+4. `integration_test/&lt;flow&gt;_robot.dart` robot pattern
+5. `.github/actions/run-tests/action.yaml` — the `very_good test --coverage` + lcov-strip + junitreport pipeline
+6. `codecov.yml` ignore list and flags
+7. Static `Key` constants on widget classes as the finder contract</result>
+<usage><subagent_tokens>114932</subagent_tokens><tool_uses>19</tool_uses><duration_ms>202565</duration_ms></usage>
+</task-notification>
+
+---
+
+Q10: teaching-repo artifact. We should enforce 100% test coverage in CI, though
+Q11: agreed, with the exception that error states should be mockable through the API as well and we shouldn't mock the bloc directly 
+Q12: agreed for now. I'd create a smoke test that hits the actual agent endpoint, though to ensure we have everything configured correctly. That can run pre-release and nightly, though. Doesn't need to be on every PR to prevent slowing iteration down
+Q13: agreed
+Q14: agreed. Good code can be ported.
+
+Are there better endpoint names than "session"? A session could mean anything. What's this endpoint do? Propose 3 options and recommend one, then wait for my decision
+
+---
+
+Agreed on the endpoint name. Also, create an issue after this to look into tooling, especially once we get for free for open source repos. Like code rabbit and codecov. Also, I'd prefer to move our runners to blacksmith, as that's faster and cheaper and also comes with 3k free minutes. We can tackle that issue after this build
+
+---
+
+address the review comments
+
+---
+
+Remove the pointer. The skill's description is visible in the agent's context and they can choose to read it if it applies. no need to duplicate that info in CLAUDE.md.
+
+Then merged #28 and continue with part 2.
+
+---
+
+You have access to the chrome tool and can do the dashboard work around rate limiting there, too. Also vercel cli if that helps. (can you rename my team to "peter-trost" when you're on it, please).
+
+#29 looks good, you can merge that.
+
+---
+
+<task-notification>
+<task-id>bq4jos7nq</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/tasks/bq4jos7nq.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for CI on PR #32 to finish and report results" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+upgrade global flutter to 3.47 – that should fix the vgv issue. Then wait for me to review the PRs.
+
+---
+
+#31 is merged.
+
+Read the review comments on #32, then let's discuss the things that need discussion. Once we made the decision there, execute on everything and babysit the PR until it's green again.
+
+---
+
+1. skip for now actually. I'm creating a dedicated open source package for very strict lint rules that we can later add in a refactoring.
+2. agreed on bumping vg analysis now and already address those.
+
+---
+
+<task-notification>
+<task-id>btp9714pa</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/tasks/btp9714pa.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for CI on PR #32 after the review fixes" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+disable `public_member_api_docs`.
+
+---
+
+<task-notification>
+<task-id>bijnqozpw</task-id>
+<tool-use-id>toolu_01Xq9kubBASneVtngSmKAQKQ</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-petertrost-dev-emotely/3b9ef8a1-ce8e-4d79-ad45-0ceabd7660df/tasks/bijnqozpw.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for CI on PR #32 after disabling the docs lint" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+had to update the branch to latest main. Use the chrome tool to enable auto merge and PR stacks in this repository. (PR stacks are now native in github)
+
+---
+
+PR is merged. go ahead. Stacking sounds good there
