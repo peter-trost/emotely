@@ -44,20 +44,13 @@ annotation carries only what genuinely differs, e.g.
   Answer`), never inside the class. No private `const Foo._()` constructor:
   editing an extension does not touch generated code, so no regeneration.
 
-## Primary constructors and docs (non-freezed classes too)
+## Primary constructors (non-freezed classes too)
 
-`public_member_api_docs` treats a primary constructor as an undocumented
-member. Document it on a `this;` body part; `unnecessary_primary_constructor_body`
-accepts a documented one:
-
-    /// Class doc.
-    class const HexColorConverter() implements JsonConverter<Color, String> {
-      /// Creates the converter.
-      this;
-    }
-
-`use_primary_constructors` also wants `enum Foo()` on constructor-less enums;
-give those the same documented `this;`.
+`use_primary_constructors` is on: `class const HexColorConverter() implements
+JsonConverter<Color, String> { ... }`, widgets as
+`class const Foo({super.key}) extends StatelessWidget`, and constructor-less
+enums as `enum Foo() { ... }`. Never add an empty `this;` body part;
+`public_member_api_docs` is disabled precisely so none is needed.
 
 ## Wire types
 

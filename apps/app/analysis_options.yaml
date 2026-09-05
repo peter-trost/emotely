@@ -23,3 +23,7 @@ linter:
     # Experimental in the SDK and not yet part of very_good_analysis; enabled
     # so hand-written classes use Dart 3.13 primary constructors.
     use_primary_constructors: true
+    # Flags every primary constructor as an undocumented member and only
+    # accepts a doc comment on a `this;` body part — pure ceremony that
+    # documents nothing. Public API docs stay a review concern, not a lint.
+    public_member_api_docs: false

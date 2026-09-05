@@ -9,9 +9,6 @@ void main() {
 
 /// Root of the emotely client; the GenUI session screen lands next.
 class const EmotelyApp({super.key}) extends StatelessWidget {
-  /// Creates the root widget.
-  this;
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

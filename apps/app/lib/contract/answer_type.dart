@@ -20,9 +20,5 @@ enum AnswerType() {
   rating,
 
   /// One or more short text items.
-  textList;
-
-  /// Values carry no state; the constructor exists for the primary
-  /// constructor lint.
-  this;
+  textList,
 }
