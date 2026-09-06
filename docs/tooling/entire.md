@@ -20,7 +20,8 @@ Capture is two halves ([capture-checkpoints](https://docs.entire.io/guides/check
   into SessionStart/Stop/SessionEnd/UserPromptSubmit and PreToolUse/PostToolUse
   on `Agent` + `TaskCreate|TaskUpdate`. `.codex/hooks.json` does the same for
   Codex. `entire status` here reports: `Enabled · branch main`, agents
-  `Claude Code, Codex`, `Checkpoints sync to: origin`.
+  `Claude Code, Codex`, `Checkpoints sync to: dedicated checkpoint remote
+  (peter-trost/emotely-checkpoints)`.
 - **Git hooks** — `.git/hooks/{prepare-commit-msg,commit-msg,post-commit,post-rewrite,pre-push}`
   all shell out to `entire hooks git ...`. `prepare-commit-msg` adds an
   `Entire-Checkpoint: <id>` trailer, `post-commit` condenses the session,
@@ -36,8 +37,21 @@ working branch. Untracked local state (`.entire/logs/`, `metadata/`, `tmp/`,
 `settings.local.json`) is ignored via `.entire/.gitignore`; `.claude/settings.json`
 also denies reads of `.entire/metadata/**`.
 
-Secrets are detected and redacted before anything is stored
-([entire.io](https://entire.io/)).
+**Transcripts are private.** This repo is public, so checkpoint refs do not go
+to `origin`: `strategy_options.checkpoint_remote` in `.entire/settings.json`
+points them at the private
+[peter-trost/emotely-checkpoints](https://github.com/peter-trost/emotely-checkpoints)
+(same owner, as Entire requires; set up 2026-09-06 via
+`entire configure --checkpoint-remote github:peter-trost/emotely-checkpoints`,
+docs: [store-checkpoints-in-another-repo](https://docs.entire.io/guides/checkpoints/store-checkpoints-in-another-repo.md)).
+If that remote is unreachable the code push still succeeds and Entire keeps the
+checkpoint local with a warning. Never push `refs/entire/*` to `origin`.
+
+Redaction runs before every write
+([privacy-and-redaction](https://docs.entire.io/guides/configuration/privacy-and-redaction.md)):
+secrets by default (API keys, tokens, credentialed URLs, connection strings,
+private keys), plus PII in `.entire/settings.json` — `redaction.pii` with
+`email` and `phone` on, `address` off.
 
 ## Key commands
 
@@ -84,11 +98,19 @@ State-changing, **the user's call — suggest, don't run**: `enable`, `disable`,
   the squashed `main` commit may not. Recovery is
   `entire session attach <SESSION_ID> -a <AGENT>`. Worth verifying against a real
   merged PR, and worth an ADR if the team wants the link guaranteed on `main`.
-- **`pre-push` pushes to `origin`** (this repo's GitHub remote) on every push, so
-  checkpoint refs land in the shared repo — anyone pushing needs write access,
-  which they have anyway.
+- **`pre-push` pushes checkpoints to the private checkpoint repo** on every
+  push, so anyone whose sessions should be captured needs write access there
+  too. Contributors without it still push code fine; their checkpoints stay
+  local.
 - Telemetry is on (`"telemetry": true` in `.entire/settings.json`).
 - `entire search` requires `entire login` (GitHub device flow); the local
   inspection commands do not.
-- No `refs/entire/*` exist locally or on `origin` yet — Entire was enabled
-  2026-08-20 and no agent commit has been made since, so this is unexercised.
+- Checkpoints that reached the public `origin` before the private remote
+  existed (57 refs, up to 2026-09-06) were pushed to the checkpoint repo and
+  deleted from `origin`. Deleted refs can linger in GitHub's object store until
+  its garbage collection runs; treat anything captured before that date as
+  possibly cached.
+- Every clone runs `entire enable` once; git hooks are not versioned. If
+  `entire status` says hooks are out of date, `entire enable --force` reinstalls
+  them — check its diff of `.claude/settings.json` afterwards, it has dropped
+  the `permissions.deny` block before.

@@ -1,5 +1,19 @@
 {
   "enabled": true,
+  "strategy_options": {
+    "checkpoint_remote": {
+      "provider": "github",
+      "repo": "peter-trost/emotely-checkpoints"
+    }
+  },
+  "redaction": {
+    "pii": {
+      "enabled": true,
+      "email": true,
+      "phone": true,
+      "address": false
+    }
+  },
   "telemetry": true,
   "checkpoints": {
     "primary": {
