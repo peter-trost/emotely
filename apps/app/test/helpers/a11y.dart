@@ -17,6 +17,9 @@ extension AccessibilityTesting on WidgetTester {
 
     await pumpWidget(widget);
     await prepare?.call(this);
+    // Material widgets animate state changes (e.g. a button becoming
+    // enabled); the guidelines must see the settled frame, not a blend.
+    await pumpAndSettle();
 
     await expectLater(this, meetsGuideline(androidTapTargetGuideline));
     await expectLater(this, meetsGuideline(iOSTapTargetGuideline));
