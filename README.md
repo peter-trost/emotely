@@ -165,20 +165,10 @@ the wild*.
 
 ## Running the app
 
-`apps/app` talks to the deployed agent by default and runs with analytics off
-unless a PostHog project token is passed. Both are `--dart-define`s, so nothing
-environment-specific is committed:
-
-```bash
-cd apps/app && flutter run --dart-define=POSTHOG_KEY=phc_… --dart-define=EMOTELY_AGENT_URL=http://localhost:3000/api/advance-session
-```
-
-Without `POSTHOG_KEY` the SDK skips setup entirely; without `EMOTELY_AGENT_URL`
-the app uses `https://emotely-agent.vercel.app/api/advance-session`.
-
-The on-device acceptance run — a whole session on a simulator or phone against
-the deployed agent — is `flutter test integration_test -d <device>` with the
-same defines. It is a nightly / pre-release check, never a per-PR one.
+Build-time configuration is `--dart-define`s read in `apps/app/lib/app/environment.dart`
+(agent URL, PostHog token — empty means analytics off). How to build, run,
+drive the app on a simulator, and run the on-device acceptance session is an
+agent skill: [`.claude/skills/run-app`](.claude/skills/run-app/SKILL.md).
 
 ## Verify-at-build-time (do NOT pin from memory)
 
