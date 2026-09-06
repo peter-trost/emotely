@@ -35,6 +35,10 @@ sealed class Answer with _$Answer {
 
 /// Behavior on [Answer] lives here so editing it never needs regeneration.
 extension AnswerX on Answer {
+  /// The value as the agent expects it on the wire — `#RRGGBB` strings for
+  /// colors, not Dart objects. This, never [value], is what gets posted.
+  Object? get wireValue => toJson()['value'];
+
   /// The answer type this variant carries.
   AnswerType get answerType => switch (this) {
     ColorAnswer() => AnswerType.color,

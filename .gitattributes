@@ -1,0 +1,5 @@
+# Generated code: collapsed in GitHub diffs and excluded from language stats.
+*.g.dart linguist-generated=true
+*.freezed.dart linguist-generated=true
+*.mocks.dart linguist-generated=true
+packages/contract/contract.schema.json linguist-generated=true
