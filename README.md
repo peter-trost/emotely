@@ -163,6 +163,13 @@ the wild*.
    entry persistence, `posthog_flutter`.
 6. **Subscription + polish** — RevenueCat, paywall, ship to TestFlight.
 
+## Running the app
+
+Build-time configuration is `--dart-define`s read in `apps/app/lib/app/environment.dart`
+(agent URL, PostHog token — empty means analytics off). How to build, run,
+drive the app on a simulator, and run the on-device acceptance session is an
+agent skill: [`.claude/skills/run-app`](.claude/skills/run-app/SKILL.md).
+
 ## Verify-at-build-time (do NOT pin from memory)
 
 Per project convention, research the latest before pinning:

@@ -1,5 +1,7 @@
 # emotely
 
+@AGENTS.md
+
 Rebuild of the original emotely journaling app around a tools-first AI harness.
 Read [`README.md`](README.md) for the architecture and [`docs/adr/`](docs/adr/)
 for the load-bearing decisions.

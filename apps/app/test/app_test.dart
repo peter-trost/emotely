@@ -9,7 +9,12 @@ void main() {
     testWidgets('opens straight into a session', (tester) async {
       final agent = AgentStub()..script([unreachable()]);
 
-      await tester.pumpWidget(EmotelyApp(agentClient: agent.agentClient));
+      await tester.pumpWidget(
+        EmotelyApp(
+          agentClient: agent.agentClient,
+          analytics: AnalyticsSpy().analytics,
+        ),
+      );
 
       expect(find.byType(SessionPage), findsOneWidget);
       expect(find.text('Journaling session'), findsOneWidget);
