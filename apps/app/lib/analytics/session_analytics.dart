@@ -39,6 +39,16 @@ class const SessionAnalytics({required final Posthog posthog}) {
   Future<void> sessionRetried() =>
       posthog.capture(eventName: 'session_retried');
 
+  /// The server refused [appVersion] and demanded at least [minAppVersion];
+  /// the user is on the force-update screen.
+  Future<void> updateRequired({
+    required String minAppVersion,
+    required String appVersion,
+  }) => posthog.capture(
+    eventName: 'update_required',
+    properties: {'min_app_version': minAppVersion, 'app_version': appVersion},
+  );
+
   static Map<String, Object> _describe(AskQuestion question) => {
     'question_id': question.questionId,
     'answer_type': question.answerType.name,

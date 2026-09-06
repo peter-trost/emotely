@@ -14,3 +14,11 @@ const posthogKey = String.fromEnvironment('POSTHOG_KEY');
 
 /// EU cloud, like the agent (ADR 0004).
 const posthogHost = 'https://eu.i.posthog.com';
+
+/// Where the force-update screen sends the user
+/// (`--dart-define=EMOTELY_STORE_URL=…`). Until the store listings exist
+/// (#9) it points at the releases page.
+const storeUrl = String.fromEnvironment(
+  'EMOTELY_STORE_URL',
+  defaultValue: 'https://github.com/peter-trost/emotely/releases',
+);

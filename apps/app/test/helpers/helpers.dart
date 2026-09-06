@@ -3,3 +3,4 @@ export 'agent_stub.dart';
 export 'analytics_spy.dart';
 export 'pump_app.dart';
 export 'submit.dart';
+export 'url_launcher_spy.dart';
