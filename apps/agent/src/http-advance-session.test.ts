@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { advanceSessionResponse } from "@emotely/contract";
 import { createAdvanceSessionHandler } from "./http-advance-session.ts";
 import type { AdvanceResult } from "./session-core.ts";
 import { signTranscript } from "./transcript-auth.ts";
@@ -171,5 +172,22 @@ describe("advance-session handler", () => {
       }),
     );
     assert.equal(res.status, 413);
+  });
+
+  it("answers in the shape packages/contract publishes for both outcomes", async () => {
+    const finished: AdvanceResult = {
+      ...awaiting,
+      status: "completed",
+      entry: {
+        summary: "A good day.",
+        answers: { q1: { answer_type: "rating", value: 7 } },
+      },
+    };
+    for (const result of [awaiting, finished]) {
+      const body: unknown = await (await handler(result)(post({}))).json();
+      // The Dart client pins against the same schema; a body that fails here
+      // would fail to decode on the device.
+      assert.deepEqual(advanceSessionResponse.parse(body), body);
+    }
   });
 });
