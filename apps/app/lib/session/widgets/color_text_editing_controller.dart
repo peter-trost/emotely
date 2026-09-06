@@ -10,7 +10,7 @@ import 'package:material_ui/material_ui.dart';
 /// code's start or end depending on the direction it came from.
 class ColorTextEditingController({super.text}) extends TextEditingController {
   /// Matches hex-encoded color strings in the format `#RRGGBB`.
-  static final RegExp hexColorRegex = RegExp(r'#[0-9a-fA-F]{6}\b');
+  static final hexColorRegex = RegExp(r'#[0-9a-fA-F]{6}\b');
 
   static const _converter = HexColorConverter();
 

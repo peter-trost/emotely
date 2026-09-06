@@ -1,34 +1,17 @@
-# Policy: deny-by-default lints (see CLAUDE.md). very_good_analysis is the
-# strictest widely-maintained ruleset; every disabled rule below must carry
-# a justification comment. CI runs `flutter analyze --fatal-infos`.
-include: package:very_good_analysis/analysis_options.yaml
+# Policy: deny-by-default lints (see AGENTS.md). flutter_agent_lints decides
+# every SDK rule as an error or an explicitly reasoned `false`; the
+# experimental variant adds the rules the SDK still marks experimental
+# (primary constructors among them). Every override below must carry a
+# justification. CI runs `flutter analyze --fatal-infos`.
+include: package:flutter_agent_lints/experimental.yaml
 
 analyzer:
   exclude:
     - build/**
     - android/**
     - ios/**
-    # Generated code (freezed / json_serializable / mockito) is not ours to
-    # lint; build_runner regenerates it and CI fails on drift (--only-check).
-    - '**/*.freezed.dart'
-    - '**/*.g.dart'
-    - '**/*.mocks.dart'
-  language:
-    strict-casts: true
-    strict-inference: true
-    strict-raw-types: true
   errors:
     # freezed places @JsonSerializable / @JsonKey on factory constructors
     # and parameters by design (its README asks for exactly this override);
     # the annotations are read by the generator, not the analyzer.
     invalid_annotation_target: ignore
-
-linter:
-  rules:
-    # Experimental in the SDK and not yet part of very_good_analysis; enabled
-    # so hand-written classes use Dart 3.13 primary constructors.
-    use_primary_constructors: true
-    # Flags every primary constructor as an undocumented member and only
-    # accepts a doc comment on a `this;` body part — pure ceremony that
-    # documents nothing. Public API docs stay a review concern, not a lint.
-    public_member_api_docs: false
