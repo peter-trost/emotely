@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 /// The emotely brand seed — carried over from the original app.
-const Color emotelyOrange = Color.fromARGB(255, 255, 136, 0);
+const emotelyOrange = Color.fromARGB(255, 255, 136, 0);
 
 ThemeData _theme(Brightness brightness) {
   final scheme = ColorScheme.fromSeed(

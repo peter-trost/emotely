@@ -13,7 +13,7 @@ typedef Round = Future<http.Response> Function();
 /// The agent, scripted at the http seam: canned rounds go out in order,
 /// every request body is recorded for assertions.
 class AgentStub() {
-  final MockClient client = MockClient();
+  final client = MockClient();
   final requests = <Map<String, dynamic>>[];
   final _rounds = <Round>[];
 

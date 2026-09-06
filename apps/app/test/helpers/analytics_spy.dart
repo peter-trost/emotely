@@ -10,7 +10,7 @@ typedef CapturedEvent = Map<String, Object>;
 
 /// Records everything the app would send to PostHog.
 class AnalyticsSpy() {
-  final MockPosthog posthog = MockPosthog();
+  final posthog = MockPosthog();
   final events = <CapturedEvent>[];
 
   /// The [SessionAnalytics] the app is given.

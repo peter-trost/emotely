@@ -7,7 +7,7 @@ import 'package:json_annotation/json_annotation.dart';
 /// Contract colors are opaque; decoding forces full alpha and encoding drops
 /// it, so a widget never has to reason about transparency.
 class const HexColorConverter() implements JsonConverter<Color, String> {
-  static final RegExp _hex = RegExp(r'^#[0-9A-Fa-f]{6}$');
+  static final _hex = RegExp(r'^#[0-9A-Fa-f]{6}$');
 
   @override
   Color fromJson(String json) {

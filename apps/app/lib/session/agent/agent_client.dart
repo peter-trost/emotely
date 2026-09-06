@@ -55,7 +55,7 @@ class const AgentClient({
 
   static String _errorMessage(String body) {
     try {
-      final decoded = jsonDecode(body);
+      final decoded = jsonDecode(body) as Object?;
       if (decoded case {'error': final String message}) {
         return message;
       }
