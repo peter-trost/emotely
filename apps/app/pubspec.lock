@@ -217,12 +217,11 @@ packages:
   flutter_agent_lints:
     dependency: "direct dev"
     description:
-      path: "."
-      ref: eae45581f3977a2e4a3ddc454f6acfeb485c9759
-      resolved-ref: eae45581f3977a2e4a3ddc454f6acfeb485c9759
-      url: "https://github.com/peter-trost/flutter_agent_lints.git"
-    source: git
-    version: "1.0.0"
+      name: flutter_agent_lints
+      sha256: b5e596359390f6d9dc8879490818584c4f74c15152dc6671bcd48f8be61c287e
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   flutter_bloc:
     dependency: "direct main"
     description:
