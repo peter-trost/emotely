@@ -9,6 +9,11 @@ part 'advance_response.g.dart';
 ///
 /// Every wire key is snake_case, like the tool contract; `build.yaml` maps
 /// the Dart names.
+///
+/// `minAppVersion` is the oldest app the server still serves; below it the
+/// app must update before it can continue. Nullable so a server that predates
+/// the field (or a rollback to one) imposes no minimum instead of failing to
+/// decode.
 @Freezed(unionKey: 'status')
 sealed class AdvanceResponse with _$AdvanceResponse {
   const factory awaitingAnswer({
@@ -16,6 +21,7 @@ sealed class AdvanceResponse with _$AdvanceResponse {
     required String signature,
     required String promptId,
     required PendingQuestion pending,
+    String? minAppVersion,
   }) = AwaitingAnswer;
 
   const factory completed({
@@ -23,6 +29,7 @@ sealed class AdvanceResponse with _$AdvanceResponse {
     required String signature,
     required String promptId,
     required JournalEntry entry,
+    String? minAppVersion,
   }) = Completed;
 
   factory fromJson(Map<String, dynamic> json) =>

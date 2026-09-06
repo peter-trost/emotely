@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 
 void main() {
@@ -65,6 +66,7 @@ class LiveSessionRobot(final WidgetTester tester) {
         agentClient: AgentClient(
           httpClient: http.Client(),
           endpoint: Uri.parse(agentUrl),
+          appVersion: (await PackageInfo.fromPlatform()).version,
         ),
         analytics: SessionAnalytics(posthog: Posthog()),
       ),

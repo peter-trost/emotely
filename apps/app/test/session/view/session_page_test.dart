@@ -23,7 +23,7 @@ void main() {
 
       expect(robot.thinking, findsOneWidget);
       expect(agent.requests, hasLength(1));
-      expect(agent.lastRequest, isEmpty);
+      expect(agent.lastRequest, {'app_version': AgentStub.appVersion});
 
       await robot.settle();
 

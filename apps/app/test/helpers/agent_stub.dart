@@ -26,10 +26,14 @@ class AgentStub() {
   /// The transcript and signature every round hands out unless overridden.
   static const transcript = <Object?>['round'];
   static const signature = 'sig';
+  static const appVersion = '1.2.3';
 
   /// An [AgentClient] talking to this stub.
-  AgentClient get agentClient =>
-      AgentClient(httpClient: client, endpoint: endpoint);
+  AgentClient get agentClient => AgentClient(
+    httpClient: client,
+    endpoint: endpoint,
+    appVersion: appVersion,
+  );
 
   /// The last request body, decoded.
   Map<String, dynamic> get lastRequest => requests.last;
@@ -58,6 +62,7 @@ Round awaiting({
   required AskQuestion question,
   String signature = AgentStub.signature,
   List<Object?> transcript = AgentStub.transcript,
+  String? minAppVersion,
 }) =>
     () async => _json({
       'status': 'awaiting_answer',
@@ -65,6 +70,7 @@ Round awaiting({
       'signature': signature,
       'prompt_id': 'session/v1',
       'pending': {'tool_call_id': toolCallId, 'question': question.toJson()},
+      'min_app_version': ?minAppVersion,
     });
 
 /// The agent finished with [summary] and the recorded [answers].

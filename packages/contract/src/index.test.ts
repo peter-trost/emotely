@@ -150,6 +150,18 @@ describe("advance_session request", () => {
       false,
     );
   });
+
+  it("carries the app version as bare semver", () => {
+    const versioned = { app_version: "1.2.3" };
+    assert.deepEqual(advanceSessionRequest.parse(versioned), versioned);
+    for (const bad of ["1.2", "v1.2.3", "1.2.3+4", ""]) {
+      assert.equal(
+        advanceSessionRequest.safeParse({ app_version: bad }).success,
+        false,
+        bad,
+      );
+    }
+  });
 });
 
 describe("advance_session response", () => {
@@ -157,6 +169,7 @@ describe("advance_session response", () => {
     transcript: [{ role: "user", content: "hi" }],
     signature: "abc",
     prompt_id: "session/v1",
+    min_app_version: "1.0.0",
   };
 
   it("accepts the next question and the finished entry", () => {
@@ -178,6 +191,18 @@ describe("advance_session response", () => {
       },
     };
     assert.deepEqual(advanceSessionResponse.parse(completed), completed);
+  });
+
+  it("always names the minimum supported app version", () => {
+    const { min_app_version: _, ...unversioned } = base;
+    assert.equal(
+      advanceSessionResponse.safeParse({
+        status: "completed",
+        ...unversioned,
+        entry: { summary: "x", answers: {} },
+      }).success,
+      false,
+    );
   });
 
   it("rejects an unknown status and a malformed recorded answer", () => {

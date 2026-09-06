@@ -10,6 +10,7 @@ type HandlerBody = {
   transcript: unknown[];
   signature: string;
   prompt_id?: string;
+  min_app_version?: string;
   pending?: { tool_call_id: string; question: { question_id: string } };
   entry?: { summary: string };
 };
@@ -37,6 +38,7 @@ const awaiting: AdvanceResult = {
 function handler(result: AdvanceResult = awaiting) {
   return createAdvanceSessionHandler({
     secret: SECRET,
+    minAppVersion: "1.0.0",
     advance: async () => result,
   });
 }
@@ -61,6 +63,17 @@ describe("advance-session handler", () => {
     assert.equal(body.pending.tool_call_id, "c1");
     assert.equal(body.prompt_id, "session/v1");
     assert.equal(body.signature, signTranscript(body.transcript, SECRET));
+  });
+
+  it("names the minimum app version it still serves, and takes the client's", async () => {
+    const res = await handler()(post({ app_version: "1.2.3" }));
+    assert.equal(res.status, 200);
+    assert.equal((await bodyOf(res)).min_app_version, "1.0.0");
+  });
+
+  it("rejects a malformed app version", async () => {
+    const res = await handler()(post({ app_version: "1.2" }));
+    assert.equal(res.status, 400);
   });
 
   it("rejects a transcript without a valid signature", async () => {
@@ -141,6 +154,7 @@ describe("advance-session handler", () => {
   it("maps a mismatched answer tool_call_id to 400, not a crash", async () => {
     const strict = createAdvanceSessionHandler({
       secret: SECRET,
+      minAppVersion: "1.0.0",
       advance: async ({ answer }) => {
         if (answer?.toolCallId !== "c1") {
           throw new Error("answer does not match the pending question");

@@ -16,6 +16,7 @@ typedef SessionAnswer = ({String toolCallId, Answer answer});
 class const AgentClient({
   required final http.Client httpClient,
   required final Uri endpoint,
+  required final String appVersion,
   final Duration timeout = defaultTimeout,
 }) {
   /// A round is one model call; anything slower than this is a hung request
@@ -23,7 +24,8 @@ class const AgentClient({
   static const defaultTimeout = Duration(seconds: 30);
 
   /// Advances the session: no transcript starts one, a transcript plus the
-  /// [answer] to its pending question continues it.
+  /// [answer] to its pending question continues it. Every request names the
+  /// [appVersion] so the server can gate behaviour per version.
   Future<AdvanceResponse> advance({
     List<Object?>? transcript,
     String? signature,
@@ -41,6 +43,7 @@ class const AgentClient({
                 'tool_call_id': answer.toolCallId,
                 'value': answer.answer.wireValue,
               },
+            'app_version': appVersion,
           }),
         )
         .timeout(timeout);
