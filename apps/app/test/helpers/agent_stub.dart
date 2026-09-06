@@ -23,6 +23,10 @@ class AgentStub() {
     'https://agent.test/api/advance-session',
   );
 
+  /// The transcript and signature every round hands out unless overridden.
+  static const transcript = <Object?>['round'];
+  static const signature = 'sig';
+
   /// An [AgentClient] talking to this stub.
   AgentClient get agentClient =>
       AgentClient(httpClient: client, endpoint: endpoint);
@@ -52,15 +56,15 @@ class AgentStub() {
 Round awaiting({
   required String toolCallId,
   required AskQuestion question,
-  String signature = 'sig',
-  List<Object?> transcript = const ['round'],
+  String signature = AgentStub.signature,
+  List<Object?> transcript = AgentStub.transcript,
 }) =>
     () async => _json({
       'status': 'awaiting_answer',
       'transcript': transcript,
       'signature': signature,
-      'promptId': 'session/v1',
-      'pending': {'toolCallId': toolCallId, 'question': question.toJson()},
+      'prompt_id': 'session/v1',
+      'pending': {'tool_call_id': toolCallId, 'question': question.toJson()},
     });
 
 /// The agent finished with [summary] and the recorded [answers].
@@ -72,7 +76,7 @@ Round completed({
       'status': 'completed',
       'transcript': const ['round', 'round'],
       'signature': 'final',
-      'promptId': 'session/v1',
+      'prompt_id': 'session/v1',
       'entry': {
         'summary': summary,
         'answers': answers.map((id, answer) => MapEntry(id, answer.toJson())),

@@ -1,11 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:emotely/contract/contract.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:http/http.dart' as http;
 
 /// The client's answer to the pending question: the tool call it answers
-/// and the raw widget value the server records.
-typedef SessionAnswer = ({String toolCallId, Object? value});
+/// and the typed [Answer] the widget produced. Only its wire value is posted.
+typedef SessionAnswer = ({String toolCallId, Answer answer});
 
 /// The only network seam of the app: one call per session round.
 ///
@@ -14,7 +16,12 @@ typedef SessionAnswer = ({String toolCallId, Object? value});
 class const AgentClient({
   required final http.Client httpClient,
   required final Uri endpoint,
+  final Duration timeout = defaultTimeout,
 }) {
+  /// A round is one model call; anything slower than this is a hung request
+  /// and surfaces as a failure the user can retry.
+  static const defaultTimeout = Duration(seconds: 30);
+
   /// Advances the session: no transcript starts one, a transcript plus the
   /// [answer] to its pending question continues it.
   Future<AdvanceResponse> advance({
@@ -22,16 +29,21 @@ class const AgentClient({
     String? signature,
     SessionAnswer? answer,
   }) async {
-    final response = await httpClient.post(
-      endpoint,
-      headers: const {'content-type': 'application/json'},
-      body: jsonEncode({
-        'transcript': ?transcript,
-        'signature': ?signature,
-        if (answer != null)
-          'answer': {'toolCallId': answer.toolCallId, 'value': answer.value},
-      }),
-    );
+    final response = await httpClient
+        .post(
+          endpoint,
+          headers: const {'content-type': 'application/json'},
+          body: jsonEncode({
+            'transcript': ?transcript,
+            'signature': ?signature,
+            if (answer != null)
+              'answer': {
+                'tool_call_id': answer.toolCallId,
+                'value': answer.answer.wireValue,
+              },
+          }),
+        )
+        .timeout(timeout);
     // The server sends `application/json` without a charset, which
     // package:http would decode as Latin-1 — emoji answers must survive.
     final body = utf8.decode(response.bodyBytes);

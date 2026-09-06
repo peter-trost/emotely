@@ -237,8 +237,8 @@ return completed(_that.transcript,_that.signature,_that.promptId,_that.entry);ca
 }
 
 /// @nodoc
+@JsonSerializable()
 
-@JsonSerializable(fieldRename: FieldRename.none)
 class AwaitingAnswer implements AdvanceResponse {
   const AwaitingAnswer({required  List<Object?> transcript, required this.signature, required this.promptId, required this.pending,  String? $type}): _transcript = transcript,$type = $type ?? 'awaiting_answer';
   factory AwaitingAnswer.fromJson(Map<String, dynamic> json) => _$AwaitingAnswerFromJson(json);
@@ -333,8 +333,8 @@ $PendingQuestionCopyWith<$Res> get pending {
 }
 
 /// @nodoc
+@JsonSerializable()
 
-@JsonSerializable(fieldRename: FieldRename.none)
 class Completed implements AdvanceResponse {
   const Completed({required  List<Object?> transcript, required this.signature, required this.promptId, required this.entry,  String? $type}): _transcript = transcript,$type = $type ?? 'completed';
   factory Completed.fromJson(Map<String, dynamic> json) => _$CompletedFromJson(json);
@@ -638,8 +638,8 @@ return $default(_that.toolCallId,_that.question);case _:
 }
 
 /// @nodoc
+@JsonSerializable()
 
-@JsonSerializable(fieldRename: FieldRename.none)
 class _PendingQuestion implements PendingQuestion {
   const _PendingQuestion({required this.toolCallId, required this.question});
   factory _PendingQuestion.fromJson(Map<String, dynamic> json) => _$PendingQuestionFromJson(json);

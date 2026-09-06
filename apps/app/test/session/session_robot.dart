@@ -74,8 +74,11 @@ class SessionRobot(final WidgetTester tester, final AgentStub agent) {
 
   /// The tool call the app answered in its most recent round.
   String get lastAnsweredToolCall =>
-      (agent.lastRequest['answer'] as Map<String, dynamic>)['toolCallId']
+      (agent.lastRequest['answer'] as Map<String, dynamic>)['tool_call_id']
           as String;
+
+  /// The failure copy for anything that is not a server-refused round.
+  static const unreachableMessage = 'Could not reach the journaling assistant.';
 
   static const rate = AskQuestion(
     questionId: 'q-rate',

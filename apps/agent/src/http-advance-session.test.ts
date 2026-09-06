@@ -8,7 +8,8 @@ type HandlerBody = {
   status: string;
   transcript: unknown[];
   signature: string;
-  pending?: { toolCallId: string; question: { question_id: string } };
+  prompt_id?: string;
+  pending?: { tool_call_id: string; question: { question_id: string } };
   entry?: { summary: string };
 };
 
@@ -55,6 +56,9 @@ describe("advance-session handler", () => {
     assert.equal(body.status, "awaiting_answer");
     assert.ok(body.pending);
     assert.equal(body.pending.question.question_id, "q1");
+    // Wire keys are snake_case end to end, like the tool contract.
+    assert.equal(body.pending.tool_call_id, "c1");
+    assert.equal(body.prompt_id, "session/v1");
     assert.equal(body.signature, signTranscript(body.transcript, SECRET));
   });
 
@@ -63,7 +67,7 @@ describe("advance-session handler", () => {
       post({
         transcript: awaiting.messages,
         signature: "forged",
-        answer: { toolCallId: "c1", value: 7 },
+        answer: { tool_call_id: "c1", value: 7 },
       }),
     );
     assert.equal(res.status, 401);
@@ -79,7 +83,7 @@ describe("advance-session handler", () => {
       post({
         transcript: tampered,
         signature,
-        answer: { toolCallId: "c1", value: 7 },
+        answer: { tool_call_id: "c1", value: 7 },
       }),
     );
     assert.equal(res.status, 401);
@@ -91,7 +95,7 @@ describe("advance-session handler", () => {
       post({
         transcript: first.transcript,
         signature: first.signature,
-        answer: { toolCallId: "c1", value: 7 },
+        answer: { tool_call_id: "c1", value: 7 },
       }),
     );
     assert.equal(res.status, 200);
@@ -108,7 +112,7 @@ describe("advance-session handler", () => {
       post({
         transcript: first.transcript,
         signature: first.signature,
-        answer: { toolCallId: "c1", value: 7 },
+        answer: { tool_call_id: "c1", value: 7 },
       }),
     );
     const body = await bodyOf(res);
@@ -122,7 +126,7 @@ describe("advance-session handler", () => {
     assert.equal(
       (
         await handler()(
-          post({ answer: { toolCallId: "c1", value: "x".repeat(5000) } }),
+          post({ answer: { tool_call_id: "c1", value: "x".repeat(5000) } }),
         )
       ).status,
       400,
@@ -133,7 +137,7 @@ describe("advance-session handler", () => {
     assert.equal(res.status, 405);
   });
 
-  it("maps a mismatched answer toolCallId to 400, not a crash", async () => {
+  it("maps a mismatched answer tool_call_id to 400, not a crash", async () => {
     const strict = createAdvanceSessionHandler({
       secret: SECRET,
       advance: async ({ answer }) => {
@@ -148,7 +152,7 @@ describe("advance-session handler", () => {
       post({
         transcript: first.transcript,
         signature: first.signature,
-        answer: { toolCallId: "someone-elses-call", value: 7 },
+        answer: { tool_call_id: "someone-elses-call", value: 7 },
       }),
     );
     assert.equal(res.status, 400);
@@ -163,7 +167,7 @@ describe("advance-session handler", () => {
       post({
         transcript: long,
         signature: signTranscript(long, SECRET),
-        answer: { toolCallId: "c1", value: 1 },
+        answer: { tool_call_id: "c1", value: 1 },
       }),
     );
     assert.equal(res.status, 413);

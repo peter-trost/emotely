@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:emotely/contract/contract.dart';
@@ -15,10 +16,12 @@ void main() {
       question: 'How was your day?',
       answerType: AnswerType.rating,
     );
+    const toolCallId = 'c1';
+    const rating = Answer.rating(7);
 
     test('starts a session with an empty body', () async {
       final stub = AgentStub()
-        ..script([awaiting(toolCallId: 'c1', question: question)]);
+        ..script([awaiting(toolCallId: toolCallId, question: question)]);
 
       final response = await stub.agentClient.advance();
 
@@ -26,33 +29,31 @@ void main() {
       expect(
         response,
         const AdvanceResponse.awaitingAnswer(
-          transcript: ['round'],
-          signature: 'sig',
+          transcript: AgentStub.transcript,
+          signature: AgentStub.signature,
           promptId: 'session/v1',
-          pending: PendingQuestion(toolCallId: 'c1', question: question),
+          pending: PendingQuestion(toolCallId: toolCallId, question: question),
         ),
       );
     });
 
-    test('echoes the transcript and signature with the answer', () async {
+    test('echoes the transcript and signature with the wire answer', () async {
+      const summary = 'A good day.';
       final stub = AgentStub()
         ..script([
-          completed(
-            summary: 'A good day.',
-            answers: const {'q-rate': Answer.rating(7)},
-          ),
+          completed(summary: summary, answers: const {'q-rate': rating}),
         ]);
 
       final response = await stub.agentClient.advance(
-        transcript: const ['round'],
-        signature: 'sig',
-        answer: (toolCallId: 'c1', value: 7),
+        transcript: AgentStub.transcript,
+        signature: AgentStub.signature,
+        answer: (toolCallId: toolCallId, answer: rating),
       );
 
       expect(stub.lastRequest, {
-        'transcript': ['round'],
-        'signature': 'sig',
-        'answer': {'toolCallId': 'c1', 'value': 7},
+        'transcript': AgentStub.transcript,
+        'signature': AgentStub.signature,
+        'answer': {'tool_call_id': toolCallId, 'value': rating.wireValue},
       });
       expect(
         response,
@@ -60,17 +61,14 @@ void main() {
           transcript: ['round', 'round'],
           signature: 'final',
           promptId: 'session/v1',
-          entry: JournalEntry(
-            summary: 'A good day.',
-            answers: {'q-rate': Answer.rating(7)},
-          ),
+          entry: JournalEntry(summary: summary, answers: {'q-rate': rating}),
         ),
       );
     });
 
     test('posts JSON to the endpoint', () async {
       final stub = AgentStub()
-        ..script([awaiting(toolCallId: 'c1', question: question)]);
+        ..script([awaiting(toolCallId: toolCallId, question: question)]);
 
       await stub.agentClient.advance();
 
@@ -84,18 +82,19 @@ void main() {
     });
 
     test('surfaces the server error message on a non-200', () async {
-      final stub = AgentStub()..script([refused(401, 'invalid signature')]);
+      const message = 'invalid signature';
+      final stub = AgentStub()..script([refused(401, message)]);
 
       await expectLater(
         stub.agentClient.advance(),
         throwsA(
           isA<AgentException>()
               .having((e) => e.statusCode, 'statusCode', 401)
-              .having((e) => e.message, 'message', 'invalid signature')
+              .having((e) => e.message, 'message', message)
               .having(
                 (e) => e.toString(),
                 'toString',
-                'AgentException(401): invalid signature',
+                'AgentException(401): $message',
               ),
         ),
       );
@@ -122,5 +121,22 @@ void main() {
         }
       },
     );
+
+    test('gives up on a round that exceeds the timeout', () async {
+      final stub = AgentStub()
+        ..script([
+          delayed(
+            awaiting(toolCallId: toolCallId, question: question),
+            const Duration(milliseconds: 50),
+          ),
+        ]);
+      final client = AgentClient(
+        httpClient: stub.client,
+        endpoint: AgentStub.endpoint,
+        timeout: const Duration(milliseconds: 10),
+      );
+
+      await expectLater(client.advance(), throwsA(isA<TimeoutException>()));
+    });
   });
 }

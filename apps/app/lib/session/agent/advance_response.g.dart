@@ -10,7 +10,7 @@ AwaitingAnswer _$AwaitingAnswerFromJson(Map<String, dynamic> json) =>
     AwaitingAnswer(
       transcript: json['transcript'] as List<dynamic>,
       signature: json['signature'] as String,
-      promptId: json['promptId'] as String,
+      promptId: json['prompt_id'] as String,
       pending: PendingQuestion.fromJson(
         json['pending'] as Map<String, dynamic>,
       ),
@@ -21,7 +21,7 @@ Map<String, dynamic> _$AwaitingAnswerToJson(AwaitingAnswer instance) =>
     <String, dynamic>{
       'transcript': instance.transcript,
       'signature': instance.signature,
-      'promptId': instance.promptId,
+      'prompt_id': instance.promptId,
       'pending': instance.pending.toJson(),
       'status': instance.$type,
     };
@@ -29,7 +29,7 @@ Map<String, dynamic> _$AwaitingAnswerToJson(AwaitingAnswer instance) =>
 Completed _$CompletedFromJson(Map<String, dynamic> json) => Completed(
   transcript: json['transcript'] as List<dynamic>,
   signature: json['signature'] as String,
-  promptId: json['promptId'] as String,
+  promptId: json['prompt_id'] as String,
   entry: JournalEntry.fromJson(json['entry'] as Map<String, dynamic>),
   $type: json['status'] as String?,
 );
@@ -37,20 +37,20 @@ Completed _$CompletedFromJson(Map<String, dynamic> json) => Completed(
 Map<String, dynamic> _$CompletedToJson(Completed instance) => <String, dynamic>{
   'transcript': instance.transcript,
   'signature': instance.signature,
-  'promptId': instance.promptId,
+  'prompt_id': instance.promptId,
   'entry': instance.entry.toJson(),
   'status': instance.$type,
 };
 
 _PendingQuestion _$PendingQuestionFromJson(Map<String, dynamic> json) =>
     _PendingQuestion(
-      toolCallId: json['toolCallId'] as String,
+      toolCallId: json['tool_call_id'] as String,
       question: AskQuestion.fromJson(json['question'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$PendingQuestionToJson(_PendingQuestion instance) =>
     <String, dynamic>{
-      'toolCallId': instance.toolCallId,
+      'tool_call_id': instance.toolCallId,
       'question': instance.question.toJson(),
     };
 

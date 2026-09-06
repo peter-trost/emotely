@@ -21,11 +21,13 @@ const jsonValue: z.ZodType<unknown> = z.lazy(() =>
   ]),
 );
 
+// Wire keys are snake_case end to end (like the tool contract); the
+// TypeScript-side types stay camelCase.
 const requestSchema = z.object({
   transcript: z.array(z.unknown()).optional(),
   signature: z.string().optional(),
   answer: z
-    .object({ toolCallId: z.string().min(1), value: jsonValue })
+    .object({ tool_call_id: z.string().min(1), value: jsonValue })
     .optional(),
 });
 
@@ -79,7 +81,12 @@ async function runAdvance(
       messages: transcript,
       ...(parsed.answer === undefined
         ? {}
-        : { answer: parsed.answer as SessionAnswer }),
+        : {
+            answer: {
+              toolCallId: parsed.answer.tool_call_id,
+              value: parsed.answer.value,
+            } as SessionAnswer,
+          }),
     });
   } catch (error) {
     if (
@@ -132,7 +139,7 @@ export function createAdvanceSessionHandler(deps: {
     const base = {
       transcript: result.messages,
       signature: signTranscript(result.messages, deps.secret),
-      promptId: result.promptId,
+      prompt_id: result.promptId,
     };
     if (result.status === "completed") {
       return json(HTTP_OK, {
@@ -145,7 +152,7 @@ export function createAdvanceSessionHandler(deps: {
       status: "awaiting_answer",
       ...base,
       pending: {
-        toolCallId: result.pending.toolCallId,
+        tool_call_id: result.pending.toolCallId,
         question: result.pending.input,
       },
     });
