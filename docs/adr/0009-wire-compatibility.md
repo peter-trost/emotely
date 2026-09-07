@@ -55,6 +55,15 @@ here on.
   rollback. A PostHog flag would let it change without a deploy, but it would
   also put a network dependency on a field that must never be missing; a
   constant cannot fail to load.
+- **Carrying the minimum on the session response is interim.** It rides
+  there because a second public endpoint needs its own WAF rate-limit rule
+  and Hobby allows one ([ADR 0008](0008-public-endpoint-abuse-controls.md)).
+  Once the project is on Pro, a startup config endpoint takes over
+  ([#49](https://github.com/peter-trost/emotely/issues/49)): the app checks
+  once before its first session and blocks with a retry if that request
+  fails, the session code loses the version check, and `min_app_version`
+  leaves the session response by the retirement procedure below.
+  `app_version` stays on every session request either way, for rule 4.
 
 ### Raising the minimum
 
