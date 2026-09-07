@@ -38,6 +38,7 @@ dependencies:
   json_annotation: 4.12.0
   material_ui: ^1.1.0
   meta: ^1.19.0
+  package_info_plus: 10.2.1
   posthog_flutter: 5.39.0
 
 dev_dependencies:

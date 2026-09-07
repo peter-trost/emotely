@@ -59,12 +59,19 @@ export type CompleteSessionInput = z.infer<typeof completeSessionInput>;
 // (consumer) both pin against the JSON Schema emitted from these.
 const jsonValue = z.json();
 
+// Bare semver (`pubspec.yaml` `version` without the build number): the app
+// reports it, the server gates on it and names the minimum it still serves.
+const appVersion = z.string().regex(/^\d+\.\d+\.\d+$/);
+
 export const advanceSessionRequest = z.object({
   transcript: z.array(z.unknown()).optional(),
   signature: z.string().optional(),
   answer: z
     .object({ tool_call_id: nonemptyString, value: jsonValue })
     .optional(),
+  // Optional on the wire so clients that predate it keep working (additive
+  // change); the app always sends it.
+  app_version: appVersion.optional(),
 });
 export type AdvanceSessionRequest = z.infer<typeof advanceSessionRequest>;
 
@@ -72,6 +79,8 @@ const advanceSessionBase = {
   transcript: z.array(z.unknown()),
   signature: nonemptyString,
   prompt_id: nonemptyString,
+  // Below this the app must update before it can continue (force-update).
+  min_app_version: appVersion,
 };
 
 export const advanceSessionResponse = z.discriminatedUnion("status", [

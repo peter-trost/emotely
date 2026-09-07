@@ -183,6 +183,10 @@
           "tool_call_id",
           "value"
         ]
+      },
+      "app_version": {
+        "type": "string",
+        "pattern": "^\\d+\\.\\d+\\.\\d+$"
       }
     },
     "$defs": {
@@ -241,6 +245,10 @@
             "type": "string",
             "minLength": 1
           },
+          "min_app_version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$"
+          },
           "pending": {
             "type": "object",
             "properties": {
@@ -288,6 +296,7 @@
           "transcript",
           "signature",
           "prompt_id",
+          "min_app_version",
           "pending"
         ]
       },
@@ -309,6 +318,10 @@
           "prompt_id": {
             "type": "string",
             "minLength": 1
+          },
+          "min_app_version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$"
           },
           "entry": {
             "type": "object",
@@ -438,6 +451,7 @@
           "transcript",
           "signature",
           "prompt_id",
+          "min_app_version",
           "entry"
         ]
       }

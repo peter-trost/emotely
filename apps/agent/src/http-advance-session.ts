@@ -92,6 +92,8 @@ async function runAdvance(
 export function createAdvanceSessionHandler(deps: {
   secret: string;
   advance: Advance;
+  /** Oldest app version this server still serves; the app blocks below it. */
+  minAppVersion: string;
 }) {
   return async (request: Request): Promise<Response> => {
     if (request.method !== "POST") {
@@ -125,6 +127,7 @@ export function createAdvanceSessionHandler(deps: {
       transcript: result.messages,
       signature: signTranscript(result.messages, deps.secret),
       prompt_id: result.promptId,
+      min_app_version: deps.minAppVersion,
     };
     if (result.status === "completed") {
       return json(HTTP_OK, {

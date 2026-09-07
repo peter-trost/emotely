@@ -14,6 +14,7 @@ AwaitingAnswer _$AwaitingAnswerFromJson(Map<String, dynamic> json) =>
       pending: PendingQuestion.fromJson(
         json['pending'] as Map<String, dynamic>,
       ),
+      minAppVersion: json['min_app_version'] as String?,
       $type: json['status'] as String?,
     );
 
@@ -23,6 +24,7 @@ Map<String, dynamic> _$AwaitingAnswerToJson(AwaitingAnswer instance) =>
       'signature': instance.signature,
       'prompt_id': instance.promptId,
       'pending': instance.pending.toJson(),
+      'min_app_version': instance.minAppVersion,
       'status': instance.$type,
     };
 
@@ -31,6 +33,7 @@ Completed _$CompletedFromJson(Map<String, dynamic> json) => Completed(
   signature: json['signature'] as String,
   promptId: json['prompt_id'] as String,
   entry: JournalEntry.fromJson(json['entry'] as Map<String, dynamic>),
+  minAppVersion: json['min_app_version'] as String?,
   $type: json['status'] as String?,
 );
 
@@ -39,6 +42,7 @@ Map<String, dynamic> _$CompletedToJson(Completed instance) => <String, dynamic>{
   'signature': instance.signature,
   'prompt_id': instance.promptId,
   'entry': instance.entry.toJson(),
+  'min_app_version': instance.minAppVersion,
   'status': instance.$type,
 };
 

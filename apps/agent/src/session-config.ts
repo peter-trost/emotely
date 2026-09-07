@@ -7,6 +7,12 @@ import { PROMPT_ID } from "./session-prompt.ts";
 
 // The benchmark winner (#4); the 'agent-model' PostHog flag overrides it.
 export const DEFAULT_MODEL = "openai/gpt-oss-120b";
+
+// The oldest app the server still serves (bare semver, compared against the
+// app's `app_version`). Raise it only after a release the store has carried
+// long enough; the app shows a force-update screen below it, which is what
+// lets deprecated wire shapes be deleted rather than kept (#37).
+export const MIN_APP_VERSION = "1.0.0";
 const FLAG_TIMEOUT_MS = 800;
 const CACHE_FILE = "agent-model.json";
 const ID_FILE = "distinct-id";

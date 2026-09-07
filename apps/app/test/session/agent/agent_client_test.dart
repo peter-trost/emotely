@@ -19,13 +19,13 @@ void main() {
     const toolCallId = 'c1';
     const rating = Answer.rating(7);
 
-    test('starts a session with an empty body', () async {
+    test('starts a session with nothing but the app version', () async {
       final stub = AgentStub()
         ..script([awaiting(toolCallId: toolCallId, question: question)]);
 
       final response = await stub.agentClient.advance();
 
-      expect(stub.lastRequest, isEmpty);
+      expect(stub.lastRequest, {'app_version': AgentStub.appVersion});
       expect(
         response,
         const AdvanceResponse.awaitingAnswer(
@@ -54,6 +54,7 @@ void main() {
         'transcript': AgentStub.transcript,
         'signature': AgentStub.signature,
         'answer': {'tool_call_id': toolCallId, 'value': rating.wireValue},
+        'app_version': AgentStub.appVersion,
       });
       expect(
         response,
@@ -64,6 +65,30 @@ void main() {
           entry: JournalEntry(summary: summary, answers: {'q-rate': rating}),
         ),
       );
+    });
+
+    test('decodes the minimum app version the server still serves', () async {
+      final stub = AgentStub()
+        ..script([
+          awaiting(
+            toolCallId: toolCallId,
+            question: question,
+            minAppVersion: '2.0.0',
+          ),
+        ]);
+
+      final response = await stub.agentClient.advance();
+
+      expect(response.minAppVersion, '2.0.0');
+    });
+
+    test('a response without a minimum app version imposes none', () async {
+      final stub = AgentStub()
+        ..script([awaiting(toolCallId: toolCallId, question: question)]);
+
+      final response = await stub.agentClient.advance();
+
+      expect(response.minAppVersion, isNull);
     });
 
     test('posts JSON to the endpoint', () async {
@@ -133,6 +158,7 @@ void main() {
       final client = AgentClient(
         httpClient: stub.client,
         endpoint: AgentStub.endpoint,
+        appVersion: AgentStub.appVersion,
         timeout: const Duration(milliseconds: 10),
       );
 
