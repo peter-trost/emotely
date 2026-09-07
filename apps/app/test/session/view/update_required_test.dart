@@ -16,7 +16,7 @@ void main() {
     );
 
     testWidgets('the update button opens the store', (tester) async {
-      final launcher = UrlLauncherSpy()..install();
+      final launcher = UrlLauncherSpy.setup();
       final agent = AgentStub()..script([blocking()]);
       final robot = SessionRobot(tester, agent);
       await robot.launch();
