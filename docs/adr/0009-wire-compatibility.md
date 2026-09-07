@@ -30,9 +30,10 @@ here on.
 5. **Signing-secret rotation keeps in-flight sessions alive.** When
    `SESSION_SIGNING_SECRET` is rotated the server must accept the previous
    secret for a grace window as long as the transcript cap makes a session
-   plausible. *Not implemented yet*: rotation has not happened, and the
-   verifier accepts one secret. Implement it before the first rotation, never
-   during.
+   plausible. *Not implemented yet*
+   ([#50](https://github.com/peter-trost/emotely/issues/50)): rotation has
+   not happened, and the verifier accepts one secret. Implement it before the
+   first rotation, never during.
 
 ## How the rules are enforced, not just written down
 
@@ -51,10 +52,12 @@ here on.
   worked example.
 - **The minimum is code, not configuration.** `MIN_APP_VERSION` in
   `apps/agent/src/session-config.ts` is `1.0.0`: nothing is blocked. Raising it
-  is a PR like any other, reviewed, deployed on merge, and reversible by
-  rollback. A PostHog flag would let it change without a deploy, but it would
-  also put a network dependency on a field that must never be missing; a
-  constant cannot fail to load.
+  is a PR like any other: reviewed, versioned next to the code that needs it,
+  and undone by the same pipeline. A PostHog flag would let it change without
+  a deploy, and its one real cost is small: a second network dependency,
+  where PostHog being down while the agent is up would leave the minimum
+  unknown. That is rare and acceptable (the fallback is "no minimum"). The
+  constant wins on review and history, not on availability.
 - **Carrying the minimum on the session response is interim.** It rides
   there because a second public endpoint needs its own WAF rate-limit rule
   and Hobby allows one ([ADR 0008](0008-public-endpoint-abuse-controls.md)).
@@ -78,35 +81,43 @@ here on.
 The force-update screen sends users to `EMOTELY_STORE_URL` (dart-define;
 the releases page until the store listings exist, #9).
 
-## Rollback is the recovery path
+## Recovery goes through the pipeline; Instant Rollback is break-glass
 
-The gate is `ci-ok` before merge; when something still reaches production
-broken, the correction is Vercel Instant Rollback, not a revert PR racing
-through CI. Because of rule 3 the server can always be rolled back on its own:
-the app in stores was compatible with the previous deployment by construction.
+The gate is `ci-ok` before merge. When something still reaches production
+broken, the correction is a **revert PR through the same pipeline** as every
+fix and feature: `git revert` the squash commit, open the PR, let `ci-ok` and
+auto-merge land it, and the Git integration deploys it. That keeps `main` and
+production identical, which is the property everything else here relies on
+(the Ignored Build Step, the contract pins, `entire why`, and the assumption
+that the deployed code is the reviewed code). The whole loop is a few minutes:
+the agent CI job runs in about a minute and the deploy in another. Because of
+rule 3 the server can always be reverted on its own; the app in stores was
+compatible with the previous deployment by construction.
 
-From `apps/agent` (the linked project directory):
+Vercel Instant Rollback exists for the case where the pipeline itself is what
+is broken (CI down, a deploy that cannot be reverted cleanly, a fire that
+cannot wait two minutes). From `apps/agent` (the linked project directory):
 
 ```bash
 vercel rollback <deployment-url-or-id>
 ```
 
-`vercel ls` lists deployments; the dashboard's production tile has the same
-button. What to know before pressing it, from Vercel's docs
-([instant-rollback](https://vercel.com/docs/instant-rollback), read 2026-09-06):
+It is deliberately the exception, because it makes Git and production drift:
+`main` still says the bad commit is live. Every rollback therefore comes with
+two obligations, in this order: open the revert PR immediately, and undo the
+rollback (`vercel promote <deployment-url-or-id>`, or the dashboard's **Undo
+Rollback**) as soon as the revert has deployed. What else to know, from
+Vercel's docs ([instant-rollback](https://vercel.com/docs/instant-rollback),
+read 2026-09-06):
 
-- **Hobby can only roll back to the immediately previous production
-  deployment.** Pro allows any deployment that was ever aliased to production.
-  Two bad merges in a row therefore need a fix-forward PR, or Pro (which is on
-  the release path anyway, see `AGENTS.md` § Billing).
 - **A rollback freezes production.** Vercel turns off auto-assignment of the
   production domain, so later merges to `main` build but do not go live until
-  the rollback is undone with `vercel promote <deployment-url-or-id>` (or the
-  dashboard's **Undo Rollback**). Undo it as soon as the fix is merged, or
-  `main` silently stops deploying.
+  the rollback is undone. Forgetting the undo means `main` silently stops
+  deploying, which is the drift becoming permanent.
+- **Hobby can only roll back to the immediately previous production
+  deployment.** Pro allows any deployment that was ever aliased to production.
 - **Environment variables are not rolled back.** The restored deployment runs
-  with the variables it was built with; a variable changed since then stays
-  changed for new builds only.
+  with the variables it was built with.
 - **The Ignored Build Step is unaffected**: it decides which commits build,
   the rollback decides which build serves traffic.
 

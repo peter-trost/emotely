@@ -25,7 +25,7 @@ The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
 6. [Flutter iOS + Android only](docs/adr/0006-flutter-ios-android-only.md) — no web, demand-driven expansion
 7. [Protected `main`](docs/adr/0007-protected-main-for-autonomous-agents.md) — PR + CI gate, because agents write here
 8. [Public endpoint abuse controls](docs/adr/0008-public-endpoint-abuse-controls.md) — signed transcripts, caps, WAF rate limit, budget ceiling
-9. [Wire compatibility](docs/adr/0009-wire-compatibility.md) — additive changes, version gating, force-update, rollback as recovery
+9. [Wire compatibility](docs/adr/0009-wire-compatibility.md) — additive changes, version gating, force-update, revert through the pipeline
 
 The project's language is defined in [`CONTEXT.md`](CONTEXT.md).
 
