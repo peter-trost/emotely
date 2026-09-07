@@ -40,6 +40,10 @@ void main() {
       await analytics.sessionFailed(statusCode: 429);
       await analytics.sessionFailed();
       await analytics.sessionRetried();
+      await analytics.updateRequired(
+        minAppVersion: '2.0.0',
+        appVersion: '1.2.3',
+      );
 
       expect(spy.events, [
         event('session_started'),
@@ -47,6 +51,10 @@ void main() {
         event('session_failed', {'status_code': 429}),
         event('session_failed'),
         event('session_retried'),
+        event('update_required', {
+          'min_app_version': '2.0.0',
+          'app_version': '1.2.3',
+        }),
       ]);
     });
   });

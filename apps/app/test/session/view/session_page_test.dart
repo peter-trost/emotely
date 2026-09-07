@@ -164,6 +164,45 @@ void main() {
       expect(robot.questionText, SessionRobot.grateful.question);
     });
 
+    testWidgets('blocks with an update screen when the server requires a '
+        'newer app', (tester) async {
+      final agent = AgentStub()
+        ..script([
+          awaiting(
+            toolCallId: 'c1',
+            question: SessionRobot.rate,
+            minAppVersion: '9.0.0',
+          ),
+        ]);
+      final robot = SessionRobot(tester, agent);
+      await robot.launch();
+      await robot.settle();
+
+      expect(robot.updateRequired, findsOneWidget);
+      expect(robot.updateButton, findsOneWidget);
+      expect(robot.question, findsNothing);
+      expect(robot.retry, findsNothing);
+    });
+
+    testWidgets('a minimum at or below the running version does not block', (
+      tester,
+    ) async {
+      final agent = AgentStub()
+        ..script([
+          awaiting(
+            toolCallId: 'c1',
+            question: SessionRobot.rate,
+            minAppVersion: AgentStub.appVersion,
+          ),
+        ]);
+      final robot = SessionRobot(tester, agent);
+      await robot.launch();
+      await robot.settle();
+
+      expect(robot.question, findsOneWidget);
+      expect(robot.updateRequired, findsNothing);
+    });
+
     testWidgets('a network failure gets a generic message', (tester) async {
       final agent = AgentStub()..script([unreachable()]);
       final robot = SessionRobot(tester, agent);

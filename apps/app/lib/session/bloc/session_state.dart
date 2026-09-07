@@ -24,4 +24,9 @@ sealed class SessionState with _$SessionState {
 
   /// The last round failed with [message]; the screen offers a retry.
   const factory failure({required String message}) = SessionFailure;
+
+  /// The server no longer serves this app version; the user must update to
+  /// at least [minAppVersion] before the session can continue.
+  const factory updateRequired({required String minAppVersion}) =
+      SessionUpdateRequired;
 }

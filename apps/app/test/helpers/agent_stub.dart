@@ -77,6 +77,7 @@ Round awaiting({
 Round completed({
   required String summary,
   required Map<String, Answer> answers,
+  String? minAppVersion,
 }) =>
     () async => _json({
       'status': 'completed',
@@ -87,6 +88,7 @@ Round completed({
         'summary': summary,
         'answers': answers.map((id, answer) => MapEntry(id, answer.toJson())),
       },
+      'min_app_version': ?minAppVersion,
     });
 
 /// The server refused the round with [statusCode] and [message].

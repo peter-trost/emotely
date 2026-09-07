@@ -28,17 +28,20 @@ class SessionRobot(
   Finder get answerInput => find.byType(AnswerInput);
   Finder get summary => find.byKey(EntryView.summaryKey);
   Finder get retry => find.byKey(SessionView.retryKey);
+  Finder get updateRequired => find.byKey(SessionView.updateRequiredKey);
+  Finder get updateButton => find.byKey(SessionView.updateKey);
 
   String get questionText => tester.widget<Text>(question).data!;
 
+  /// The whole app, wired to the scripted agent and the spied analytics.
+  Widget get app => EmotelyApp(
+    agentClient: agent.agentClient,
+    analytics: analytics.analytics,
+  );
+
   /// Launches the app; the first round is in flight until [settle].
   Future<void> launch() async {
-    await tester.pumpWidget(
-      EmotelyApp(
-        agentClient: agent.agentClient,
-        analytics: analytics.analytics,
-      ),
-    );
+    await tester.pumpWidget(app);
     await tester.pump();
   }
 
@@ -78,6 +81,11 @@ class SessionRobot(
 
   Future<void> tapRetry() async {
     await tester.tap(retry);
+    await settle();
+  }
+
+  Future<void> tapUpdate() async {
+    await tester.tap(updateButton);
     await settle();
   }
 

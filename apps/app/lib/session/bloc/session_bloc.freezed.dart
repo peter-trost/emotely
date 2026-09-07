@@ -363,7 +363,7 @@ extension SessionStatePatterns on SessionState {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SessionInitial value)?  initial,TResult Function( SessionLoading value)?  loading,TResult Function( SessionAwaitingAnswer value)?  awaitingAnswer,TResult Function( SessionCompleted value)?  completed,TResult Function( SessionFailure value)?  failure,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SessionInitial value)?  initial,TResult Function( SessionLoading value)?  loading,TResult Function( SessionAwaitingAnswer value)?  awaitingAnswer,TResult Function( SessionCompleted value)?  completed,TResult Function( SessionFailure value)?  failure,TResult Function( SessionUpdateRequired value)?  updateRequired,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SessionInitial() when initial != null:
@@ -371,7 +371,8 @@ return initial(_that);case SessionLoading() when loading != null:
 return loading(_that);case SessionAwaitingAnswer() when awaitingAnswer != null:
 return awaitingAnswer(_that);case SessionCompleted() when completed != null:
 return completed(_that);case SessionFailure() when failure != null:
-return failure(_that);case _:
+return failure(_that);case SessionUpdateRequired() when updateRequired != null:
+return updateRequired(_that);case _:
   return orElse();
 
 }
@@ -389,7 +390,7 @@ return failure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SessionInitial value)  initial,required TResult Function( SessionLoading value)  loading,required TResult Function( SessionAwaitingAnswer value)  awaitingAnswer,required TResult Function( SessionCompleted value)  completed,required TResult Function( SessionFailure value)  failure,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SessionInitial value)  initial,required TResult Function( SessionLoading value)  loading,required TResult Function( SessionAwaitingAnswer value)  awaitingAnswer,required TResult Function( SessionCompleted value)  completed,required TResult Function( SessionFailure value)  failure,required TResult Function( SessionUpdateRequired value)  updateRequired,}){
 final _that = this;
 switch (_that) {
 case SessionInitial():
@@ -397,7 +398,8 @@ return initial(_that);case SessionLoading():
 return loading(_that);case SessionAwaitingAnswer():
 return awaitingAnswer(_that);case SessionCompleted():
 return completed(_that);case SessionFailure():
-return failure(_that);}
+return failure(_that);case SessionUpdateRequired():
+return updateRequired(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -411,7 +413,7 @@ return failure(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SessionInitial value)?  initial,TResult? Function( SessionLoading value)?  loading,TResult? Function( SessionAwaitingAnswer value)?  awaitingAnswer,TResult? Function( SessionCompleted value)?  completed,TResult? Function( SessionFailure value)?  failure,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SessionInitial value)?  initial,TResult? Function( SessionLoading value)?  loading,TResult? Function( SessionAwaitingAnswer value)?  awaitingAnswer,TResult? Function( SessionCompleted value)?  completed,TResult? Function( SessionFailure value)?  failure,TResult? Function( SessionUpdateRequired value)?  updateRequired,}){
 final _that = this;
 switch (_that) {
 case SessionInitial() when initial != null:
@@ -419,7 +421,8 @@ return initial(_that);case SessionLoading() when loading != null:
 return loading(_that);case SessionAwaitingAnswer() when awaitingAnswer != null:
 return awaitingAnswer(_that);case SessionCompleted() when completed != null:
 return completed(_that);case SessionFailure() when failure != null:
-return failure(_that);case _:
+return failure(_that);case SessionUpdateRequired() when updateRequired != null:
+return updateRequired(_that);case _:
   return null;
 
 }
@@ -436,14 +439,15 @@ return failure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function( int answered)?  loading,TResult Function( PendingQuestion pending,  int answered)?  awaitingAnswer,TResult Function( JournalEntry entry,  Map<String, AskQuestion> questions)?  completed,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function( int answered)?  loading,TResult Function( PendingQuestion pending,  int answered)?  awaitingAnswer,TResult Function( JournalEntry entry,  Map<String, AskQuestion> questions)?  completed,TResult Function( String message)?  failure,TResult Function( String minAppVersion)?  updateRequired,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SessionInitial() when initial != null:
 return initial();case SessionLoading() when loading != null:
 return loading(_that.answered);case SessionAwaitingAnswer() when awaitingAnswer != null:
 return awaitingAnswer(_that.pending,_that.answered);case SessionCompleted() when completed != null:
 return completed(_that.entry,_that.questions);case SessionFailure() when failure != null:
-return failure(_that.message);case _:
+return failure(_that.message);case SessionUpdateRequired() when updateRequired != null:
+return updateRequired(_that.minAppVersion);case _:
   return orElse();
 
 }
@@ -461,14 +465,15 @@ return failure(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function( int answered)  loading,required TResult Function( PendingQuestion pending,  int answered)  awaitingAnswer,required TResult Function( JournalEntry entry,  Map<String, AskQuestion> questions)  completed,required TResult Function( String message)  failure,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function( int answered)  loading,required TResult Function( PendingQuestion pending,  int answered)  awaitingAnswer,required TResult Function( JournalEntry entry,  Map<String, AskQuestion> questions)  completed,required TResult Function( String message)  failure,required TResult Function( String minAppVersion)  updateRequired,}) {final _that = this;
 switch (_that) {
 case SessionInitial():
 return initial();case SessionLoading():
 return loading(_that.answered);case SessionAwaitingAnswer():
 return awaitingAnswer(_that.pending,_that.answered);case SessionCompleted():
 return completed(_that.entry,_that.questions);case SessionFailure():
-return failure(_that.message);}
+return failure(_that.message);case SessionUpdateRequired():
+return updateRequired(_that.minAppVersion);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -482,14 +487,15 @@ return failure(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function( int answered)?  loading,TResult? Function( PendingQuestion pending,  int answered)?  awaitingAnswer,TResult? Function( JournalEntry entry,  Map<String, AskQuestion> questions)?  completed,TResult? Function( String message)?  failure,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function( int answered)?  loading,TResult? Function( PendingQuestion pending,  int answered)?  awaitingAnswer,TResult? Function( JournalEntry entry,  Map<String, AskQuestion> questions)?  completed,TResult? Function( String message)?  failure,TResult? Function( String minAppVersion)?  updateRequired,}) {final _that = this;
 switch (_that) {
 case SessionInitial() when initial != null:
 return initial();case SessionLoading() when loading != null:
 return loading(_that.answered);case SessionAwaitingAnswer() when awaitingAnswer != null:
 return awaitingAnswer(_that.pending,_that.answered);case SessionCompleted() when completed != null:
 return completed(_that.entry,_that.questions);case SessionFailure() when failure != null:
-return failure(_that.message);case _:
+return failure(_that.message);case SessionUpdateRequired() when updateRequired != null:
+return updateRequired(_that.minAppVersion);case _:
   return null;
 
 }
@@ -822,6 +828,74 @@ class _$SessionFailureCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
   return _then(SessionFailure(
 message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class SessionUpdateRequired implements SessionState {
+  const SessionUpdateRequired({required this.minAppVersion});
+  
+
+ final  String minAppVersion;
+
+/// Create a copy of SessionState
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SessionUpdateRequiredCopyWith<SessionUpdateRequired> get copyWith => _$SessionUpdateRequiredCopyWithImpl<SessionUpdateRequired>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionUpdateRequired&&(identical(other.minAppVersion, minAppVersion) || other.minAppVersion == minAppVersion));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,minAppVersion);
+}
+
+@override
+String toString() {
+    return 'SessionState.updateRequired(minAppVersion: $minAppVersion)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $SessionUpdateRequiredCopyWith<$Res> implements $SessionStateCopyWith<$Res> {
+  factory $SessionUpdateRequiredCopyWith(SessionUpdateRequired value, $Res Function(SessionUpdateRequired) _then) = _$SessionUpdateRequiredCopyWithImpl;
+@useResult
+$Res call({
+ String minAppVersion
+});
+
+
+
+
+}
+/// @nodoc
+class _$SessionUpdateRequiredCopyWithImpl<$Res>
+    implements $SessionUpdateRequiredCopyWith<$Res> {
+  _$SessionUpdateRequiredCopyWithImpl(this._self, this._then);
+
+  final SessionUpdateRequired _self;
+  final $Res Function(SessionUpdateRequired) _then;
+
+/// Create a copy of SessionState
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? minAppVersion = null,}) {
+  return _then(SessionUpdateRequired(
+minAppVersion: null == minAppVersion ? _self.minAppVersion : minAppVersion // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

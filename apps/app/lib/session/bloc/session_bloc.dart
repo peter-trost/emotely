@@ -6,6 +6,7 @@ import 'package:emotely/session/agent/advance_response.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:pub_semver/pub_semver.dart';
 
 part 'session_bloc.freezed.dart';
 part 'session_event.dart';
@@ -70,6 +71,12 @@ class SessionBloc({
     emit(SessionState.loading(answered: _asked.length));
     try {
       final response = await round();
+      if (_requiresUpdate(response.minAppVersion)) {
+        emit(
+          SessionState.updateRequired(minAppVersion: response.minAppVersion!),
+        );
+        return;
+      }
       _transcript = response.transcript;
       _signature = response.signature;
       emit(switch (response) {
@@ -87,6 +94,25 @@ class SessionBloc({
         ),
       );
     }
+  }
+
+  /// Whether the server's [minAppVersion] is newer than the version this
+  /// app reported. No minimum, or one this app already meets, never blocks.
+  bool _requiresUpdate(String? minAppVersion) {
+    if (minAppVersion == null) {
+      return false;
+    }
+    final blocked =
+        Version.parse(minAppVersion) > Version.parse(_agentClient.appVersion);
+    if (blocked) {
+      unawaited(
+        _analytics.updateRequired(
+          minAppVersion: minAppVersion,
+          appVersion: _agentClient.appVersion,
+        ),
+      );
+    }
+    return blocked;
   }
 
   SessionState _await(PendingQuestion pending) {
