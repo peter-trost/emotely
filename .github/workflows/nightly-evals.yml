@@ -25,6 +25,12 @@ jobs:
 
   live-smoke:
     runs-on: ubuntu-latest
+    environment: ci
+    env:
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+      SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+      SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -33,5 +39,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Full session against the DEPLOYED endpoint + tamper/forgery probes.
+      # Full session against the DEPLOYED endpoint as the smoke user, plus
+      # anonymous / tamper / forgery probes (all must be 401).
       - run: pnpm --filter @emotely/agent smoke
