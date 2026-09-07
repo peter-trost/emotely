@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  advanceSessionRequest,
+  advanceSessionResponse,
   answerValueSchemas,
   askQuestionInput,
   completeSessionInput,
@@ -128,5 +130,68 @@ describe("rating value", () => {
     for (const bad of [0, 11, 5.5, "7", null]) {
       assert.equal(answerValueSchemas.rating.safeParse(bad).success, false);
     }
+  });
+});
+
+describe("advance_session request", () => {
+  it("accepts a fresh session (empty body) and a full round", () => {
+    assert.deepEqual(advanceSessionRequest.parse({}), {});
+    const round = {
+      transcript: [{ role: "user", content: "hi" }],
+      signature: "abc",
+      answer: { tool_call_id: "c1", value: ["#FF8800"] },
+    };
+    assert.deepEqual(advanceSessionRequest.parse(round), round);
+  });
+
+  it("rejects an answer without a tool_call_id", () => {
+    assert.equal(
+      advanceSessionRequest.safeParse({ answer: { value: 7 } }).success,
+      false,
+    );
+  });
+});
+
+describe("advance_session response", () => {
+  const base = {
+    transcript: [{ role: "user", content: "hi" }],
+    signature: "abc",
+    prompt_id: "session/v1",
+  };
+
+  it("accepts the next question and the finished entry", () => {
+    const awaiting = {
+      status: "awaiting_answer",
+      ...base,
+      pending: {
+        tool_call_id: "c1",
+        question: { question_id: "q1", question: "Q?", answer_type: "rating" },
+      },
+    };
+    assert.deepEqual(advanceSessionResponse.parse(awaiting), awaiting);
+    const completed = {
+      status: "completed",
+      ...base,
+      entry: {
+        summary: "A good day.",
+        answers: { q1: { answer_type: "rating", value: 7 } },
+      },
+    };
+    assert.deepEqual(advanceSessionResponse.parse(completed), completed);
+  });
+
+  it("rejects an unknown status and a malformed recorded answer", () => {
+    assert.equal(
+      advanceSessionResponse.safeParse({ status: "thinking", ...base }).success,
+      false,
+    );
+    assert.equal(
+      advanceSessionResponse.safeParse({
+        status: "completed",
+        ...base,
+        entry: { summary: "x", answers: { q1: { answer_type: "rating" } } },
+      }).success,
+      false,
+    );
   });
 });

@@ -156,5 +156,291 @@
     "required": [
       "summary"
     ]
+  },
+  "advance_session_request": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "transcript": {
+        "type": "array",
+        "items": {}
+      },
+      "signature": {
+        "type": "string"
+      },
+      "answer": {
+        "type": "object",
+        "properties": {
+          "tool_call_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "required": [
+          "tool_call_id",
+          "value"
+        ]
+      }
+    },
+    "$defs": {
+      "__schema0": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/__schema0"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "advance_session_response": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "awaiting_answer"
+          },
+          "transcript": {
+            "type": "array",
+            "items": {}
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pending": {
+            "type": "object",
+            "properties": {
+              "tool_call_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "question": {
+                "type": "object",
+                "properties": {
+                  "question_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "question": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "answer_type": {
+                    "type": "string",
+                    "enum": [
+                      "color",
+                      "emoji",
+                      "longtext",
+                      "rating",
+                      "text_list"
+                    ]
+                  }
+                },
+                "required": [
+                  "question_id",
+                  "question",
+                  "answer_type"
+                ]
+              }
+            },
+            "required": [
+              "tool_call_id",
+              "question"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "transcript",
+          "signature",
+          "prompt_id",
+          "pending"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed"
+          },
+          "transcript": {
+            "type": "array",
+            "items": {}
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entry": {
+            "type": "object",
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "answers": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "answer_type": {
+                          "type": "string",
+                          "const": "color"
+                        },
+                        "value": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^#[0-9A-Fa-f]{6}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "answer_type",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "answer_type": {
+                          "type": "string",
+                          "const": "emoji"
+                        },
+                        "value": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      },
+                      "required": [
+                        "answer_type",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "answer_type": {
+                          "type": "string",
+                          "const": "longtext"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "answer_type",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "answer_type": {
+                          "type": "string",
+                          "const": "rating"
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10
+                        }
+                      },
+                      "required": [
+                        "answer_type",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "answer_type": {
+                          "type": "string",
+                          "const": "text_list"
+                        },
+                        "value": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      },
+                      "required": [
+                        "answer_type",
+                        "value"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "required": [
+              "summary",
+              "answers"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "transcript",
+          "signature",
+          "prompt_id",
+          "entry"
+        ]
+      }
+    ]
   }
 }

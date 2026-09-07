@@ -53,3 +53,43 @@ export const completeSessionInput = z.object({
   summary: nonemptyString,
 });
 export type CompleteSessionInput = z.infer<typeof completeSessionInput>;
+
+// The HTTP envelope of `POST /api/advance-session`. Wire keys are snake_case
+// end to end, like the tool payloads above; the agent (producer) and the app
+// (consumer) both pin against the JSON Schema emitted from these.
+const jsonValue = z.json();
+
+export const advanceSessionRequest = z.object({
+  transcript: z.array(z.unknown()).optional(),
+  signature: z.string().optional(),
+  answer: z
+    .object({ tool_call_id: nonemptyString, value: jsonValue })
+    .optional(),
+});
+export type AdvanceSessionRequest = z.infer<typeof advanceSessionRequest>;
+
+const advanceSessionBase = {
+  transcript: z.array(z.unknown()),
+  signature: nonemptyString,
+  prompt_id: nonemptyString,
+};
+
+export const advanceSessionResponse = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("awaiting_answer"),
+    ...advanceSessionBase,
+    pending: z.object({
+      tool_call_id: nonemptyString,
+      question: askQuestionInput,
+    }),
+  }),
+  z.object({
+    status: z.literal("completed"),
+    ...advanceSessionBase,
+    entry: z.object({
+      summary: nonemptyString,
+      answers: z.record(nonemptyString, answer),
+    }),
+  }),
+]);
+export type AdvanceSessionResponse = z.infer<typeof advanceSessionResponse>;

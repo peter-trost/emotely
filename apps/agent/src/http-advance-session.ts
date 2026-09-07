@@ -1,4 +1,8 @@
-import { z } from "zod";
+import {
+  type AdvanceSessionRequest,
+  type AdvanceSessionResponse,
+  advanceSessionRequest,
+} from "@emotely/contract";
 import type { AdvanceResult, SessionAnswer } from "./session-core.ts";
 import { signTranscript, verifyTranscript } from "./transcript-auth.ts";
 
@@ -10,27 +14,8 @@ const HTTP_UNAUTHORIZED = 401;
 const HTTP_METHOD_NOT_ALLOWED = 405;
 const HTTP_PAYLOAD_TOO_LARGE = 413;
 
-const jsonValue: z.ZodType<unknown> = z.lazy(() =>
-  z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-    z.null(),
-    z.array(jsonValue),
-    z.record(z.string(), jsonValue),
-  ]),
-);
-
-// Wire keys are snake_case end to end (like the tool contract); the
+// The wire envelope (snake_case keys) is owned by packages/contract; the
 // TypeScript-side types stay camelCase.
-const requestSchema = z.object({
-  transcript: z.array(z.unknown()).optional(),
-  signature: z.string().optional(),
-  answer: z
-    .object({ tool_call_id: z.string().min(1), value: jsonValue })
-    .optional(),
-});
-
 type Advance = (input: {
   messages: unknown[];
   answer?: SessionAnswer;
@@ -44,7 +29,7 @@ function json(status: number, body: unknown): Response {
 }
 
 function validate(
-  parsed: z.infer<typeof requestSchema>,
+  parsed: AdvanceSessionRequest,
   secret: string,
 ): { error: Response } | { error?: never; transcript: unknown[] } {
   const { transcript, signature, answer } = parsed;
@@ -74,7 +59,7 @@ function validate(
 async function runAdvance(
   advance: Advance,
   transcript: unknown[],
-  parsed: z.infer<typeof requestSchema>,
+  parsed: AdvanceSessionRequest,
 ): Promise<AdvanceResult | Response> {
   try {
     return await advance({
@@ -112,9 +97,9 @@ export function createAdvanceSessionHandler(deps: {
     if (request.method !== "POST") {
       return json(HTTP_METHOD_NOT_ALLOWED, { error: "POST only" });
     }
-    let parsed: z.infer<typeof requestSchema>;
+    let parsed: AdvanceSessionRequest;
     try {
-      parsed = requestSchema.parse(await request.json());
+      parsed = advanceSessionRequest.parse(await request.json());
     } catch {
       return json(HTTP_BAD_REQUEST, { error: "malformed request" });
     }
@@ -146,7 +131,7 @@ export function createAdvanceSessionHandler(deps: {
         status: "completed",
         ...base,
         entry: result.entry,
-      });
+      } satisfies AdvanceSessionResponse);
     }
     return json(HTTP_OK, {
       status: "awaiting_answer",
@@ -155,6 +140,6 @@ export function createAdvanceSessionHandler(deps: {
         tool_call_id: result.pending.toolCallId,
         question: result.pending.input,
       },
-    });
+    } satisfies AdvanceSessionResponse);
   };
 }

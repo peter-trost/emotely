@@ -1,6 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { z } from "zod";
 import {
+  advanceSessionRequest,
+  advanceSessionResponse,
   askQuestionInput,
   completeSessionInput,
   recordAnswerInput,
@@ -13,6 +15,12 @@ const schema = {
   ask_question: z.toJSONSchema(askQuestionInput, { io: "input" }),
   record_answer: z.toJSONSchema(recordAnswerInput, { io: "input" }),
   complete_session: z.toJSONSchema(completeSessionInput, { io: "input" }),
+  advance_session_request: z.toJSONSchema(advanceSessionRequest, {
+    io: "input",
+  }),
+  advance_session_response: z.toJSONSchema(advanceSessionResponse, {
+    io: "input",
+  }),
 };
 
 writeFileSync(
