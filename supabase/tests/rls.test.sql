@@ -3,7 +3,7 @@
 -- or as `anon` with none. What a user can see or touch is exactly their own
 -- rows; anything else fails before it reaches a row.
 begin;
-select plan(21);
+select plan(27);
 
 -- Impersonation helpers. auth.uid() reads `sub` from request.jwt.claims,
 -- which is how PostgREST hands the verified JWT to Postgres.
@@ -131,6 +131,52 @@ select throws_ok(
   '42501',
   null,
   'anon cannot call delete_account'
+);
+
+-- Completing a session is one atomic, owner-only step ---------------------------
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+-- Only one session may be in progress, so the first one is closed by hand.
+update public.sessions set status = 'completed'
+  where id = '10000000-0000-0000-0000-000000000001';
+select lives_ok(
+  $$insert into public.sessions (id, question_set_id, transcript, signature, pending, questions)
+    values ('10000000-0000-0000-0000-000000000002', 'default', '[]', 'sig-4',
+            '{"tool_call_id": "c1"}', '[{"question_id": "q1"}]')$$,
+  'a session carries its pending question and the questions asked so far'
+);
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000b');
+select throws_ok(
+  $$select public.complete_session(
+      '10000000-0000-0000-0000-000000000002', 'Not mine.', '{}', '[]')$$,
+  'P0002',
+  null,
+  'another user cannot complete a session that is not theirs'
+);
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+select lives_ok(
+  $$select public.complete_session(
+      '10000000-0000-0000-0000-000000000002', 'A fine day.', '{"q1": 7}', '[{"question_id": "q1"}]')$$,
+  'the owner completes their session'
+);
+select results_eq(
+  $$select status from public.sessions where id = '10000000-0000-0000-0000-000000000002'$$,
+  $$values ('completed'::text)$$,
+  'completing marks the session completed'
+);
+select results_eq(
+  $$select summary from public.entries where session_id = '10000000-0000-0000-0000-000000000002'$$,
+  $$values ('A fine day.'::text)$$,
+  'completing writes the entry for the session'
+);
+select throws_ok(
+  $$select public.complete_session(
+      '10000000-0000-0000-0000-000000000002', 'Again.', '{}', '[]')$$,
+  'P0002',
+  null,
+  'a completed session cannot be completed again'
 );
 
 -- Account deletion takes everything with it -------------------------------------

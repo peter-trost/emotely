@@ -17,6 +17,11 @@ create table public.sessions (
   signature text not null,
   status text not null default 'in_progress'
     check (status in ('in_progress', 'completed')),
+  -- The question the user is on (tool call id + question), and every
+  -- question asked so far: what a resume needs to render without a server
+  -- round. Both mirror what the agent already put in the transcript.
+  pending jsonb,
+  questions jsonb not null default '[]'::jsonb,
   app_version text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -76,6 +81,45 @@ create policy "users own their entries" on public.entries
   for all to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+
+-- Finishing a session is one transaction: the entry appears and the session
+-- leaves the in-progress state together, or neither happens. Runs as the
+-- caller (security invoker), so RLS decides which session it may touch; a
+-- session it cannot see or that is not in progress raises no_data_found.
+create function public.complete_session(
+  session_id uuid,
+  summary text,
+  answers jsonb,
+  questions jsonb
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  entry_id uuid;
+begin
+  update public.sessions
+    set status = 'completed', pending = null
+    where id = complete_session.session_id and status = 'in_progress';
+  if not found then
+    raise no_data_found using message = 'no session in progress with that id';
+  end if;
+  insert into public.entries (session_id, summary, answers, questions)
+    values (complete_session.session_id, complete_session.summary,
+            complete_session.answers, complete_session.questions)
+    returning id into entry_id;
+  return entry_id;
+end;
+$$;
+comment on function public.complete_session(uuid, text, jsonb, jsonb) is
+  'Writes the entry and closes the session atomically; owner only via RLS.';
+
+revoke execute on function public.complete_session(uuid, text, jsonb, jsonb)
+  from public, anon;
+grant execute on function public.complete_session(uuid, text, jsonb, jsonb)
+  to authenticated;
 
 -- Account deletion, in-app (App Store guideline 5.1.1). Deleting the auth
 -- user cascades through sessions and entries. security definer because the

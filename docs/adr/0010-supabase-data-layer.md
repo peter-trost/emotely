@@ -49,11 +49,12 @@ authenticated request from here on.
 
 | table | row | rules |
 | --- | --- | --- |
-| `sessions` | one journaling conversation: signed transcript, status, question set, app version | owner-only; at most one `in_progress` per user (partial unique index) |
+| `sessions` | one journaling conversation: signed transcript, the pending question and the questions asked so far (what a resume renders), status, question set, app version | owner-only; at most one `in_progress` per user (partial unique index) |
 | `entries` | one finished entry: summary, answers by question id, the questions as asked | owner-only; no `update` privilege, delete only |
 
 Both default `user_id` to `auth.uid()`, cascade from `auth.users`, and grant
-nothing to `anon`. `delete_account()` is a `security definer` function that
+nothing to `anon`. `complete_session()` writes the entry and closes the session in one
+transaction as the caller, so RLS decides which session it may touch. `delete_account()` is a `security definer` function that
 deletes the caller from `auth.users`, which cascades: in-app account deletion
 is an App Store requirement (5.1.1) and ten lines here.
 
