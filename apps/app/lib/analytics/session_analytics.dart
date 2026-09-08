@@ -39,6 +39,14 @@ class const SessionAnalytics({required final Posthog posthog}) {
   Future<void> sessionRetried() =>
       posthog.capture(eventName: 'session_retried');
 
+  /// A round could not be written to the journal; the session went on.
+  Future<void> sessionSaveFailed() =>
+      posthog.capture(eventName: 'session_save_failed');
+
+  /// The finished entry could not be filed; the user can retry.
+  Future<void> entrySaveFailed() =>
+      posthog.capture(eventName: 'entry_save_failed');
+
   /// The server refused [appVersion] and demanded at least [minAppVersion];
   /// the user is on the force-update screen.
   Future<void> updateRequired({

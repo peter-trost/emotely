@@ -14,6 +14,8 @@ Widget appUnderTest({
   required AnalyticsSpy analytics,
 }) {
   agent.accessToken = () => supabase.supabase.auth.currentSession?.accessToken;
+  // A journal that accepts every write unless the test scripts otherwise.
+  supabase.journalWorks();
   return EmotelyApp(
     agentClient: agent.agentClient,
     analytics: analytics.analytics,

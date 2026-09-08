@@ -40,6 +40,8 @@ void main() {
       await analytics.sessionFailed(statusCode: 429);
       await analytics.sessionFailed();
       await analytics.sessionRetried();
+      await analytics.sessionSaveFailed();
+      await analytics.entrySaveFailed();
       await analytics.updateRequired(
         minAppVersion: '2.0.0',
         appVersion: '1.2.3',
@@ -51,6 +53,8 @@ void main() {
         event('session_failed', {'status_code': 429}),
         event('session_failed'),
         event('session_retried'),
+        event('session_save_failed'),
+        event('entry_save_failed'),
         event('update_required', {
           'min_app_version': '2.0.0',
           'app_version': '1.2.3',

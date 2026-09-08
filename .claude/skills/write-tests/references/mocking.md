@@ -11,7 +11,9 @@
 - `provideDummy(...)` for non-nullable state types mockito can't construct.
 - What may be mocked: the http clients behind the agent API (`AgentStub`)
   and the Supabase SDK (`SupabaseStub`, the real `SupabaseClient` over a
-  scripted `MockClient`; sign in a test with `supabase.signedIn()`), platform
+  scripted `MockClient`; sign in a test with `supabase.signedIn()`, script
+  the data API per `METHOD /rest/v1/...` with `rest(...)`, defaults come
+  from `journalWorks()`), platform
   channels, and infrastructure like image caching. `appUnderTest(...)` in
   `test/helpers/app_harness.dart` wires the three together the way `main.dart`
   does.
