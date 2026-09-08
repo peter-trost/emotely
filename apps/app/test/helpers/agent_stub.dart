@@ -11,11 +11,16 @@ import '../mocks.mocks.dart';
 typedef Round = Future<http.Response> Function();
 
 /// The agent, scripted at the http seam: canned rounds go out in order,
-/// every request body is recorded for assertions.
+/// every request body and header set is recorded for assertions.
 class AgentStub() {
   final client = MockClient();
   final requests = <Map<String, dynamic>>[];
+  final headers = <Map<String, String>>[];
   final _rounds = <Round>[];
+
+  /// The token the client attaches; the app harness points this at the
+  /// Supabase session, a bare stub sends none.
+  String? Function() accessToken = () => null;
 
   /// The endpoint the stub answers on; any URL works, it never leaves the
   /// process.
@@ -33,10 +38,14 @@ class AgentStub() {
     httpClient: client,
     endpoint: endpoint,
     appVersion: appVersion,
+    accessToken: () => accessToken(),
   );
 
   /// The last request body, decoded.
   Map<String, dynamic> get lastRequest => requests.last;
+
+  /// The headers of the last request.
+  Map<String, String> get lastHeaders => headers.last;
 
   /// Queues the next rounds, served first-in first-out.
   void script(List<Round> rounds) {
@@ -46,6 +55,10 @@ class AgentStub() {
           requests.add(
             jsonDecode(invocation.namedArguments[#body] as String)
                 as Map<String, dynamic>,
+          );
+          headers.add(
+            (invocation.namedArguments[#headers] as Map<String, String>?) ??
+                const {},
           );
           if (_rounds.isEmpty) {
             throw StateError('agent stub script exhausted');

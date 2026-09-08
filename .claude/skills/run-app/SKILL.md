@@ -16,6 +16,9 @@ All configuration is `--dart-define`s, read in one place: `lib/app/environment.d
 | --- | --- | --- |
 | `EMOTELY_AGENT_URL` | `https://emotely-agent.vercel.app/api/advance-session` | the agent; point at a local or preview deployment when needed |
 | `POSTHOG_KEY` | empty = analytics off (the SDK skips setup) | PostHog project token (`phc_…`) |
+| `EMOTELY_SUPABASE_URL` | the hosted project | Supabase project URL; public (ADR 0010) |
+| `EMOTELY_SUPABASE_PUBLISHABLE_KEY` | the hosted project's key | Supabase publishable key; public, acts only under the signed-in user |
+| `SMOKE_EMAIL`, `SMOKE_PASSWORD` | none | integration_test only: the smoke user the acceptance run signs in as |
 
 The token is public by design but is never committed. Read it **blind** from
 the agent's local env — never print it, never paste it into a message:
@@ -23,6 +26,12 @@ the agent's local env — never print it, never paste it into a message:
 ```bash
 KEY=$(grep -E '^POSTHOG_KEY=' apps/agent/.env.local | cut -d= -f2- | tr -d '"' | tr -d "'")
 ```
+
+The smoke user's credentials live in the same file (`SMOKE_EMAIL`,
+`SMOKE_PASSWORD`) and are read the same way. On a device, sign in by hand:
+the app asks for an email and the six-digit code Supabase mails to it. Against
+the local Supabase stack (`supabase start`, see the supabase skill) the code
+shows up in Inbucket at http://127.0.0.1:54324 instead of a mailbox.
 
 ## Toolchain
 
@@ -58,7 +67,9 @@ A whole session against the deployed agent, answering whatever it asks —
 nightly / pre-release by hand, never per PR:
 
 ```bash
-cd apps/app && fvm flutter test integration_test/live_session_test.dart -d <device udid> --dart-define=POSTHOG_KEY="$KEY"
+SMOKE_EMAIL=$(grep -E '^SMOKE_EMAIL=' apps/agent/.env.local | cut -d= -f2-)
+SMOKE_PASSWORD=$(grep -E '^SMOKE_PASSWORD=' apps/agent/.env.local | cut -d= -f2-)
+cd apps/app && fvm flutter test integration_test/live_session_test.dart -d <device udid> --dart-define=POSTHOG_KEY="$KEY" --dart-define=SMOKE_EMAIL="$SMOKE_EMAIL" --dart-define=SMOKE_PASSWORD="$SMOKE_PASSWORD"
 ```
 
 Expect ~25 s after the build (about ten live model rounds). Then verify the

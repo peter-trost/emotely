@@ -17,6 +17,7 @@ class const AgentClient({
   required final http.Client httpClient,
   required final Uri endpoint,
   required final String appVersion,
+  required final String? Function() accessToken,
   final Duration timeout = defaultTimeout,
 }) {
   /// A round is one model call; anything slower than this is a hung request
@@ -25,7 +26,9 @@ class const AgentClient({
 
   /// Advances the session: no transcript starts one, a transcript plus the
   /// [answer] to its pending question continues it. Every request names the
-  /// [appVersion] so the server can gate behaviour per version.
+  /// [appVersion] so the server can gate behaviour per version, and carries
+  /// the signed-in user's token from [accessToken]; without one the server
+  /// refuses the round (ADR 0010).
   Future<AdvanceResponse> advance({
     List<Object?>? transcript,
     String? signature,
@@ -34,7 +37,11 @@ class const AgentClient({
     final response = await httpClient
         .post(
           endpoint,
-          headers: const {'content-type': 'application/json'},
+          headers: {
+            'content-type': 'application/json',
+            if (accessToken() case final token?)
+              'authorization': 'Bearer $token',
+          },
           body: jsonEncode({
             'transcript': ?transcript,
             'signature': ?signature,
