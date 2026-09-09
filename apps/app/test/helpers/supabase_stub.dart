@@ -115,6 +115,8 @@ class SupabaseStub() {
   /// A journal that accepts everything: sessions are created as [sessionId],
   /// updated and closed without complaint. What most session tests want.
   void journalWorks({String sessionId = SupabaseStub.sessionId}) {
+    always('GET /rest/v1/entries', rows(const []));
+    always('GET /rest/v1/sessions', rows(const []));
     always('DELETE /rest/v1/sessions', rowsChanged());
     always('POST /rest/v1/sessions', rowCreated(sessionId));
     always('PATCH /rest/v1/sessions', rowsChanged());
@@ -249,3 +251,11 @@ AuthRound rpcReturned(Object? value) =>
 /// eat several scripted rounds for one failure.
 AuthRound restRefused({int statusCode = 409, String message = 'refused'}) =>
     () async => _json({'code': 'XX000', 'message': message}, statusCode);
+
+/// The data API answered a select with [rowsFound].
+AuthRound rows(List<Map<String, Object?>> rowsFound) =>
+    () async => http.Response.bytes(
+      utf8.encode(jsonEncode(rowsFound)),
+      200,
+      headers: const {'content-type': 'application/json'},
+    );

@@ -15,6 +15,7 @@ void main() {
       await analytics.codeRejected();
       await analytics.identify(userId: 'user-1');
       await analytics.signedIn();
+      await analytics.signedOut();
 
       expect(spy.identified, ['user-1']);
       expect(spy.events, [
@@ -22,7 +23,9 @@ void main() {
         event('sign_in_code_request_failed'),
         event('sign_in_code_rejected'),
         event('signed_in'),
+        event('signed_out'),
       ]);
+      expect(spy.resets, 1);
     });
 
     testWidgets('never sends the email or the code (ADR 0005)', (tester) async {
@@ -39,7 +42,7 @@ void main() {
       await robot.tapSignIn();
       await robot.settle();
 
-      expect(robot.session, findsOneWidget);
+      expect(robot.home, findsOneWidget);
       final outgoing = robot.analytics.outgoingStrings.toList();
       expect(outgoing, isNotEmpty);
       for (final leaving in outgoing) {

@@ -24,4 +24,10 @@ class const AuthAnalytics({required final Posthog posthog}) {
 
   /// The user completed a sign-in (not a restored session).
   Future<void> signedIn() => posthog.capture(eventName: 'signed_in');
+
+  /// The user signed out: PostHog forgets who this device belongs to.
+  Future<void> signedOut() async {
+    await posthog.capture(eventName: 'signed_out');
+    await posthog.reset();
+  }
 }

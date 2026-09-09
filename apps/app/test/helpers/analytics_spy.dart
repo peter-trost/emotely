@@ -1,4 +1,5 @@
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:mockito/mockito.dart';
 
@@ -36,6 +37,10 @@ class AnalyticsSpy() {
       identified.add(invocation.namedArguments[#userId] as String);
       return Future<void>.value();
     });
+    when(posthog.reset()).thenAnswer((_) {
+      resets++;
+      return Future<void>.value();
+    });
   }
 
   final posthog = MockPosthog();
@@ -44,11 +49,17 @@ class AnalyticsSpy() {
   /// The user ids the app identified PostHog with, in order.
   final identified = <String>[];
 
+  /// How often the app told PostHog to forget the user.
+  var resets = 0;
+
   /// The [SessionAnalytics] the app is given.
   SessionAnalytics get analytics => SessionAnalytics(posthog: posthog);
 
   /// The [AuthAnalytics] the app is given.
   AuthAnalytics get authAnalytics => AuthAnalytics(posthog: posthog);
+
+  /// The [JournalAnalytics] the app is given.
+  JournalAnalytics get journalAnalytics => JournalAnalytics(posthog: posthog);
 
   /// Every string that would leave the device: event names, properties and
   /// identities.

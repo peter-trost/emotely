@@ -286,6 +286,7 @@ void main() {
         await robot.answerLongtext('Shipping.');
 
         expect(robot.analytics.events, [
+          event('journal_viewed', {'entries': 0, 'open_session': false}),
           event('session_started'),
           event('question_asked', {
             'question_id': 'q-rate',
@@ -334,7 +335,9 @@ void main() {
         await robot.answerLongtext('$needle answer');
 
         expect(robot.summary, findsOneWidget);
-        expect(robot.analytics.events, hasLength(4));
+        // journal_viewed, session_started, question_asked, answer_submitted,
+        // session_completed: the whole story, none of it content.
+        expect(robot.analytics.events, hasLength(5));
         for (final outgoing in robot.analytics.outgoingStrings) {
           expect(outgoing, isNot(contains(needle)));
         }
@@ -356,6 +359,7 @@ void main() {
         await robot.tapRetry();
 
         expect(robot.analytics.events, [
+          event('journal_viewed', {'entries': 0, 'open_session': false}),
           event('session_started'),
           event('session_failed', {'status_code': 429}),
           event('session_retried'),

@@ -1,6 +1,6 @@
 import 'package:emotely/app/app.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
-import 'package:emotely/session/view/session_page.dart';
+import 'package:emotely/journal/view/journal_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/helpers.dart';
@@ -17,10 +17,10 @@ void main() {
       );
 
       expect(find.byType(SignInPage), findsOneWidget);
-      expect(find.byType(SessionPage), findsNothing);
+      expect(find.byType(JournalPage), findsNothing);
     });
 
-    testWidgets('opens straight into a session for a restored sign-in', (
+    testWidgets('opens straight into the journal for a restored sign-in', (
       tester,
     ) async {
       final supabase = SupabaseStub();
@@ -29,14 +29,14 @@ void main() {
 
       await tester.pumpWidget(
         appUnderTest(
-          agent: AgentStub()..script([unreachable()]),
+          agent: AgentStub(),
           supabase: supabase,
           analytics: analytics,
         ),
       );
 
-      expect(find.byType(SessionPage), findsOneWidget);
-      expect(find.text('Journaling session'), findsOneWidget);
+      expect(find.byType(JournalPage), findsOneWidget);
+      expect(find.text('Your journal'), findsOneWidget);
       // The restored user is known to PostHog before anything else happens.
       expect(analytics.identified, [SupabaseStub.userId]);
     });

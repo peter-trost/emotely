@@ -1,4 +1,5 @@
 import 'package:emotely/contract/contract.dart';
+import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/bloc/session_bloc.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
@@ -42,19 +43,27 @@ class SessionRobot(
   Widget get app =>
       appUnderTest(agent: agent, supabase: supabaseStub, analytics: analytics);
 
-  /// Launches the app signed in; the first round is in flight until
-  /// [settle].
+  /// Launches the app signed in and starts a session from the journal; the
+  /// first round is in flight until [settle].
   Future<void> launch() async {
     await supabaseStub.signedIn();
     await tester.pumpWidget(app);
+    await settle();
+    await tester.tap(find.byKey(JournalView.startKey));
+    // One frame pushes the session route, the next builds it and fires the
+    // first round.
+    await tester.pump();
     await tester.pump();
   }
 
   Future<void> settle() => tester.pumpAndSettle();
 
-  /// For pumps that bypass [launch]: sign in, then let the first round land.
+  /// For pumps that bypass [launch]: sign in, start a session from the
+  /// journal, then let the first round land.
   Future<void> signInAndSettle() async {
     await supabaseStub.signedIn();
+    await settle();
+    await tester.tap(find.byKey(JournalView.startKey));
     await settle();
   }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/contract/contract.dart';
+import 'package:emotely/journal/journal_models.dart';
 import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:emotely/session/agent/agent_client.dart';
@@ -46,8 +47,40 @@ class SessionBloc({
   late Future<void> Function(Emitter<SessionState> emit) _retry;
 
   Future<void> _onStarted(SessionStarted event, Emitter<SessionState> emit) {
+    if (event.resume case final session?) {
+      return _resume(session, emit);
+    }
     unawaited(_analytics.sessionStarted());
     return _round(emit, _agentClient.advance);
+  }
+
+  /// Picks a stored session up: the pending question goes straight back on
+  /// screen. A row saved after the last answer but before its entry was
+  /// filed has no pending question; the agent finishes it again.
+  Future<void> _resume(OpenSession session, Emitter<SessionState> emit) {
+    unawaited(_analytics.sessionResumed());
+    _sessionId = session.id;
+    _transcript = session.transcript;
+    _signature = session.signature;
+    _asked.addEntries([
+      for (final question in session.questions)
+        MapEntry(question.questionId, question),
+    ]);
+    if (session.pending case final pending?) {
+      _asked[pending.question.questionId] = pending.question;
+      emit(
+        SessionState.awaitingAnswer(
+          pending: pending,
+          answered: _asked.length - 1,
+        ),
+      );
+      return Future.value();
+    }
+    return _round(
+      emit,
+      () =>
+          _agentClient.advance(transcript: _transcript, signature: _signature),
+    );
   }
 
   Future<void> _onAnswered(

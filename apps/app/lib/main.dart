@@ -1,6 +1,7 @@
 // coverage:ignore-file
 // Composition root; behavior lives in EmotelyApp and is tested there.
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
@@ -38,6 +39,7 @@ Future<void> main() async {
       analytics: SessionAnalytics(posthog: posthog),
       supabase: supabase.client,
       authAnalytics: AuthAnalytics(posthog: posthog),
+      journalAnalytics: JournalAnalytics(posthog: posthog),
     ),
   );
 }

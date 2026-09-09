@@ -21,5 +21,6 @@ Widget appUnderTest({
     analytics: analytics.analytics,
     supabase: supabase.supabase,
     authAnalytics: analytics.authAnalytics,
+    journalAnalytics: analytics.journalAnalytics,
   );
 }

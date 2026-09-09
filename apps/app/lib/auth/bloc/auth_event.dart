@@ -12,6 +12,9 @@ sealed class AuthEvent with _$AuthEvent {
   /// Back to the email step.
   const factory emailChangeRequested() = AuthEmailChangeRequested;
 
+  /// Sign out of this device.
+  const factory signOutRequested() = AuthSignOutRequested;
+
   /// Supabase reports a session for [userId], or none. Mirrors the SDK's
   /// auth stream; the UI never sends it.
   const factory sessionChanged(String? userId) = AuthSessionChanged;

@@ -22,6 +22,7 @@ class AuthBloc({
     on<AuthCodeRequested>(_onCodeRequested);
     on<AuthCodeSubmitted>(_onCodeSubmitted);
     on<AuthEmailChangeRequested>(_onEmailChangeRequested);
+    on<AuthSignOutRequested>(_onSignOutRequested);
     on<AuthSessionChanged>(_onSessionChanged);
     if (state case AuthSignedIn(:final userId)) {
       unawaited(_analytics.identify(userId: userId));
@@ -91,6 +92,21 @@ class AuthBloc({
     AuthEmailChangeRequested event,
     Emitter<AuthState> emit,
   ) => emit(const AuthState.signedOut());
+
+  /// Ends the session on this device. The SDK drops it locally first and
+  /// reports that on its stream, which is what moves the UI; whether the
+  /// server-side revocation then succeeds changes nothing here.
+  Future<void> _onSignOutRequested(
+    AuthSignOutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      await _supabase.auth.signOut();
+    } on Exception {
+      // Already signed out locally; see above.
+    }
+    unawaited(_analytics.signedOut());
+  }
 
   /// Supabase's own view of the session, which wins: a sign-out, an expiry
   /// or a deleted account ends the signed-in state wherever the UI is.
