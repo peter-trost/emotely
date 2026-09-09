@@ -27,7 +27,7 @@ const storeUrl = String.fromEnvironment(
 /// design; row-level security is what protects the data (ADR 0010).
 const supabaseUrl = String.fromEnvironment(
   'EMOTELY_SUPABASE_URL',
-  defaultValue: 'https://SUPABASE_PROJECT_REF.supabase.co',
+  defaultValue: 'https://khfkszlujgkfjgnawdlf.supabase.co',
 );
 
 /// The project's publishable key
@@ -35,5 +35,5 @@ const supabaseUrl = String.fromEnvironment(
 /// Public like the URL: it only ever acts under the signed-in user's rights.
 const supabasePublishableKey = String.fromEnvironment(
   'EMOTELY_SUPABASE_PUBLISHABLE_KEY',
-  defaultValue: 'sb_publishable_SUPABASE_PROJECT_KEY',
+  defaultValue: 'sb_publishable_di6BB76PPuuoDklt7jtI0w_KlwO_8JF',
 );
