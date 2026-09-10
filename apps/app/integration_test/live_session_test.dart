@@ -3,10 +3,16 @@
 // nightly / pre-release by hand — never per PR (see the write-tests skill):
 //
 //   flutter test integration_test -d <device> \
-//     --dart-define=POSTHOG_KEY=phc_… [--dart-define=EMOTELY_AGENT_URL=…]
+//     --dart-define=POSTHOG_KEY=phc_… \
+//     --dart-define=SMOKE_EMAIL=… --dart-define=SMOKE_PASSWORD=… \
+//     [--dart-define=EMOTELY_AGENT_URL=…]
+//
+// The agent serves signed-in users only, so the run signs in as the smoke
+// user (password sign-in exists for that user alone; the app uses codes).
+import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
+import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
-import 'package:emotely/main.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
@@ -21,6 +27,10 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+const _smokeEmail = String.fromEnvironment('SMOKE_EMAIL');
+const _smokePassword = String.fromEnvironment('SMOKE_PASSWORD');
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -61,14 +71,31 @@ class LiveSessionRobot(final WidgetTester tester) {
       : tester.widget<Text>(find.byType(Text).first).data;
 
   Future<void> launch() async {
+    final supabase = await Supabase.initialize(
+      url: supabaseUrl,
+      publishableKey: supabasePublishableKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.implicit,
+        detectSessionInUri: false,
+        persistSession: false,
+      ),
+    );
+    await supabase.client.auth.signInWithPassword(
+      email: _smokeEmail,
+      password: _smokePassword,
+    );
+    final posthog = Posthog();
     await tester.pumpWidget(
       EmotelyApp(
         agentClient: AgentClient(
           httpClient: http.Client(),
           endpoint: Uri.parse(agentUrl),
           appVersion: (await PackageInfo.fromPlatform()).version,
+          accessToken: () => supabase.client.auth.currentSession?.accessToken,
         ),
-        analytics: SessionAnalytics(posthog: Posthog()),
+        analytics: SessionAnalytics(posthog: posthog),
+        supabase: supabase.client,
+        authAnalytics: AuthAnalytics(posthog: posthog),
       ),
     );
     await _settleRound();

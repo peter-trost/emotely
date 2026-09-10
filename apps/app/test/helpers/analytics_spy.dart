@@ -1,3 +1,4 @@
+import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:mockito/mockito.dart';
 
@@ -10,11 +11,7 @@ typedef CapturedEvent = Map<String, Object>;
 
 /// Records everything the app would send to PostHog.
 class AnalyticsSpy() {
-  final posthog = MockPosthog();
-  final events = <CapturedEvent>[];
-
-  /// The [SessionAnalytics] the app is given.
-  SessionAnalytics get analytics {
+  this {
     when(
       posthog.capture(
         eventName: anyNamed('eventName'),
@@ -29,11 +26,34 @@ class AnalyticsSpy() {
       });
       return Future<void>.value();
     });
-    return SessionAnalytics(posthog: posthog);
+    when(
+      posthog.identify(
+        userId: anyNamed('userId'),
+        userProperties: anyNamed('userProperties'),
+        userPropertiesSetOnce: anyNamed('userPropertiesSetOnce'),
+      ),
+    ).thenAnswer((invocation) {
+      identified.add(invocation.namedArguments[#userId] as String);
+      return Future<void>.value();
+    });
   }
 
-  /// Every string that would leave the device, event names included.
+  final posthog = MockPosthog();
+  final events = <CapturedEvent>[];
+
+  /// The user ids the app identified PostHog with, in order.
+  final identified = <String>[];
+
+  /// The [SessionAnalytics] the app is given.
+  SessionAnalytics get analytics => SessionAnalytics(posthog: posthog);
+
+  /// The [AuthAnalytics] the app is given.
+  AuthAnalytics get authAnalytics => AuthAnalytics(posthog: posthog);
+
+  /// Every string that would leave the device: event names, properties and
+  /// identities.
   Iterable<String> get outgoingStrings sync* {
+    yield* identified;
     for (final event in events) {
       yield event['event']! as String;
       final properties = event['properties']! as Map<String, Object>;

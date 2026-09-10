@@ -73,7 +73,7 @@ void main() {
 
       await tester.expectMeetsAccessibilityGuidelines(
         robot.app,
-        prepare: (tester) => robot.settle(),
+        prepare: (tester) => robot.signInAndSettle(),
       );
     });
   });

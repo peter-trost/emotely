@@ -159,6 +159,7 @@ void main() {
         httpClient: stub.client,
         endpoint: AgentStub.endpoint,
         appVersion: AgentStub.appVersion,
+        accessToken: () => null,
         timeout: const Duration(milliseconds: 10),
       );
 

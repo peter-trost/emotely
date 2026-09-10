@@ -1,6 +1,8 @@
 export 'a11y.dart';
 export 'agent_stub.dart';
 export 'analytics_spy.dart';
+export 'app_harness.dart';
 export 'pump_app.dart';
 export 'submit.dart';
+export 'supabase_stub.dart';
 export 'url_launcher_spy.dart';

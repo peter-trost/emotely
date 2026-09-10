@@ -1,5 +1,4 @@
 import 'package:emotely/contract/contract.dart';
-import 'package:emotely/main.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:emotely/session/widgets/answer_input.dart';
@@ -19,9 +18,13 @@ class SessionRobot(
   final WidgetTester tester,
   final AgentStub agent, {
   final AnalyticsSpy? spy,
+  final SupabaseStub? supabase,
 }) {
   /// Set up by [launch]; the spy every test can inspect.
   late final AnalyticsSpy analytics = spy ?? AnalyticsSpy();
+
+  /// Signed in before launch unless a test hands in its own.
+  late final SupabaseStub supabaseStub = supabase ?? SupabaseStub();
 
   Finder get thinking => find.byType(CircularProgressIndicator);
   Finder get question => find.byKey(SessionView.questionKey);
@@ -33,19 +36,26 @@ class SessionRobot(
 
   String get questionText => tester.widget<Text>(question).data!;
 
-  /// The whole app, wired to the scripted agent and the spied analytics.
-  Widget get app => EmotelyApp(
-    agentClient: agent.agentClient,
-    analytics: analytics.analytics,
-  );
+  /// The whole app, wired to the scripted agent, a signed-in Supabase and
+  /// the spied analytics.
+  Widget get app =>
+      appUnderTest(agent: agent, supabase: supabaseStub, analytics: analytics);
 
-  /// Launches the app; the first round is in flight until [settle].
+  /// Launches the app signed in; the first round is in flight until
+  /// [settle].
   Future<void> launch() async {
+    await supabaseStub.signedIn();
     await tester.pumpWidget(app);
     await tester.pump();
   }
 
   Future<void> settle() => tester.pumpAndSettle();
+
+  /// For pumps that bypass [launch]: sign in, then let the first round land.
+  Future<void> signInAndSettle() async {
+    await supabaseStub.signedIn();
+    await settle();
+  }
 
   Future<void> answerRating(int value) async {
     await tester.tap(find.byKey(RatingInput.chipKey(value)));

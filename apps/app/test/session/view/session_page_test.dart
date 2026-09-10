@@ -1,5 +1,4 @@
 import 'package:emotely/contract/contract.dart';
-import 'package:emotely/main.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
@@ -24,6 +23,11 @@ void main() {
       expect(robot.thinking, findsOneWidget);
       expect(agent.requests, hasLength(1));
       expect(agent.lastRequest, {'app_version': AgentStub.appVersion});
+      // The round runs as the signed-in user (ADR 0010).
+      expect(
+        agent.lastHeaders['authorization'],
+        'Bearer ${SupabaseStub.accessToken}',
+      );
 
       await robot.settle();
 
@@ -371,11 +375,10 @@ void main() {
         final agent = AgentStub()
           ..script([awaiting(toolCallId: 'c1', question: SessionRobot.rate)]);
 
+        final robot = SessionRobot(tester, agent);
         await tester.expectMeetsAccessibilityGuidelines(
-          EmotelyApp(
-            agentClient: agent.agentClient,
-            analytics: AnalyticsSpy().analytics,
-          ),
+          robot.app,
+          prepare: (tester) => robot.signInAndSettle(),
         );
       });
 
@@ -388,22 +391,20 @@ void main() {
             ),
           ]);
 
+        final robot = SessionRobot(tester, agent);
         await tester.expectMeetsAccessibilityGuidelines(
-          EmotelyApp(
-            agentClient: agent.agentClient,
-            analytics: AnalyticsSpy().analytics,
-          ),
+          robot.app,
+          prepare: (tester) => robot.signInAndSettle(),
         );
       });
 
       testWidgets('on failure', (tester) async {
         final agent = AgentStub()..script([refused(500, 'boom')]);
 
+        final robot = SessionRobot(tester, agent);
         await tester.expectMeetsAccessibilityGuidelines(
-          EmotelyApp(
-            agentClient: agent.agentClient,
-            analytics: AnalyticsSpy().analytics,
-          ),
+          robot.app,
+          prepare: (tester) => robot.signInAndSettle(),
         );
       });
     });
