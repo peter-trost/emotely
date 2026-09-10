@@ -234,10 +234,16 @@ otp_length = 6
 otp_expiry = 600
 
 # Sign-in is a one-time code typed into the app, not a link (no deep link,
-# no web). Supabase sends codes through the magic-link template.
-[auth.email.template.magic_link]
-subject = "Your emotely sign-in code"
-content_path = "./supabase/templates/sign_in_code.html"
+# no web). Supabase sends codes through the magic-link template, and the
+# default template carries only a link — so the template below is what makes
+# sign-in work at all. It is commented out until #52 lands: the hosted free
+# tier refuses template changes while the built-in mailer is in use
+# ("Email template modification is not available for free tier projects
+# using the default email provider"), and `supabase config push` fails on it.
+# Re-enable together with `[auth.email.smtp]`.
+# [auth.email.template.magic_link]
+# subject = "Your emotely sign-in code"
+# content_path = "./supabase/templates/sign_in_code.html"
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
