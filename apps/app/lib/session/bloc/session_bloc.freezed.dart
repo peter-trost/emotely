@@ -123,10 +123,10 @@ return retried(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function( Answer answer)?  answered,TResult Function()?  retried,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( OpenSession? resume)?  started,TResult Function( Answer answer)?  answered,TResult Function()?  retried,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SessionStarted() when started != null:
-return started();case SessionAnswered() when answered != null:
+return started(_that.resume);case SessionAnswered() when answered != null:
 return answered(_that.answer);case SessionRetried() when retried != null:
 return retried();case _:
   return orElse();
@@ -146,10 +146,10 @@ return retried();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function( Answer answer)  answered,required TResult Function()  retried,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( OpenSession? resume)  started,required TResult Function( Answer answer)  answered,required TResult Function()  retried,}) {final _that = this;
 switch (_that) {
 case SessionStarted():
-return started();case SessionAnswered():
+return started(_that.resume);case SessionAnswered():
 return answered(_that.answer);case SessionRetried():
 return retried();}
 }
@@ -165,10 +165,10 @@ return retried();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function( Answer answer)?  answered,TResult? Function()?  retried,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( OpenSession? resume)?  started,TResult? Function( Answer answer)?  answered,TResult? Function()?  retried,}) {final _that = this;
 switch (_that) {
 case SessionStarted() when started != null:
-return started();case SessionAnswered() when answered != null:
+return started(_that.resume);case SessionAnswered() when answered != null:
 return answered(_that.answer);case SessionRetried() when retried != null:
 return retried();case _:
   return null;
@@ -182,33 +182,81 @@ return retried();case _:
 
 
 class SessionStarted implements SessionEvent {
-  const SessionStarted();
+  const SessionStarted({this.resume});
   
 
+ final  OpenSession? resume;
 
-
+/// Create a copy of SessionEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SessionStartedCopyWith<SessionStarted> get copyWith => _$SessionStartedCopyWithImpl<SessionStarted>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionStarted);
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionStarted&&(identical(other.resume, resume) || other.resume == resume));
 }
 
 
 @override
-int get hashCode => runtimeType.hashCode;
+int get hashCode {
+    return Object.hash(runtimeType,resume);
+}
 
 @override
 String toString() {
-    return 'SessionEvent.started()';
+    return 'SessionEvent.started(resume: $resume)';
 }
 
 
 }
 
+/// @nodoc
+abstract mixin class $SessionStartedCopyWith<$Res> implements $SessionEventCopyWith<$Res> {
+  factory $SessionStartedCopyWith(SessionStarted value, $Res Function(SessionStarted) _then) = _$SessionStartedCopyWithImpl;
+@useResult
+$Res call({
+ OpenSession? resume
+});
 
 
+$OpenSessionCopyWith<$Res>? get resume;
+
+}
+/// @nodoc
+class _$SessionStartedCopyWithImpl<$Res>
+    implements $SessionStartedCopyWith<$Res> {
+  _$SessionStartedCopyWithImpl(this._self, this._then);
+
+  final SessionStarted _self;
+  final $Res Function(SessionStarted) _then;
+
+/// Create a copy of SessionEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? resume = freezed,}) {
+  return _then(SessionStarted(
+resume: freezed == resume ? _self.resume : resume // ignore: cast_nullable_to_non_nullable
+as OpenSession?,
+  ));
+}
+
+/// Create a copy of SessionEvent
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$OpenSessionCopyWith<$Res>? get resume {
+    if (_self.resume == null) {
+    return null;
+  }
+
+  return $OpenSessionCopyWith<$Res>(_self.resume!, (value) {
+    return _then(_self.copyWith(resume: value));
+  });
+}
+}
 
 /// @nodoc
 

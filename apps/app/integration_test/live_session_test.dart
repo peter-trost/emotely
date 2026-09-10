@@ -10,9 +10,11 @@
 // The agent serves signed-in users only, so the run signs in as the smoke
 // user (password sign-in exists for that user alone; the app uses codes).
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
+import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
@@ -96,8 +98,11 @@ class LiveSessionRobot(final WidgetTester tester) {
         analytics: SessionAnalytics(posthog: posthog),
         supabase: supabase.client,
         authAnalytics: AuthAnalytics(posthog: posthog),
+        journalAnalytics: JournalAnalytics(posthog: posthog),
       ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(JournalView.startKey));
     await _settleRound();
   }
 

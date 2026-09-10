@@ -35,6 +35,10 @@ class const SessionAnalytics({required final Posthog posthog}) {
     properties: {'status_code': ?statusCode},
   );
 
+  /// The user picked an unfinished session up from the journal.
+  Future<void> sessionResumed() =>
+      posthog.capture(eventName: 'session_resumed');
+
   /// The user retried the failed round.
   Future<void> sessionRetried() =>
       posthog.capture(eventName: 'session_retried');

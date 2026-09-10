@@ -56,13 +56,14 @@ extension AuthEventPatterns on AuthEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AuthCodeRequested value)?  codeRequested,TResult Function( AuthCodeSubmitted value)?  codeSubmitted,TResult Function( AuthEmailChangeRequested value)?  emailChangeRequested,TResult Function( AuthSessionChanged value)?  sessionChanged,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AuthCodeRequested value)?  codeRequested,TResult Function( AuthCodeSubmitted value)?  codeSubmitted,TResult Function( AuthEmailChangeRequested value)?  emailChangeRequested,TResult Function( AuthSignOutRequested value)?  signOutRequested,TResult Function( AuthSessionChanged value)?  sessionChanged,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case AuthCodeRequested() when codeRequested != null:
 return codeRequested(_that);case AuthCodeSubmitted() when codeSubmitted != null:
 return codeSubmitted(_that);case AuthEmailChangeRequested() when emailChangeRequested != null:
-return emailChangeRequested(_that);case AuthSessionChanged() when sessionChanged != null:
+return emailChangeRequested(_that);case AuthSignOutRequested() when signOutRequested != null:
+return signOutRequested(_that);case AuthSessionChanged() when sessionChanged != null:
 return sessionChanged(_that);case _:
   return orElse();
 
@@ -81,13 +82,14 @@ return sessionChanged(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AuthCodeRequested value)  codeRequested,required TResult Function( AuthCodeSubmitted value)  codeSubmitted,required TResult Function( AuthEmailChangeRequested value)  emailChangeRequested,required TResult Function( AuthSessionChanged value)  sessionChanged,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AuthCodeRequested value)  codeRequested,required TResult Function( AuthCodeSubmitted value)  codeSubmitted,required TResult Function( AuthEmailChangeRequested value)  emailChangeRequested,required TResult Function( AuthSignOutRequested value)  signOutRequested,required TResult Function( AuthSessionChanged value)  sessionChanged,}){
 final _that = this;
 switch (_that) {
 case AuthCodeRequested():
 return codeRequested(_that);case AuthCodeSubmitted():
 return codeSubmitted(_that);case AuthEmailChangeRequested():
-return emailChangeRequested(_that);case AuthSessionChanged():
+return emailChangeRequested(_that);case AuthSignOutRequested():
+return signOutRequested(_that);case AuthSessionChanged():
 return sessionChanged(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
@@ -102,13 +104,14 @@ return sessionChanged(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AuthCodeRequested value)?  codeRequested,TResult? Function( AuthCodeSubmitted value)?  codeSubmitted,TResult? Function( AuthEmailChangeRequested value)?  emailChangeRequested,TResult? Function( AuthSessionChanged value)?  sessionChanged,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AuthCodeRequested value)?  codeRequested,TResult? Function( AuthCodeSubmitted value)?  codeSubmitted,TResult? Function( AuthEmailChangeRequested value)?  emailChangeRequested,TResult? Function( AuthSignOutRequested value)?  signOutRequested,TResult? Function( AuthSessionChanged value)?  sessionChanged,}){
 final _that = this;
 switch (_that) {
 case AuthCodeRequested() when codeRequested != null:
 return codeRequested(_that);case AuthCodeSubmitted() when codeSubmitted != null:
 return codeSubmitted(_that);case AuthEmailChangeRequested() when emailChangeRequested != null:
-return emailChangeRequested(_that);case AuthSessionChanged() when sessionChanged != null:
+return emailChangeRequested(_that);case AuthSignOutRequested() when signOutRequested != null:
+return signOutRequested(_that);case AuthSessionChanged() when sessionChanged != null:
 return sessionChanged(_that);case _:
   return null;
 
@@ -126,12 +129,13 @@ return sessionChanged(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String email)?  codeRequested,TResult Function( String code)?  codeSubmitted,TResult Function()?  emailChangeRequested,TResult Function( String? userId)?  sessionChanged,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String email)?  codeRequested,TResult Function( String code)?  codeSubmitted,TResult Function()?  emailChangeRequested,TResult Function()?  signOutRequested,TResult Function( String? userId)?  sessionChanged,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AuthCodeRequested() when codeRequested != null:
 return codeRequested(_that.email);case AuthCodeSubmitted() when codeSubmitted != null:
 return codeSubmitted(_that.code);case AuthEmailChangeRequested() when emailChangeRequested != null:
-return emailChangeRequested();case AuthSessionChanged() when sessionChanged != null:
+return emailChangeRequested();case AuthSignOutRequested() when signOutRequested != null:
+return signOutRequested();case AuthSessionChanged() when sessionChanged != null:
 return sessionChanged(_that.userId);case _:
   return orElse();
 
@@ -150,12 +154,13 @@ return sessionChanged(_that.userId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String email)  codeRequested,required TResult Function( String code)  codeSubmitted,required TResult Function()  emailChangeRequested,required TResult Function( String? userId)  sessionChanged,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String email)  codeRequested,required TResult Function( String code)  codeSubmitted,required TResult Function()  emailChangeRequested,required TResult Function()  signOutRequested,required TResult Function( String? userId)  sessionChanged,}) {final _that = this;
 switch (_that) {
 case AuthCodeRequested():
 return codeRequested(_that.email);case AuthCodeSubmitted():
 return codeSubmitted(_that.code);case AuthEmailChangeRequested():
-return emailChangeRequested();case AuthSessionChanged():
+return emailChangeRequested();case AuthSignOutRequested():
+return signOutRequested();case AuthSessionChanged():
 return sessionChanged(_that.userId);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -170,12 +175,13 @@ return sessionChanged(_that.userId);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String email)?  codeRequested,TResult? Function( String code)?  codeSubmitted,TResult? Function()?  emailChangeRequested,TResult? Function( String? userId)?  sessionChanged,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String email)?  codeRequested,TResult? Function( String code)?  codeSubmitted,TResult? Function()?  emailChangeRequested,TResult? Function()?  signOutRequested,TResult? Function( String? userId)?  sessionChanged,}) {final _that = this;
 switch (_that) {
 case AuthCodeRequested() when codeRequested != null:
 return codeRequested(_that.email);case AuthCodeSubmitted() when codeSubmitted != null:
 return codeSubmitted(_that.code);case AuthEmailChangeRequested() when emailChangeRequested != null:
-return emailChangeRequested();case AuthSessionChanged() when sessionChanged != null:
+return emailChangeRequested();case AuthSignOutRequested() when signOutRequested != null:
+return signOutRequested();case AuthSessionChanged() when sessionChanged != null:
 return sessionChanged(_that.userId);case _:
   return null;
 
@@ -344,6 +350,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
     return 'AuthEvent.emailChangeRequested()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class AuthSignOutRequested implements AuthEvent {
+  const AuthSignOutRequested();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthSignOutRequested);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'AuthEvent.signOutRequested()';
 }
 
 

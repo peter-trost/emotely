@@ -59,6 +59,7 @@ void main() {
       await robot.settle();
 
       expect(robot.analytics.events, [
+        event('journal_viewed', {'entries': 0, 'open_session': false}),
         event('session_started'),
         event('update_required', {
           'min_app_version': '9.0.0',

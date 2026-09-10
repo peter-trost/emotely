@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/environment.dart';
+import 'package:emotely/journal/journal_models.dart';
 import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:emotely/session/agent/agent_client.dart';
@@ -12,15 +13,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Wires a [SessionBloc] to the [AgentClient] in scope and starts a session.
-class const SessionPage({super.key}) extends StatelessWidget {
+/// Wires a [SessionBloc] to the [AgentClient] in scope and starts a session,
+/// or picks [resume] up where the journal left it.
+class const SessionPage({final OpenSession? resume, super.key})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(
     create: (context) => SessionBloc(
       agentClient: context.read<AgentClient>(),
       analytics: context.read<SessionAnalytics>(),
       store: context.read<JournalStore>(),
-    )..add(const SessionEvent.started()),
+    )..add(SessionEvent.started(resume: resume)),
     child: const SessionView(),
   );
 }

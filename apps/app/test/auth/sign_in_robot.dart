@@ -1,5 +1,5 @@
 import 'package:emotely/auth/view/sign_in_page.dart';
-import 'package:emotely/session/view/session_page.dart';
+import 'package:emotely/journal/view/journal_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -15,7 +15,7 @@ class SignInRobot(
   final analytics = AnalyticsSpy();
 
   Finder get signIn => find.byType(SignInPage);
-  Finder get session => find.byType(SessionPage);
+  Finder get home => find.byType(JournalPage);
   Finder get emailField => find.byKey(SignInPage.emailKey);
   Finder get sendCode => find.byKey(SignInPage.sendCodeKey);
   Finder get codeField => find.byKey(SignInPage.codeKey);

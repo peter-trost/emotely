@@ -12,7 +12,7 @@ void main() {
   group(SignInPage, () {
     const code = '482913';
 
-    testWidgets('asks for the email, then the code, then opens a session', (
+    testWidgets('asks for the email, then the code, then opens the journal', (
       tester,
     ) async {
       final supabase = SupabaseStub()
@@ -47,12 +47,10 @@ void main() {
       expect(verify['email'], SupabaseStub.email);
       expect(verify['token'], code);
       expect(verify['type'], 'email');
-      expect(robot.session, findsOneWidget);
+      expect(robot.home, findsOneWidget);
       expect(robot.signIn, findsNothing);
-      expect(
-        agent.lastHeaders['authorization'],
-        'Bearer ${SupabaseStub.accessToken}',
-      );
+      // The journal was read as the user who just signed in.
+      expect(supabase.to('GET /rest/v1/entries').single.query['select'], '*');
     });
 
     testWidgets('shows progress while Supabase answers', (tester) async {
@@ -84,7 +82,7 @@ void main() {
 
       await robot.settle();
 
-      expect(robot.session, findsOneWidget);
+      expect(robot.home, findsOneWidget);
     });
 
     testWidgets('explains when Supabase refuses the email', (tester) async {
@@ -189,7 +187,7 @@ void main() {
       await robot.tapSignIn();
       await robot.settle();
 
-      expect(robot.session, findsOneWidget);
+      expect(robot.home, findsOneWidget);
     });
 
     testWidgets('lets the user go back and change the email', (tester) async {
@@ -219,7 +217,7 @@ void main() {
       await robot.launch();
       await robot.settle();
 
-      expect(robot.session, findsOneWidget);
+      expect(robot.home, findsOneWidget);
 
       await supabase.supabase.auth.signOut();
       await robot.settle();

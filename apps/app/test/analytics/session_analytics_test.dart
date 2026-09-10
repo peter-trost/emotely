@@ -40,6 +40,7 @@ void main() {
       await analytics.sessionFailed(statusCode: 429);
       await analytics.sessionFailed();
       await analytics.sessionRetried();
+      await analytics.sessionResumed();
       await analytics.sessionSaveFailed();
       await analytics.entrySaveFailed();
       await analytics.updateRequired(
@@ -53,6 +54,7 @@ void main() {
         event('session_failed', {'status_code': 429}),
         event('session_failed'),
         event('session_retried'),
+        event('session_resumed'),
         event('session_save_failed'),
         event('entry_save_failed'),
         event('update_required', {
