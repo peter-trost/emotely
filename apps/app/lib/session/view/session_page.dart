@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/environment.dart';
+import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/bloc/session_bloc.dart';
@@ -18,6 +19,7 @@ class const SessionPage({super.key}) extends StatelessWidget {
     create: (context) => SessionBloc(
       agentClient: context.read<AgentClient>(),
       analytics: context.read<SessionAnalytics>(),
+      store: context.read<JournalStore>(),
     )..add(const SessionEvent.started()),
     child: const SessionView(),
   );

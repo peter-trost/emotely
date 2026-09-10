@@ -1,4 +1,5 @@
 import 'package:emotely/contract/contract.dart';
+import 'package:emotely/session/bloc/session_bloc.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:emotely/session/widgets/answer_input.dart';
@@ -110,6 +111,9 @@ class SessionRobot(
 
   /// The failure copy for anything that is not a server-refused round.
   static const unreachableMessage = 'Could not reach the journaling assistant.';
+
+  /// The failure copy when the finished entry could not be filed.
+  static const entrySaveFailedMessage = SessionBloc.entrySaveFailedMessage;
 
   static const rate = AskQuestion(
     questionId: 'q-rate',

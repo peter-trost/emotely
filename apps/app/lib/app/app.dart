@@ -3,6 +3,7 @@ import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/theme.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
+import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -24,6 +25,7 @@ class const EmotelyApp({
       RepositoryProvider.value(value: agentClient),
       RepositoryProvider.value(value: analytics),
       RepositoryProvider.value(value: supabase),
+      RepositoryProvider(create: (_) => JournalStore(supabase: supabase)),
     ],
     child: BlocProvider(
       create: (_) => AuthBloc(supabase: supabase, analytics: authAnalytics),
