@@ -59,7 +59,12 @@ run the suite, watch it fail, `supabase db reset --local`.
 `supabase/config.toml` `[auth]` sections are pushed to the hosted project by
 CI (`supabase config push`). The sign-in code email is
 `supabase/templates/sign_in_code.html`, wired under
-`[auth.email.template.magic_link]`; the local stack renders it in Inbucket.
+`[auth.email.template.magic_link]`. That block is commented out until custom
+SMTP exists (#52): the hosted free tier refuses template changes on the
+built-in mailer and `config push` fails on it, and Supabase's default
+magic-link mail carries no code, so hosted email-code sign-in does not work
+before #52. The local stack has no such limit: uncomment the block locally to
+see the code in Inbucket, never commit it uncommented before #52.
 Anything with a secret uses `env(VAR)` and is never committed.
 
 ## Deploying
