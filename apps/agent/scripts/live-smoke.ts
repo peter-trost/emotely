@@ -56,15 +56,17 @@ async function signIn(): Promise<string> {
 
 const accessToken = await signIn();
 
+// `anonymous` is an explicit flag, not an optional token: an `undefined`
+// argument would fall back to a default parameter and send the token anyway.
 async function call(
   body: unknown,
-  token: string | undefined = accessToken,
+  { anonymous = false } = {},
 ): Promise<{ code: number; res: Res }> {
   const r = await fetch(`${BASE}/api/advance-session`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
+      ...(anonymous ? {} : { authorization: `Bearer ${accessToken}` }),
     },
     body: JSON.stringify(body),
   });
@@ -99,9 +101,9 @@ if (recorded !== Object.keys(answers).length) {
 }
 
 // Security probes: anonymous callers, tampering and forgery must be rejected.
-const anonymous = await call({}, undefined);
-if (anonymous.code !== 401) {
-  throw new Error(`anonymous session accepted: ${anonymous.code}`);
+const anonymousProbe = await call({}, { anonymous: true });
+if (anonymousProbe.code !== 401) {
+  throw new Error(`anonymous session accepted: ${anonymousProbe.code}`);
 }
 const tampered = await call({
   transcript: [
