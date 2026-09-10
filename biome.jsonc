@@ -11,7 +11,11 @@
       "!**/.vercel",
       "!.entire/logs",
       "!.entire/metadata",
-      "!.entire/tmp"
+      "!.entire/tmp",
+      // Go templates for Supabase Auth emails ({{ .Token }}); not HTML biome can parse.
+      "!supabase/templates",
+      // Supabase CLI scratch (gitignored); pgdelta drops unformatted JSON there.
+      "!supabase/.temp"
     ]
   },
   "linter": {
