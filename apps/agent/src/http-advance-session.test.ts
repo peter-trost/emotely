@@ -35,10 +35,13 @@ const awaiting: AdvanceResult = {
   },
 };
 
+const signedIn = async () => ({ userId: "user-1" });
+
 function handler(result: AdvanceResult = awaiting) {
   return createAdvanceSessionHandler({
     secret: SECRET,
     minAppVersion: "1.0.0",
+    verifyCaller: signedIn,
     advance: async () => result,
   });
 }
@@ -52,6 +55,38 @@ function post(body: unknown): Request {
 }
 
 describe("advance-session handler", () => {
+  it("refuses a caller it cannot identify before reading anything else", async () => {
+    let advanced = false;
+    const anonymous = createAdvanceSessionHandler({
+      secret: SECRET,
+      minAppVersion: "1.0.0",
+      verifyCaller: async () => undefined,
+      advance: async () => {
+        advanced = true;
+        return awaiting;
+      },
+    });
+    const res = await anonymous(post({}));
+    assert.equal(res.status, 401);
+    assert.deepEqual(await res.json(), { error: "unauthorized" });
+    assert.equal(advanced, false);
+  });
+
+  it("hands the verified user to the session", async () => {
+    let seen: string | undefined;
+    const h = createAdvanceSessionHandler({
+      secret: SECRET,
+      minAppVersion: "1.0.0",
+      verifyCaller: signedIn,
+      advance: async ({ userId }) => {
+        seen = userId;
+        return awaiting;
+      },
+    });
+    assert.equal((await h(post({}))).status, 200);
+    assert.equal(seen, "user-1");
+  });
+
   it("starts a session and returns a signed transcript with the pending question", async () => {
     const res = await handler()(post({}));
     assert.equal(res.status, 200);
@@ -155,6 +190,7 @@ describe("advance-session handler", () => {
     const strict = createAdvanceSessionHandler({
       secret: SECRET,
       minAppVersion: "1.0.0",
+      verifyCaller: signedIn,
       advance: async ({ answer }) => {
         if (answer?.toolCallId !== "c1") {
           throw new Error("answer does not match the pending question");

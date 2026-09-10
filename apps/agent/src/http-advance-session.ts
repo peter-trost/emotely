@@ -3,6 +3,7 @@ import {
   type AdvanceSessionResponse,
   advanceSessionRequest,
 } from "@emotely/contract";
+import type { VerifyCaller } from "./request-auth.ts";
 import type { AdvanceResult, SessionAnswer } from "./session-core.ts";
 import { signTranscript, verifyTranscript } from "./transcript-auth.ts";
 
@@ -19,6 +20,8 @@ const HTTP_PAYLOAD_TOO_LARGE = 413;
 type Advance = (input: {
   messages: unknown[];
   answer?: SessionAnswer;
+  /** The signed-in user the round runs for. */
+  userId: string;
 }) => Promise<AdvanceResult>;
 
 function json(status: number, body: unknown): Response {
@@ -60,10 +63,12 @@ async function runAdvance(
   advance: Advance,
   transcript: unknown[],
   parsed: AdvanceSessionRequest,
+  userId: string,
 ): Promise<AdvanceResult | Response> {
   try {
     return await advance({
       messages: transcript,
+      userId,
       ...(parsed.answer === undefined
         ? {}
         : {
@@ -87,17 +92,24 @@ async function runAdvance(
 /**
  * The stateless session endpoint: the client echoes the signed transcript and
  * its widget answer; the server advances to the next question or the entry.
- * Signature-first: nothing reaches the model unless this server produced it.
+ * Caller-first, then signature-first: only a signed-in user gets a body read,
+ * and nothing reaches the model unless this server produced it.
  */
 export function createAdvanceSessionHandler(deps: {
   secret: string;
   advance: Advance;
   /** Oldest app version this server still serves; the app blocks below it. */
   minAppVersion: string;
+  /** Who is calling; `undefined` is a 401 (ADR 0010). */
+  verifyCaller: VerifyCaller;
 }) {
   return async (request: Request): Promise<Response> => {
     if (request.method !== "POST") {
       return json(HTTP_METHOD_NOT_ALLOWED, { error: "POST only" });
+    }
+    const caller = await deps.verifyCaller(request);
+    if (caller === undefined) {
+      return json(HTTP_UNAUTHORIZED, { error: "unauthorized" });
     }
     let parsed: AdvanceSessionRequest;
     try {
@@ -117,7 +129,12 @@ export function createAdvanceSessionHandler(deps: {
       return checked.error;
     }
 
-    const outcome = await runAdvance(deps.advance, checked.transcript, parsed);
+    const outcome = await runAdvance(
+      deps.advance,
+      checked.transcript,
+      parsed,
+      caller.userId,
+    );
     if (outcome instanceof Response) {
       return outcome;
     }

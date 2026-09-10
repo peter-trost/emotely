@@ -44,6 +44,9 @@ importers:
       ai:
         specifier: 7.0.77
         version: 7.0.77(zod@4.4.3)
+      jose:
+        specifier: 6.2.12
+        version: 6.2.12
       posthog-node:
         specifier: 5.51.1
         version: 5.51.1
@@ -454,6 +457,9 @@ packages:
   jose@5.10.0:
     resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
 
+  jose@6.2.12:
+    resolution: {integrity: sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==}
+
   json-schema@0.4.0:
     resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
 
@@ -835,6 +841,8 @@ snapshots:
   isexe@2.0.0: {}
 
   jose@5.10.0: {}
+
+  jose@6.2.12: {}
 
   json-schema@0.4.0: {}
 
