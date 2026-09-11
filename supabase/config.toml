@@ -236,24 +236,16 @@ otp_expiry = 600
 # Sign-in is a one-time code typed into the app, not a link (no deep link,
 # no web). Supabase sends codes through the magic-link template, and the
 # default template carries only a link — so the template below is what makes
-# sign-in work at all. It is commented out until #52 lands: the hosted free
-# tier refuses template changes while the built-in mailer is in use
-# ("Email template modification is not available for free tier projects
-# using the default email provider"), and `supabase config push` fails on it.
-# Re-enable together with `[auth.email.smtp]`.
-# [auth.email.template.magic_link]
-# subject = "Your emotely sign-in code"
-# content_path = "./supabase/templates/sign_in_code.html"
+# sign-in work at all. The hosted free tier only accepts a custom template
+# once the project sends through its own SMTP, which the hosted project does
+# (see [remotes.production] at the end of this file); locally the template
+# renders into Inbucket.
+[auth.email.template.magic_link]
+subject = "Your emotely sign-in code"
+content_path = "./supabase/templates/sign_in_code.html"
 
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# SMTP is configured for the hosted project only, under [remotes.production]
+# at the end of this file. Local development keeps Inbucket.
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -424,3 +416,25 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Hosted project only: `supabase config push` applies this block when the
+# linked project ref equals `project_id`; `supabase start` ignores it, so local
+# development keeps Inbucket. Mail goes out through Resend (#52). The password
+# is a Resend API key restricted to sending from getemotely.com; it lives in
+# the GitHub `ci` environment as SMTP_PASS and only the deploy job sees it.
+[remotes.production]
+project_id = "khfkszlujgkfjgnawdlf"
+
+[remotes.production.auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(SMTP_PASS)"
+admin_email = "hello@getemotely.com"
+sender_name = "emotely"
+
+[remotes.production.auth.rate_limit]
+# Per hour. Resend's free tier caps sending at 100 a day; this keeps a burst
+# of sign-ins well inside it while still being far above real use.
+email_sent = 30
