@@ -19,6 +19,7 @@ jobs:
       agent: ${{ steps.filter.outputs.agent }}
       app: ${{ steps.filter.outputs.app }}
       supabase: ${{ steps.filter.outputs.supabase }}
+      web: ${{ steps.filter.outputs.web }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
@@ -42,6 +43,9 @@ jobs:
               - '.github/workflows/ci.yml'
             supabase:
               - 'supabase/**'
+              - '.github/workflows/ci.yml'
+            web:
+              - 'apps/web/**'
               - '.github/workflows/ci.yml'
 
   agent:
@@ -102,6 +106,31 @@ jobs:
       - run: dart pub global activate very_good_cli
       - run: dart pub global run very_good_cli:very_good test --coverage --min-coverage 100 --exclude-coverage '**/*.{freezed,g,mocks}.dart'
 
+  # The landing page (apps/web): a Dart-only Jaspr site. Generated
+  # *.options.dart files are committed; the build must not change them. The
+  # waitlist form is tested in headless Chrome, the rest on the VM, and the
+  # static build itself is the last gate.
+  web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        with:
+          sdk: 3.13.3
+      - run: dart pub get
+      - run: dart pub global activate jaspr_cli 0.23.4
+      - run: dart format --set-exit-if-changed .
+      - run: dart analyze --fatal-infos
+      - run: dart test
+      - run: dart test -p chrome test/client
+      - run: jaspr build --sitemap-domain https://getemotely.com
+      - run: git diff --exit-code -- lib
+
   # The schema gate: migrations apply to a fresh Postgres, and the pgTAP suite
   # proves row-level security holds (ADR 0010). Only the database container
   # is started; nothing else is needed to run SQL tests.
@@ -142,7 +171,7 @@ jobs:
 
   # The single required check. Green only if every job succeeded or was skipped.
   ci-ok:
-    needs: [changes, agent, app, supabase]
+    needs: [changes, agent, app, supabase, web]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
