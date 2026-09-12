@@ -1,4 +1,6 @@
+import 'package:emotely_web/components/confirm_waitlist.dart';
 import 'package:emotely_web/components/waitlist_form.dart';
+import 'package:emotely_web/pages/confirm.dart';
 import 'package:emotely_web/pages/home.dart';
 import 'package:emotely_web/pages/imprint.dart';
 import 'package:emotely_web/pages/privacy.dart';
@@ -54,6 +56,15 @@ void main() {
     });
   });
 
+  group('Confirm', () {
+    testComponents('pre-renders the checking state for the island', (tester) {
+      tester.pumpComponent(const Confirm());
+
+      expect(find.byType(ConfirmWaitlist), findsOneComponent);
+      expect(find.textContaining('Checking your link'), findsOneComponent);
+    });
+  });
+
   group('Legal pages', () {
     testComponents('the imprint names the operator and a contact address', (
       tester,
@@ -91,6 +102,7 @@ void main() {
         expect(find.textContaining('Art. 6 (1) (a)'), findsComponents);
         expect(find.textContaining('Art. 6 (1) (f)'), findsComponents);
         expect(find.textContaining('erased after one day'), findsOneComponent);
+        expect(find.textContaining('deleted after a week'), findsOneComponent);
         expect(find.textContaining('Landesbeauftragte'), findsOneComponent);
         expect(find.textContaining('served from this site'), findsOneComponent);
       },

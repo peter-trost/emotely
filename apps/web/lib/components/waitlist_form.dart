@@ -98,7 +98,10 @@ class _WaitlistFormState extends State<WaitlistForm> {
     if (_phase == .joined) {
       return const div(classes: 'waitlist waitlist-done', [
         p(classes: 'waitlist-thanks', [
-          .text("You're on the list. Watch your inbox for your spot."),
+          .text(
+            'Check your inbox: one click on the link there and your spot '
+            'is held.',
+          ),
         ]),
       ]);
     }

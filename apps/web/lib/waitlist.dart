@@ -60,3 +60,46 @@ Future<JoinOutcome> joinWaitlist(
     _ => JoinOutcome.failed,
   };
 }
+
+/// What the confirm link led to.
+enum ConfirmOutcome() {
+  /// The address is confirmed, from this click.
+  confirmed,
+
+  /// The token matched no waiting row: already used, a week old, or made up.
+  unknown,
+
+  /// Anything else, including no network: worth a retry.
+  failed,
+}
+
+/// Redeems the [token] from a confirmation mail through [client]: the
+/// anon-callable RPC `confirm_waitlist` (ADR 0011) answers `true` exactly
+/// once per row.
+Future<ConfirmOutcome> confirmWaitlist(
+  http.Client client, {
+  required String token,
+  required Uri supabaseUrl,
+  required String publishableKey,
+}) async {
+  final http.Response response;
+  try {
+    response = await client.post(
+      supabaseUrl.resolve('/rest/v1/rpc/confirm_waitlist'),
+      headers: {
+        'apikey': publishableKey,
+        'authorization': 'Bearer $publishableKey',
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({'token': token}),
+    );
+  } on http.ClientException {
+    return ConfirmOutcome.failed;
+  }
+  return switch (response.statusCode) {
+    200 when response.body.trim() == 'true' => ConfirmOutcome.confirmed,
+    // `false`, or a token Postgres would not even parse as a uuid.
+    200 || 400 => ConfirmOutcome.unknown,
+    _ => ConfirmOutcome.failed,
+  };
+}

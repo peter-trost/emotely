@@ -1,4 +1,5 @@
 import 'package:emotely_web/environment.dart';
+import 'package:emotely_web/pages/confirm.dart';
 import 'package:emotely_web/pages/home.dart';
 import 'package:emotely_web/pages/imprint.dart';
 import 'package:emotely_web/pages/privacy.dart';
@@ -25,6 +26,11 @@ class const App({super.key}) extends StatelessComponent {
           path: '/',
           title: 'emotely — a journal that asks, listens and writes',
           builder: (_, _) => const Home(),
+        ),
+        Route(
+          path: '/confirm',
+          title: 'Confirm your address — emotely',
+          builder: (_, _) => const Confirm(),
         ),
         Route(
           path: '/privacy',

@@ -58,7 +58,7 @@ void main() {
 
         expect(seen, hasLength(1));
         expect(seen.single.body, contains('alice@example.com'));
-        expect(find.textContaining("You're on the list"), findsOneComponent);
+        expect(find.textContaining('Check your inbox'), findsOneComponent);
         expect(find.byKey(const Key('join')), findsNothing);
       });
     });
@@ -159,7 +159,7 @@ void main() {
         await tester.click(find.byKey(const Key('join')));
         await pumpEventQueue();
 
-        expect(find.textContaining("You're on the list"), findsOneComponent);
+        expect(find.textContaining('Check your inbox'), findsOneComponent);
       });
     });
 
@@ -181,7 +181,7 @@ void main() {
           await pumpEventQueue();
 
           expect(seen, isEmpty);
-          expect(find.textContaining("You're on the list"), findsOneComponent);
+          expect(find.textContaining('Check your inbox'), findsOneComponent);
         });
       },
     );

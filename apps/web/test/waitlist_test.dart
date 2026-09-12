@@ -94,6 +94,83 @@ void main() {
     });
   });
 
+  group('confirmWaitlist', () {
+    // Shaped like a token, obviously not one (a secret scanner reads this).
+    const token = '00000000-0000-4000-8000-000000000042';
+
+    test('calls the confirm RPC with the token from the link', () async {
+      http.Request? seen;
+      final client = MockClient((request) async {
+        seen = request;
+        return http.Response('true', 200);
+      });
+
+      final outcome = await confirmWaitlist(
+        client,
+        token: token,
+        supabaseUrl: supabase,
+        publishableKey: key,
+      );
+
+      expect(outcome, ConfirmOutcome.confirmed);
+      expect(seen?.method, 'POST');
+      expect(
+        seen?.url,
+        Uri.parse('https://example.supabase.co/rest/v1/rpc/confirm_waitlist'),
+      );
+      expect(seen?.headers['apikey'], key);
+      expect(seen?.headers['authorization'], 'Bearer $key');
+      expect(seen?.headers['content-type'], startsWith('application/json'));
+      expect(jsonDecode(seen!.body), {'token': token});
+    });
+
+    test(
+      'false means the link matched nothing (used, expired or made up)',
+      () async {
+        final client = MockClient((_) async => http.Response('false', 200));
+        final outcome = await confirmWaitlist(
+          client,
+          token: token,
+          supabaseUrl: supabase,
+          publishableKey: key,
+        );
+        expect(outcome, ConfirmOutcome.unknown);
+      },
+    );
+
+    test('a 400 (not even a token) is treated the same as unknown', () async {
+      final client = MockClient(
+        (_) async => http.Response('{"code":"22P02"}', 400),
+      );
+      final outcome = await confirmWaitlist(
+        client,
+        token: 'not-a-uuid',
+        supabaseUrl: supabase,
+        publishableKey: key,
+      );
+      expect(outcome, ConfirmOutcome.unknown);
+    });
+
+    test(
+      'any other status or a network error is a retryable failure',
+      () async {
+        final down = MockClient((_) async => http.Response('', 503));
+        final offline = MockClient(
+          (_) async => throw http.ClientException('offline'),
+        );
+        for (final client in [down, offline]) {
+          final outcome = await confirmWaitlist(
+            client,
+            token: token,
+            supabaseUrl: supabase,
+            publishableKey: key,
+          );
+          expect(outcome, ConfirmOutcome.failed);
+        }
+      },
+    );
+  });
+
   group('looksLikeEmail', () {
     test('accepts an ordinary address', () {
       expect(looksLikeEmail('peter@getemotely.com'), isTrue);

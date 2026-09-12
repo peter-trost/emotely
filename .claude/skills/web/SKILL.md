@@ -71,7 +71,11 @@ its `web.Event` has no target — so anything that reads an input runs under
 `lib/waitlist.dart` posts to `public.waitlist` with the publishable key and
 `Prefer: return=minimal`. The table (`supabase/migrations/*_waitlist.sql`,
 ADR 0011) owns validation, silent de-duplication and rate limits and answers
-201 / 429 (`PT429`) / 400. To exercise it locally, `supabase start` and pass
+201 / 429 (`PT429`) / 400. The confirmation mail the database sends links
+to `/confirm?t=<token>`; that page's island (`components/confirm_waitlist.dart`)
+calls the RPC `confirm_waitlist` once and shows confirmed / no longer valid /
+retry. Both islands are pre-rendered at build time, so anything that needs
+`window` sits behind `kIsWeb`. To exercise it locally, `supabase start` and pass
 `--dart-define=EMOTELY_SUPABASE_URL=http://127.0.0.1:54321` plus the local
 anon key to `jaspr serve` (see `lib/environment.dart`).
 
