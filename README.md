@@ -27,6 +27,7 @@ The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
 8. [Public endpoint abuse controls](docs/adr/0008-public-endpoint-abuse-controls.md) — signed transcripts, caps, WAF rate limit, budget ceiling
 9. [Wire compatibility](docs/adr/0009-wire-compatibility.md) — additive changes, version gating, force-update, revert through the pipeline
 10. [Supabase data layer](docs/adr/0010-supabase-data-layer.md) — app writes under RLS, agent only verifies the JWT, schema as code
+11. [Public waitlist writes to Postgres](docs/adr/0011-public-waitlist-writes-to-postgres.md) — insert-only for the world, rate limits in a trigger, no server in between
 
 The project's language is defined in [`CONTEXT.md`](CONTEXT.md).
 
