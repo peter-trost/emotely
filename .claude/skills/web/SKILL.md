@@ -37,6 +37,24 @@ use classic constructors — `jaspr_builder` parses them with analyzer 12,
 which cannot read primary constructors; the per-file ignore in
 `waitlist_form.dart` says so.
 
+## Fonts and icons
+
+`web/fonts/` holds the site's two faces as latin `woff2` subsets next to
+their SIL OFL licences: Baskervville (every word, the app's text face too)
+and Sacramento (the wordmark, as in the legacy logo). They are served from
+the site on purpose — a `fonts.googleapis.com` link would hand visitor IPs
+to Google (LG München I, 3 O 17493/20) and contradict the privacy page. To
+add a face or subset, download the `woff2` from the Google Fonts CSS
+(`curl -A "<Chrome UA>" "https://fonts.googleapis.com/css2?family=..."`
+lists the URLs per unicode range), drop it in `web/fonts/`, add the OFL
+file from `github.com/google/fonts/tree/main/ofl/<family>`, and declare it
+in `web/styles.css`.
+
+The icons (`favicon.svg`, `favicon.ico`, `apple-touch-icon.png`) are the
+legacy emotely mark from Peter's iCloud (`emotely/SVG/favicon_1.svg`):
+render the SVG with `qlmanage -t -s 1024`, then `magick` for the ICO
+(48/32/16) and the 180 px PNG.
+
 ## Testing the island
 
 `@client` components only take serialisable parameters, so the HTTP client

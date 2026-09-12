@@ -47,16 +47,25 @@ void main() {
           },
         ),
         const link(rel: 'stylesheet', href: '/styles.css'),
-        const link(rel: 'icon', href: '/favicon.ico'),
-        const link(rel: 'preconnect', href: 'https://fonts.googleapis.com'),
+        // The legacy emotely mark: the ICO for old browsers and Safari, the
+        // SVG for the rest, the PNG for home screens.
         const link(
-          rel: 'preconnect',
-          href: 'https://fonts.gstatic.com',
-          attributes: {'crossorigin': ''},
+          rel: 'icon',
+          href: '/favicon.ico',
+          attributes: {'sizes': '32x32'},
         ),
         const link(
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;600&display=swap',
+          rel: 'icon',
+          href: '/favicon.svg',
+          attributes: {'type': 'image/svg+xml'},
+        ),
+        const link(rel: 'apple-touch-icon', href: '/apple-touch-icon.png'),
+        // Fonts are self-hosted (see styles.css); the body face is preloaded
+        // so the first paint is already in it.
+        const link(
+          rel: 'preload',
+          href: '/fonts/baskervville-latin.woff2',
+          attributes: {'as': 'font', 'type': 'font/woff2', 'crossorigin': ''},
         ),
         if (posthogKey.isNotEmpty) ...[
           const script(
