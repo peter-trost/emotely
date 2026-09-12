@@ -4,7 +4,7 @@
 -- What the world may do is exactly one thing — add an address — and every
 -- other verb, column and read is refused before it reaches a row.
 begin;
-select plan(24);
+select plan(27);
 
 -- Impersonation helpers, as in rls.test.sql, plus the client IP the way
 -- Supabase's gateway hands it to Postgres (x-forwarded-for).
@@ -90,6 +90,10 @@ select throws_ok(
   null,
   'a malformed address is refused'
 );
+select lives_ok(
+  $$insert into public.waitlist (email) values ('a@b.co')$$,
+  'the shortest address a two-letter domain allows is accepted'
+);
 select throws_ok(
   $$insert into public.waitlist (email) values (repeat('a', 250) || '@x.io')$$,
   '23514',
@@ -171,13 +175,33 @@ select lives_ok(
   'the window closes after an hour'
 );
 
+-- The IP outlives its purpose by a day at most --------------------------------
+
+select pg_temp.logout();
+update public.waitlist set created_at = now() - interval '2 days' where email = 'h1@example.com';
+select pg_temp.anon();
+select pg_temp.from_ip('198.51.100.9');
+insert into public.waitlist (email) values ('h8@example.com');
+select pg_temp.logout();
+select results_eq(
+  $$select ip is null from public.waitlist where email = 'h1@example.com'$$,
+  $$values (true)$$,
+  'a day after the sign-up the IP is erased by the next insert'
+);
+select results_eq(
+  $$select count(*) from public.waitlist where ip is null$$,
+  $$values (1::bigint)$$,
+  'younger rows keep theirs until the window has passed'
+);
+
 -- And a global cap, so a distributed flood costs at most a day of rows ------------
 
 select pg_temp.anon();
 do $$
 begin
-  -- Eight rows exist at this point; 492 more make the day's 500.
-  for i in 1..492 loop
+  -- Ten rows exist at this point, one of them backdated out of the day;
+  -- 491 more make the day's 500.
+  for i in 1..491 loop
     perform set_config('request.headers',
       json_build_object('x-forwarded-for', format('10.%s.%s.%s', i / 65536, (i / 256) % 256, i % 256))::text, true);
     insert into public.waitlist (email) values (format('flood%s@example.com', i));

@@ -44,6 +44,9 @@ called directly.
 - **Consent is single opt-in for now.** The form says what the address is for.
   `confirmed_at` exists so a confirmation mail can be added when it is worth
   it; until then nothing is sent to the list.
+- **The IP is evidence for a day, not a record.** It exists for the per-IP
+  window; the guard erases it from any row older than a day on the next
+  insert, so the list never accumulates addresses-to-people links.
 - **The form is the only client.** A change to the table's contract is a change
   to `apps/web`, in the same PR, like the app and the agent share
   `packages/contract`.

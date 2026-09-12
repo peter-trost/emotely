@@ -10,14 +10,21 @@
 
 create table public.waitlist (
   id uuid primary key default gen_random_uuid(),
+  -- Shape only: something@something.something, no whitespace, within the
+  -- 254 characters SMTP can deliver to. Real validation is the mail itself.
   email text not null
     check (
       email = lower(btrim(email))
-      and length(email) between 6 and 254
+      and length(email) <= 254
       and email ~ '^[^\s@]+@[^\s@]+\.[^\s@]+$'
     ),
-  -- Where the address came from ("landing", a campaign tag), for later.
+  -- Where the address came from, set by the site from the link the visitor
+  -- used: `utm_source/utm_medium/utm_campaign` (lowercased, [a-z0-9._-]),
+  -- else the referring host, else `landing`. The link format is the
+  -- campaign-links skill's business; this column just keeps the tag.
   source text check (source is null or length(source) <= 64),
+  -- The caller's IP, kept only while the per-IP window can still need it:
+  -- the guard erases it from rows older than a day.
   ip inet,
   created_at timestamptz not null default now(),
   -- Set by the double-opt-in mail once it exists; null means unconfirmed.
@@ -90,11 +97,16 @@ begin
       message = 'the waitlist is taking a breather, try again tomorrow';
   end if;
 
+  -- Data minimisation, piggybacked on the write path so no scheduler is
+  -- needed: an IP older than the windows above serves no purpose.
+  update public.waitlist w set ip = null
+    where w.ip is not null and w.created_at < now() - interval '1 day';
+
   return new;
 end;
 $$;
 comment on function public.waitlist_guard() is
-  'Normalises, de-duplicates silently and rate-limits waitlist inserts.';
+  'Normalises, de-duplicates silently, rate-limits waitlist inserts and erases day-old IPs.';
 
 revoke execute on function public.waitlist_guard() from public, anon, authenticated;
 
