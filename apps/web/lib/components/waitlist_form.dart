@@ -15,10 +15,11 @@ import 'package:universal_web/web.dart' as web;
 /// client is not injected; `http.Client()` honours `http.runWithClient`,
 /// which is how tests put a fake behind it.
 //
-// jaspr_builder parses @client files with analyzer 12, which has no
-// primary-constructor support yet, so this one file keeps the classic form
-// (and the classic constructor name that goes with it).
+// jaspr_builder parses @client files with analyzer 12, which cannot read a
+// primary constructor yet, so this one file keeps the classic form.
 // ignore_for_file: use_primary_constructors
+// The classic form repeats the type name in the constructor; the fix this
+// rule proposes is the primary constructor the builder cannot parse.
 // ignore_for_file: unnecessary_type_name_in_constructor
 @client
 class WaitlistForm extends StatefulComponent {

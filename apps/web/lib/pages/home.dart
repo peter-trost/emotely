@@ -19,7 +19,7 @@ class const Home({super.key}) extends StatelessComponent {
   ]);
 
   Component _hero() => const section(id: 'top', classes: 'hero', [
-    p(classes: 'eyebrow', [.text('Early access · iPhone and Android')]),
+    p(classes: 'eyebrow', [.text('Early access · iOS and Android')]),
     h1([
       .text(
         'Know what you actually felt today. '
@@ -159,9 +159,10 @@ class const Home({super.key}) extends StatelessComponent {
             'was said.',
       ),
       _qa(
-        'Which phones?',
-        'iPhone and Android. Early access opens in small batches so every '
-            'person gets a reply from a human.',
+        'Which devices?',
+        'iOS and Android. Phones first; tablets and foldables follow. Early '
+            'access opens in small batches so every person gets a reply '
+            'from a human.',
       ),
       _qa(
         'What does it cost?',

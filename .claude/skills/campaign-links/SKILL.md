@@ -39,8 +39,11 @@ list is never readable through the API):
 supabase db query --linked "select source, count(*) from public.waitlist group by 1 order by 2 desc"
 ```
 
-PostHog (project emotely, EU) shows visits per `utm_source` under Web
-analytics and the `waitlist_joined` event with its `source` property; both
-are cookieless, so counts are per visit, not per person over time. Paid
+PostHog (project emotely, EU) keeps all three tags: every event carries
+`utm_source`, `utm_medium` and `utm_campaign` (and the referrer) as
+properties, so Web analytics can break visits down by any of them, and the
+`waitlist_joined` event carries the combined `source` string, the same one
+the row stores. Everything is cookieless, so counts are per visit, not per
+person over time. Paid
 campaigns or experiments that need returning-visitor attribution mean
 switching PostHog to `on_reject` with a consent banner — tracked in #70.

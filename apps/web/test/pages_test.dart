@@ -45,6 +45,13 @@ void main() {
 
       expect(find.textContaining('Read the code'), findsComponents);
     });
+
+    testComponents('names the platforms, not one phone brand', (tester) {
+      tester.pumpComponent(const Home());
+
+      expect(find.textContaining('iOS and Android'), findsComponents);
+      expect(find.textContaining('iPhone'), findsNothing);
+    });
   });
 
   group('Legal pages', () {
@@ -73,6 +80,19 @@ void main() {
         expect(find.textContaining('Vercel'), findsComponents);
         expect(find.textContaining('PostHog'), findsComponents);
         expect(find.textContaining('hello@getemotely.com'), findsComponents);
+      },
+    );
+
+    testComponents(
+      'the privacy page gives a legal basis, a retention and a regulator',
+      (tester) {
+        tester.pumpComponent(const Privacy());
+
+        expect(find.textContaining('Art. 6 (1) (a)'), findsComponents);
+        expect(find.textContaining('Art. 6 (1) (f)'), findsComponents);
+        expect(find.textContaining('erased after one day'), findsOneComponent);
+        expect(find.textContaining('Landesbeauftragte'), findsOneComponent);
+        expect(find.textContaining('served from this site'), findsOneComponent);
       },
     );
   });

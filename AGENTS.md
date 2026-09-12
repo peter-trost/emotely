@@ -14,6 +14,8 @@ handling. If a step is only documented for humans, move it into a skill.
 - Research the latest version and current API of any dependency, model, or action
   from its canonical source before pinning or calling it — never from memory.
 - `main` is protected: all changes land via squash-merged PR, `ci-ok` green.
+- Never point at a skill from a `CLAUDE.md`: skill descriptions are already in
+  context, so the pointer is noise. Put the fact itself here or in the skill.
 - Lints are deny-by-default and always errors: biome `preset: "all"`
   (`biome.jsonc`), all TS strictness flags,
   [`flutter_agent_lints`](https://github.com/peter-trost/flutter_agent_lints)
