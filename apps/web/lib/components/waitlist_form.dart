@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:emotely_web/analytics.dart';
+import 'package:emotely_web/attribution.dart';
 import 'package:emotely_web/environment.dart';
 import 'package:emotely_web/waitlist.dart';
 import 'package:http/http.dart' as http;
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
+import 'package:universal_web/web.dart' as web;
 
 /// The one interactive island on the site: an address in, a thank-you out.
 ///
@@ -35,12 +38,17 @@ class _WaitlistFormState extends State<WaitlistForm> {
   String? _message;
 
   Future<void> _submit() async {
+    final source = sourceFrom(
+      query: web.window.location.search,
+      referrer: web.document.referrer,
+    );
     if (_website.isNotEmpty) {
       setState(() => _phase = .joined);
       return;
     }
     final email = _email.trim();
     if (!looksLikeEmail(email)) {
+      track('waitlist_refused', {'source': source, 'reason': 'invalid'});
       setState(() => _message = "That doesn't look like an email address.");
       return;
     }
@@ -53,9 +61,15 @@ class _WaitlistFormState extends State<WaitlistForm> {
       final outcome = await joinWaitlist(
         client,
         email: email,
+        source: source,
         supabaseUrl: supabaseUrl,
         publishableKey: supabasePublishableKey,
       );
+      if (outcome == .joined) {
+        track('waitlist_joined', {'source': source});
+      } else {
+        track('waitlist_refused', {'source': source, 'reason': outcome.name});
+      }
       setState(() {
         switch (outcome) {
           case .joined:

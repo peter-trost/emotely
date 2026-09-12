@@ -5,7 +5,10 @@ set -eu
 
 export PATH="$PWD/.dart-sdk/bin:$HOME/.pub-cache/bin:$PATH"
 
-jaspr build --sitemap-domain https://getemotely.com
+# POSTHOG_KEY is a plain (public) project env var on Vercel; unset means the
+# site ships without the analytics script.
+jaspr build --sitemap-domain https://getemotely.com \
+  --dart-define="POSTHOG_KEY=${POSTHOG_KEY:-}"
 
 # build_web_compilers copies every package's non-Dart assets next to the
 # compiled JS (analyzer docs, test runner pages, ...). Nothing in the site

@@ -3,6 +3,7 @@
 library;
 
 import 'package:emotely_web/app.dart';
+import 'package:emotely_web/environment.dart';
 import 'package:emotely_web/main.server.options.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
@@ -12,41 +13,61 @@ const _description =
     'journal entry for you. Five minutes, no blank page, open source, your '
     'words stay yours.';
 
+/// PostHog, cookieless (ADR 0004): nothing is stored in the browser, no
+/// person profiles, no autocapture, no replay, no surveys. The library is
+/// loaded deferred from the EU asset host and initialised once the document
+/// is ready; `lib/analytics.dart` is the only caller afterwards.
+const _posthogInit =
+    "window.addEventListener('DOMContentLoaded',function(){"
+    "window.posthog&&window.posthog.init('$posthogKey',{"
+    "api_host:'$posthogHost',defaults:'2026-08-29',"
+    "cookieless_mode:'always',person_profiles:'never',"
+    'autocapture:false,capture_pageview:true,'
+    'disable_session_recording:true,disable_surveys:true})})';
+
 void main() {
   Jaspr.initializeApp(options: defaultServerOptions);
 
   runApp(
-    const Document(
+    Document(
       title: 'emotely — a journal that asks, listens and writes',
       lang: 'en',
-      meta: {'description': _description, 'theme-color': '#f6f1e9'},
+      meta: const {'description': _description, 'theme-color': '#f6f1e9'},
       head: [
         // Open Graph wants `property`, which Document.meta cannot emit.
-        meta(attributes: {'property': 'og:title', 'content': 'emotely'}),
-        meta(
+        const meta(attributes: {'property': 'og:title', 'content': 'emotely'}),
+        const meta(
           attributes: {'property': 'og:description', 'content': _description},
         ),
-        meta(attributes: {'property': 'og:type', 'content': 'website'}),
-        meta(
+        const meta(attributes: {'property': 'og:type', 'content': 'website'}),
+        const meta(
           attributes: {
             'property': 'og:url',
             'content': 'https://getemotely.com/',
           },
         ),
-        link(rel: 'stylesheet', href: '/styles.css'),
-        link(rel: 'icon', href: '/favicon.ico'),
-        link(rel: 'preconnect', href: 'https://fonts.googleapis.com'),
-        link(
+        const link(rel: 'stylesheet', href: '/styles.css'),
+        const link(rel: 'icon', href: '/favicon.ico'),
+        const link(rel: 'preconnect', href: 'https://fonts.googleapis.com'),
+        const link(
           rel: 'preconnect',
           href: 'https://fonts.gstatic.com',
           attributes: {'crossorigin': ''},
         ),
-        link(
+        const link(
           rel: 'stylesheet',
           href: 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;600&display=swap',
         ),
+        if (posthogKey.isNotEmpty) ...[
+          const script(
+            src: 'https://eu-assets.i.posthog.com/static/array.js',
+            defer: true,
+            attributes: {'crossorigin': 'anonymous'},
+          ),
+          const script(content: _posthogInit),
+        ],
       ],
-      body: App(),
+      body: const App(),
     ),
   );
 }

@@ -1,11 +1,15 @@
 @TestOn('browser')
 library;
 
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+
 import 'package:emotely_web/components/waitlist_form.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/client_test.dart';
+import 'package:universal_web/web.dart' as web;
 
 /// Runs [body] with every `http.Client()` the form creates answering
 /// [status]; what the form sent is collected in [seen].
@@ -21,8 +25,24 @@ Future<void> withApi(
   }),
 );
 
+/// A `window.posthog` that only remembers what it was asked to capture.
+List<(String, Map<String, Object?>)> installPosthogStub() {
+  final captured = <(String, Map<String, Object?>)>[];
+  final stub = JSObject();
+  stub['capture'] = ((JSString event, JSAny? properties) {
+    final props = properties.dartify() as Map? ?? {};
+    captured.add((event.toDart, props.cast<String, Object?>()));
+  }).toJS;
+  globalContext['posthog'] = stub;
+  return captured;
+}
+
+void visit(String path) => web.window.history.replaceState(null, '', path);
+
 void main() {
   group('WaitlistForm', () {
+    setUp(() => visit('/'));
+
     testClient('a valid address is sent once and the reader is thanked', (
       tester,
     ) async {
@@ -43,10 +63,33 @@ void main() {
       });
     });
 
+    testClient('the link the reader came from is stored with the address', (
+      tester,
+    ) async {
+      final seen = <http.Request>[];
+      final captured = installPosthogStub();
+      visit('/?utm_source=LinkedIn&utm_medium=post&utm_campaign=launch');
+      await withApi(seen: seen, () async {
+        tester.pumpComponent(const WaitlistForm());
+        await tester.input(
+          find.byKey(const Key('email')),
+          value: 'dana@example.com',
+        );
+        await tester.click(find.byKey(const Key('join')));
+        await pumpEventQueue();
+
+        expect(seen.single.body, contains('"source":"linkedin/post/launch"'));
+        expect(captured.single.$1, 'waitlist_joined');
+        expect(captured.single.$2, {'source': 'linkedin/post/launch'});
+      });
+    });
+
     testClient('an address that is not one never leaves the page', (
       tester,
     ) async {
       final seen = <http.Request>[];
+      final captured = installPosthogStub();
+      visit('/?utm_source=blog');
       await withApi(seen: seen, () async {
         tester.pumpComponent(const WaitlistForm());
         await tester.input(
@@ -62,6 +105,8 @@ void main() {
           findsOneComponent,
         );
         expect(find.byKey(const Key('join')), findsOneComponent);
+        expect(captured.single.$1, 'waitlist_refused');
+        expect(captured.single.$2, {'source': 'blog', 'reason': 'invalid'});
       });
     });
 
@@ -69,6 +114,7 @@ void main() {
       tester,
     ) async {
       final seen = <http.Request>[];
+      final captured = installPosthogStub();
       await withApi(seen: seen, status: 429, () async {
         tester.pumpComponent(const WaitlistForm());
         await tester.input(
@@ -80,6 +126,8 @@ void main() {
 
         expect(find.textContaining('Too many sign-ups'), findsOneComponent);
         expect(find.byKey(const Key('join')), findsOneComponent);
+        expect(captured.single.$1, 'waitlist_refused');
+        expect(captured.single.$2['reason'], 'tooMany');
       });
     });
 
@@ -96,6 +144,22 @@ void main() {
 
         expect(find.textContaining('Something went wrong'), findsOneComponent);
         expect(find.byKey(const Key('join')), findsOneComponent);
+      });
+    });
+
+    testClient('without PostHog on the page nothing breaks', (tester) async {
+      globalContext.delete('posthog'.toJS);
+      final seen = <http.Request>[];
+      await withApi(seen: seen, () async {
+        tester.pumpComponent(const WaitlistForm());
+        await tester.input(
+          find.byKey(const Key('email')),
+          value: 'erin@example.com',
+        );
+        await tester.click(find.byKey(const Key('join')));
+        await pumpEventQueue();
+
+        expect(find.textContaining("You're on the list"), findsOneComponent);
       });
     });
 

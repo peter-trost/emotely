@@ -19,10 +19,10 @@ class const Privacy({super.key}) extends StatelessComponent {
     p([
       .text(
         'Nothing, unless you join the waitlist. Then it stores the email '
-        'address you typed, the moment you sent it, a "source" tag saying '
-        'it came from this site, and the IP address of the request. The IP '
-        'is kept only to limit abuse of the form and is not linked to '
-        'anything else.',
+        'address you typed, the moment you sent it, a "source" tag (the '
+        'campaign tags in the link you used, or the site that linked here), '
+        'and the IP address of the request. The IP is kept only to limit '
+        'abuse of the form and is not linked to anything else.',
       ),
     ]),
 
@@ -48,11 +48,21 @@ class const Privacy({super.key}) extends StatelessComponent {
           ' hosts the site and keeps ordinary server logs for a short time.',
         ),
       ]),
+      li([
+        strong([.text('PostHog')]),
+        .text(
+          ' counts visits and waitlist sign-ups on servers in the EU, '
+          'without cookies or any identifier stored in your browser: visits '
+          'are grouped by a hash that changes daily, and your IP address is '
+          'discarded before anything is kept. It sees which page you '
+          'viewed and where the link came from, never your email address.',
+        ),
+      ]),
     ]),
     p([
       .text(
-        'No analytics, no tracking pixels and no cookies are used on this '
-        'site.',
+        'No cookies, no tracking pixels and nothing stored in your browser '
+        'are used on this site.',
       ),
     ]),
 

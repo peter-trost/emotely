@@ -71,6 +71,7 @@ void main() {
         expect(find.textContaining('Supabase'), findsComponents);
         expect(find.textContaining('Resend'), findsComponents);
         expect(find.textContaining('Vercel'), findsComponents);
+        expect(find.textContaining('PostHog'), findsComponents);
         expect(find.textContaining('hello@getemotely.com'), findsComponents);
       },
     );

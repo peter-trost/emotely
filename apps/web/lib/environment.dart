@@ -18,6 +18,13 @@ const supabasePublishableKey = String.fromEnvironment(
   defaultValue: 'sb_publishable_di6BB76PPuuoDklt7jtI0w_KlwO_8JF',
 );
 
+/// The PostHog project token (`-DPOSTHOG_KEY=phc_…`), the same project as
+/// the app (ADR 0004). Empty means analytics off: no script is emitted.
+const posthogKey = String.fromEnvironment('POSTHOG_KEY');
+
+/// EU cloud, like the app and the agent.
+const posthogHost = 'https://eu.i.posthog.com';
+
 /// Where the code lives; the site links to it everywhere trust is asked for.
 const repositoryUrl = 'https://github.com/peter-trost/emotely';
 
