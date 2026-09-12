@@ -5,7 +5,7 @@ library;
 /// Where the agent runs (`--dart-define=EMOTELY_AGENT_URL=…`).
 const agentUrl = String.fromEnvironment(
   'EMOTELY_AGENT_URL',
-  defaultValue: 'https://emotely-agent.vercel.app/api/advance-session',
+  defaultValue: 'https://api.getemotely.com/api/advance-session',
 );
 
 /// The PostHog project token (`--dart-define=POSTHOG_KEY=phc_…`). Empty

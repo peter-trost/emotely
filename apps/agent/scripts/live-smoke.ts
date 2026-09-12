@@ -8,8 +8,7 @@ import process from "node:process";
 // as a dedicated user with a password. Password sign-in exists for this
 // probe alone; the app uses email codes.
 
-const BASE =
-  process.env["EMOTELY_AGENT_URL"] ?? "https://emotely-agent.vercel.app";
+const BASE = process.env["EMOTELY_AGENT_URL"] ?? "https://api.getemotely.com";
 const SUPABASE_URL = process.env["SUPABASE_URL"];
 const SUPABASE_KEY = process.env["SUPABASE_PUBLISHABLE_KEY"];
 const SMOKE_EMAIL = process.env["SMOKE_EMAIL"];
