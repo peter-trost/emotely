@@ -42,7 +42,8 @@ emotely/
 │  ├─ agent/      TypeScript · Vercel AI SDK agent loop · deploys to Vercel
 │  │             tools: ask_question / record_answer / complete_session
 │  │             evals/ — offline fixtures → cost + quality (CI gate)
-│  └─ app/        Flutter (iOS + Android) · renders one native widget per tool call
+│  ├─ app/        Flutter (iOS + Android) · renders one native widget per tool call
+│  └─ web/        Jaspr (Dart) · getemotely.com landing page + waitlist · static, deploys to Vercel
 ├─ packages/
 │  └─ contract/   the tool-call schema — single source of truth for both sides
 ├─ supabase/     Postgres schema + RLS tests (pgTAP) + auth config · deploys on merge
