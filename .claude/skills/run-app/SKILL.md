@@ -14,7 +14,7 @@ All configuration is `--dart-define`s, read in one place: `lib/app/environment.d
 
 | define | default | purpose |
 | --- | --- | --- |
-| `EMOTELY_AGENT_URL` | `https://emotely-agent.vercel.app/api/advance-session` | the agent; point at a local or preview deployment when needed |
+| `EMOTELY_AGENT_URL` | `https://api.getemotely.com/api/advance-session` | the agent (production alias of the `emotely-agent` Vercel project); point at a local or preview deployment when needed |
 | `POSTHOG_KEY` | empty = analytics off (the SDK skips setup) | PostHog project token (`phc_…`) |
 | `EMOTELY_SUPABASE_URL` | the hosted project | Supabase project URL; public (ADR 0010) |
 | `EMOTELY_SUPABASE_PUBLISHABLE_KEY` | the hosted project's key | Supabase publishable key; public, acts only under the signed-in user |
