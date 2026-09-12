@@ -21,6 +21,7 @@ class const Imprint({super.key}) extends StatelessComponent {
       .text('Email: '),
       a(href: 'mailto:$contactEmail', [.text(contactEmail)]),
     ]),
+    p([.text('VAT ID (USt-IdNr. according to § 27a UStG): DE369514299')]),
     p([.text('Responsible for content: Peter Trost, address as above.')]),
     h2([.text('Source code')]),
     p([

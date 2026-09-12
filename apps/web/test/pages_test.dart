@@ -57,6 +57,12 @@ void main() {
       expect(find.textContaining('hello@getemotely.com'), findsComponents);
     });
 
+    testComponents('the imprint carries the VAT ID (§ 27a UStG)', (tester) {
+      tester.pumpComponent(const Imprint());
+
+      expect(find.textContaining('DE369514299'), findsOneComponent);
+    });
+
     testComponents(
       'the privacy page names every party that touches an address',
       (tester) {
