@@ -22,10 +22,12 @@ class const Privacy({super.key}) extends StatelessComponent {
       .text(
         'Nothing, unless you join the waitlist. Then it stores the email '
         'address you typed, the moment you sent it, a "source" tag (the '
-        'campaign tags in the link you used, or the site that linked here) '
-        'and the IP address of the request. The IP address exists only to '
-        'limit abuse of the form: it is erased after one day, before it '
-        'could be linked to anything.',
+        'campaign tags in the link you used, or the site that linked here), '
+        'a random token that the confirmation link carries, and the IP '
+        'address of the request. The IP address exists only to limit abuse '
+        'of the form: it is erased after one day, before it could be linked '
+        'to anything. An address that never clicks its confirmation link is '
+        'deleted after a week.',
       ),
     ]),
 
@@ -89,8 +91,9 @@ class const Privacy({super.key}) extends StatelessComponent {
       li([
         strong([.text('Resend')]),
         .text(
-          ' sends the email that tells you your spot is open, from servers '
-          'in the EU.',
+          ' sends two emails from servers in the EU: the one asking you to '
+          'confirm your address, and later the one that tells you your spot '
+          'is open.',
         ),
       ]),
       li([
@@ -124,7 +127,8 @@ class const Privacy({super.key}) extends StatelessComponent {
     p([
       .text(
         'Your address stays on the list until early access is over or you '
-        'ask for it to be removed, whichever comes first. The IP address is '
+        'ask for it to be removed, whichever comes first; unconfirmed, it '
+        'is gone after a week. The IP address is '
         'gone after a day. Request logs are gone after a short time. Visit '
         'counts are aggregated and cannot be traced back to you.',
       ),
