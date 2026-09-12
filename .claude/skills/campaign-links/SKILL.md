@@ -33,10 +33,11 @@ stable across channels: `utm_source` is the site, `utm_medium` the format,
 ## Read the results
 
 Sign-ups by source, with the linked Supabase CLI (schema access only, the
-list is never readable through the API):
+list is never readable through the API). `confirmed` is the number that
+answered the double-opt-in mail; the rest are deleted after a week:
 
 ```bash
-supabase db query --linked "select source, count(*) from public.waitlist group by 1 order by 2 desc"
+supabase db query --linked "select source, count(*) as signed_up, count(confirmed_at) as confirmed from public.waitlist group by 1 order by 2 desc"
 ```
 
 PostHog (project emotely, EU) keeps all three tags: every event carries

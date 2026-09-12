@@ -41,9 +41,20 @@ called directly.
 
 ## What follows from it
 
-- **Consent is single opt-in for now.** The form says what the address is for.
-  `confirmed_at` exists so a confirmation mail can be added when it is worth
-  it; until then nothing is sent to the list.
+- **Consent is double opt-in.** The form says what the address is for, and
+  the row proves nothing until the mailbox answers: every insert gets a
+  `confirm_token`, an after-insert trigger hands a confirmation mail to
+  Resend through `pg_net` (key from Vault, `resend_api_key`), and the link
+  in that mail calls `confirm_waitlist(token)`, the only path to
+  `confirmed_at`. A row that never confirms is deleted after a week by the
+  guard. GDPR does not spell this out; German practice (§ 7 UWG, the burden
+  of proof for consent is ours) does, and it is the only way the list may
+  ever be mailed.
+- **The mail is sent from the database, not from a function or the site.**
+  `pg_net` queues the HTTP call inside the transaction and fires it only on
+  commit, so a refused insert sends nothing and nothing outside Postgres
+  ever holds the Resend key. The cost is a mail template in SQL; the gain
+  is one fewer runtime to deploy and secure.
 - **The IP is evidence for a day, not a record.** It exists for the per-IP
   window; the guard erases it from any row older than a day on the next
   insert, so the list never accumulates addresses-to-people links.

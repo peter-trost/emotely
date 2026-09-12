@@ -74,6 +74,30 @@ re-run the deploy (any push to `main` touching `supabase/**`). Sender and
 reply address is `hello@getemotely.com`, a Google Group in the Workspace.
 Anything with a secret uses `env(VAR)` and is never committed.
 
+## The waitlist mail (double opt-in)
+
+`public.waitlist` (ADR 0011) sends its own confirmation mail: an
+after-insert trigger calls Resend's API through `pg_net`, with the key read
+from Vault (`vault.decrypted_secrets`, name `resend_api_key`) at send time.
+Nothing outside Postgres holds that key. The link in the mail calls the
+anon-executable RPC `confirm_waitlist(token)`; unconfirmed rows are deleted
+after a week by the guard trigger.
+
+- **Local stacks have no key** and need none: the insert succeeds, the
+  trigger logs `waitlist: no resend_api_key in vault` and sends nothing.
+  `supabase/tests/waitlist_confirm.test.sql` creates a throwaway key inside
+  its transaction and asserts the queued request instead.
+- **Storing or rotating the production key** (agent-executable, value never
+  seen): create a sending-only key in the Resend dashboard
+  (`resend.com/api-keys`), copy it with the page's Copy button, then
+  `pbpaste | sh supabase/scripts/vault-secret.sh resend_api_key "Resend, sending only, waitlist mail"`
+  and clear the clipboard. The script writes the value through a 0600 temp
+  file and `db query --file`, creating or updating the Vault row.
+- **Checking a send** on the hosted project:
+  `supabase db query --linked "select status_code, left(content, 120), created from net._http_response order by created desc limit 5"`
+  — Resend answers `200 {"id": ...}`; a `401` means the key, a `422` the
+  body. Postgres logs carry the warning when the key is missing.
+
 ## Deploying
 
 A merge to `main` that touches `supabase/**` runs `supabase-deploy` in CI:
