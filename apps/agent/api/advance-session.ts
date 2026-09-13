@@ -13,6 +13,9 @@ const secret = process.env["SESSION_SIGNING_SECRET"];
 if (!secret) {
   throw new Error("SESSION_SIGNING_SECRET is required");
 }
+// Set only for the grace window of a rotation (ADR 0009 rule 5; runbook in
+// ../README.md). Unset in normal operation; the verifier treats "" as unset.
+const previousSecret = process.env["SESSION_SIGNING_SECRET_PREVIOUS"];
 // Public by design (it is in the app too): the project whose users may call.
 const supabaseUrl = process.env["SUPABASE_URL"];
 if (!supabaseUrl) {
@@ -34,6 +37,7 @@ const transcriptSchema = z.array(modelMessageSchema);
 
 const handler = createAdvanceSessionHandler({
   secret,
+  ...(previousSecret === undefined ? {} : { previousSecret }),
   minAppVersion: MIN_APP_VERSION,
   verifyCaller: createCallerVerifier(supabaseAuth(supabaseUrl)),
   advance: ({ messages, answer }) =>

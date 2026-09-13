@@ -34,6 +34,7 @@ function json(status: number, body: unknown): Response {
 function validate(
   parsed: AdvanceSessionRequest,
   secret: string,
+  previousSecret: string | undefined,
 ): { error: Response } | { error?: never; transcript: unknown[] } {
   const { transcript, signature, answer } = parsed;
   if (transcript === undefined) {
@@ -41,7 +42,7 @@ function validate(
   }
   if (
     signature === undefined ||
-    !verifyTranscript(transcript, signature, secret)
+    !verifyTranscript(transcript, signature, secret, previousSecret)
   ) {
     return { error: json(HTTP_UNAUTHORIZED, { error: "invalid signature" }) };
   }
@@ -96,7 +97,14 @@ async function runAdvance(
  * and nothing reaches the model unless this server produced it.
  */
 export function createAdvanceSessionHandler(deps: {
+  /** Signs every response; the only secret that verifies outside a rotation. */
   secret: string;
+  /**
+   * The secret being retired, set only for the grace window of a rotation
+   * (ADR 0009 rule 5). Transcripts signed with it still verify and come back
+   * signed with `secret`, so an in-flight session migrates on its next round.
+   */
+  previousSecret?: string;
   advance: Advance;
   /** Oldest app version this server still serves; the app blocks below it. */
   minAppVersion: string;
@@ -124,7 +132,7 @@ export function createAdvanceSessionHandler(deps: {
     ) {
       return json(HTTP_BAD_REQUEST, { error: "answer too large" });
     }
-    const checked = validate(parsed, deps.secret);
+    const checked = validate(parsed, deps.secret, deps.previousSecret);
     if (checked.error) {
       return checked.error;
     }
