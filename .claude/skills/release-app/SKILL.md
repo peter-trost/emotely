@@ -12,15 +12,19 @@ match, the `release` environment).
 
 ## Ship a beta build
 
+Every merge to `main` that touches `apps/app/**`, the contract schema or the
+workflow itself ships automatically (continuous delivery). To ship without a
+change, or to retry:
+
 ```bash
 gh workflow run app-release.yml
 gh run watch
 ```
 
-Or push a tag `app-v2.0.0-beta.N`. The workflow runs `fastlane ios beta`
-(macOS) and `fastlane android beta` (Linux) with `BUILD_NUMBER = 1000 +
-run_number`. The IPA lands in TestFlight and processes on Apple's side for
-10–30 min; the AAB lands on the Play **internal** track immediately.
+The workflow runs `fastlane ios beta` (macos-26, Xcode 26) and `fastlane
+android beta` (Linux) with `BUILD_NUMBER = 1000 + run_number`. The IPA lands
+in TestFlight and processes on Apple's side for 10–30 min; the AAB lands on
+the Play **internal** track immediately.
 
 After the build shows up:
 
