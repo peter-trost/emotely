@@ -1,4 +1,4 @@
-package com.trostsystems.emotely
+package de.emotely.emotely
 
 import io.flutter.embedding.android.FlutterActivity
 
