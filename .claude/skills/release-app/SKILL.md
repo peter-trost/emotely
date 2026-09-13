@@ -76,6 +76,53 @@ The list is in ADR 0013. `PLAY_SERVICE_ACCOUNT_JSON` is the JSON key of
   the Data safety form, which the app cannot satisfy on its own. Out of
   scope of the in-app path; tracked in #86.
 
+## Store reviewer accounts
+
+Sign-in is an emailed one-time code (ADR 0010), which App Review, Google
+Play's policy reviewers and Google's pre-launch crawler cannot receive: none
+of them reads our mailbox, and the crawler retrying the sign-in screen burns
+the Resend quota (100 mails/day, shared with the website's waitlist). Both
+stores accept a demo account as "username + password"; Google's guidance for
+apps with one-time-PIN sign-in is to provide reusable sign-in details that do
+not expire. So two accounts sign in with a **password, not a code**, and never
+trigger an email (`apps/app/lib/auth/review_accounts.dart`):
+
+- `google-play-review@getemotely.com`
+- `app-store-review@getemotely.com`
+
+The app shows a password step for exactly these addresses (trimmed,
+case-insensitive) and calls `signInWithPassword`; the accounts exist only on
+the server, the app has no sign-up path.
+
+- **The password** is `REVIEWER_PASSWORD` in
+  `~/.config/emotely/reviewer-accounts.env` (mode 600, never in the repo) and
+  in Peter's iCloud Passwords. It is the same for both accounts. Paste it into
+  App Store Connect → App Review Information → Sign-in required, and Play
+  Console → App content → App access → "All or some functionality is
+  restricted" → sign-in details.
+- **Before every store submission, run the recreate script.** A reviewer
+  testing "Delete account" really deletes the account (the App Store path
+  above), and both stores may re-test at any time:
+
+  ```bash
+  .claude/skills/release-app/scripts/reviewer-accounts.sh
+  ```
+
+  Idempotent: it reads the password from the env file (generating one with
+  `openssl rand` and writing the file with `umask 077` if absent), obtains the
+  legacy `service_role` key blind through `supabase projects api-keys`, creates
+  each user pre-confirmed with `app_metadata.review_account = true` and, if it
+  already exists, resets its password. It prints status lines only, never a
+  body, a key or the password. Needs the linked Supabase CLI login, `jq`,
+  `curl`, `openssl`.
+- **Play Console pre-launch crawler.** The "Sign-in details" entry has a
+  switch "allow Google to use these sign-in details for testing": on, the
+  pre-launch report's crawler signs in with the reviewer account instead of
+  hammering the sign-in screen with an address of its own. Leave it on.
+- The accounts are ordinary users under row-level security: whatever a
+  reviewer journals is theirs and gone with the next recreate only if they
+  deleted the account; the script never wipes an existing account's data.
+
 ## App Store Connect prep for a new version
 
 Version records, the app name and TestFlight Test Information are set through
