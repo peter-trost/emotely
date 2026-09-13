@@ -25,6 +25,7 @@ class AccountRobot(
   Finder get confirm => find.byKey(AccountView.confirmKey);
   Finder get cancel => find.byKey(AccountView.cancelKey);
   Finder get retry => find.byKey(AccountView.retryKey);
+  Finder get signOut => find.byKey(AccountView.signOutKey);
   Finder get failure => find.text(AccountView.failureMessage);
   Finder get busy => find.byType(CircularProgressIndicator);
 

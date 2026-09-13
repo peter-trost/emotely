@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:emotely/account/bloc/account_bloc.dart';
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
@@ -26,26 +27,44 @@ class const AccountView({super.key}) extends StatelessWidget {
   static const confirmKey = Key('account_view.confirm');
   static const cancelKey = Key('account_view.cancel');
   static const retryKey = Key('account_view.retry');
+  static const signOutKey = Key('account_view.sign_out');
 
-  static const confirmationMessage =
-      'Every journal entry you wrote will be deleted with it. '
-      'This cannot be undone.';
+  /// What deleting means; the screen says it once, the dialog only asks.
+  static const consequenceMessage =
+      'Deleting your account also deletes every journal entry you wrote. '
+      'There is no way back.';
+  static const confirmationMessage = 'Delete your account and every entry?';
   static const failureMessage = AccountBloc.failureMessage;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Account')),
-    body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: BlocConsumer<AccountBloc, AccountState>(
-          listenWhen: (_, state) => state is AccountDeleted,
-          listener: (context, _) => Navigator.of(context).pop(),
-          builder: (context, state) => switch (state) {
-            AccountIdle() => const _DeleteAccount(),
-            AccountDeleting() || AccountDeleted() => const _Busy(),
-            AccountFailure() => const _Failure(),
-          },
+  Widget build(BuildContext context) => BlocConsumer<AccountBloc, AccountState>(
+    listenWhen: (_, state) => state is AccountDeleted,
+    listener: (context, _) {
+      // Only this route pops itself; never whatever else may be on top,
+      // and never the root under it.
+      if (ModalRoute.of(context)?.isCurrent ?? false) {
+        Navigator.of(context).pop();
+      }
+    },
+    // The server deletes the account whether or not this screen stays; the
+    // bloc lives with the route, so leaving mid-flight would drop the local
+    // sign-out and keep a session for a user who no longer exists. Every
+    // way out (back arrow, system back, swipe) asks the route first.
+    builder: (context, state) => PopScope(
+      canPop: state is! AccountDeleting,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Account')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: switch (state) {
+              AccountIdle() => const _DeleteAccount(),
+              // Deleted has no screen of its own: the listener above pops
+              // this route the moment it arrives.
+              AccountDeleting() || AccountDeleted() => const _Busy(),
+              AccountFailure() => const _Failure(),
+            },
+          ),
         ),
       ),
     ),
@@ -59,8 +78,7 @@ class const _DeleteAccount() extends StatelessWidget {
     spacing: 16,
     children: [
       Text(
-        'Deleting your account removes it and every journal entry in it. '
-        'There is no way back.',
+        AccountView.consequenceMessage,
         style: Theme.of(context).textTheme.bodyLarge,
       ),
       OutlinedButton(
@@ -87,13 +105,12 @@ class const _DeleteAccount() extends StatelessWidget {
   }
 }
 
-/// Names what is lost before anything is; the only way to delete.
+/// Asks once more, naming the loss in the question; the only way to delete.
 class const _Confirmation({required final VoidCallback onConfirm})
     extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Delete your account?'),
-    content: const Text(AccountView.confirmationMessage),
+    title: const Text(AccountView.confirmationMessage),
     actions: [
       TextButton(
         key: AccountView.cancelKey,
@@ -116,6 +133,10 @@ class const _Confirmation({required final VoidCallback onConfirm})
   );
 }
 
+/// Retry, or sign out: the server may have deleted the account even though
+/// the answer never arrived, and this device should not keep a session it
+/// may no longer be entitled to. (`delete_account` is idempotent, so the
+/// retry is safe either way.)
 class const _Failure() extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
@@ -132,6 +153,15 @@ class const _Failure() extends StatelessWidget {
           const AccountEvent.deletionRequested(),
         ),
         child: const Text('Try again'),
+      ),
+      TextButton(
+        key: AccountView.signOutKey,
+        onPressed: () {
+          // The root swaps to sign-in underneath; this route leaves too.
+          context.read<AuthBloc>().add(const AuthEvent.signOutRequested());
+          Navigator.of(context).pop();
+        },
+        child: const Text('Sign out'),
       ),
     ],
   );

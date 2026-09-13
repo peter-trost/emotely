@@ -98,6 +98,33 @@ void main() {
       expect(robot.signIn, findsOneWidget);
     });
 
+    testWidgets('cannot be left while the account is being deleted', (
+      tester,
+    ) async {
+      final robot = robotWith(
+        tester,
+        deletions: [delayedAuth(rpcReturned(null))],
+      );
+      await robot.launch();
+      await robot.askToDelete();
+
+      await tester.tap(robot.confirm);
+      await tester.pump();
+      // The server is deleting the account whatever happens on this side;
+      // leaving now would keep a session for a user who no longer exists.
+      await robot.back();
+
+      expect(robot.signIn, findsOneWidget);
+      expect(robot.account, findsNothing);
+      expect(robot.home, findsNothing);
+      expect(robot.supabase.to(logout), hasLength(1));
+      expect(robot.analytics.events, [
+        event('journal_viewed', journalViewed),
+        event('account_deleted'),
+      ]);
+      expect(robot.analytics.resets, 1);
+    });
+
     testWidgets('explains when the account cannot be deleted, and retries', (
       tester,
     ) async {
@@ -124,6 +151,36 @@ void main() {
       expect(robot.analytics.resets, 1);
     });
 
+    testWidgets('offers to sign out when the account cannot be deleted', (
+      tester,
+    ) async {
+      // A deletion that failed on this side may have succeeded on the
+      // server; signing out is the way to stop holding a token for a user
+      // who may no longer exist.
+      final robot = robotWith(
+        tester,
+        deletions: [restRefused()],
+        logoutAnswer: signedOut(),
+      );
+      await robot.launch();
+      await robot.askToDelete();
+      await robot.tap(robot.confirm);
+
+      expect(robot.failure, findsOneWidget);
+
+      await robot.tap(robot.signOut);
+
+      expect(robot.signIn, findsOneWidget);
+      expect(robot.account, findsNothing);
+      expect(robot.home, findsNothing);
+      expect(robot.supabase.to(logout), hasLength(1));
+      expect(robot.analytics.events, [
+        event('journal_viewed', journalViewed),
+        event('signed_out'),
+      ]);
+      expect(robot.analytics.resets, 1);
+    });
+
     testWidgets('leaves even when the sign-out cannot reach the server', (
       tester,
     ) async {
@@ -141,6 +198,37 @@ void main() {
       expect(robot.account, findsNothing);
       expect(robot.analytics.events.last, event('account_deleted'));
       expect(robot.analytics.resets, 1);
+    });
+
+    testWidgets('never lets journal content leave the device (ADR 0005)', (
+      tester,
+    ) async {
+      const needle = 'needle: the day the sea turned violet';
+      final robot = robotWith(
+        tester,
+        deletions: [restRefused(), rpcReturned(null)],
+      );
+      robot.supabase.rest('GET /rest/v1/entries', [
+        rows([
+          entryRow(
+            id: 'e-needle',
+            summary: needle,
+            createdAt: DateTime.utc(2026, 9, 7, 20),
+          ),
+        ]),
+      ]);
+      await robot.launch();
+      await robot.askToDelete();
+      await robot.tap(robot.confirm);
+      await robot.tap(robot.retry);
+
+      expect(robot.signIn, findsOneWidget);
+      final outgoing = robot.analytics.outgoingStrings.toList();
+      expect(outgoing, contains('account_deleted'));
+      for (final leaving in outgoing) {
+        expect(leaving, isNot(contains('needle')));
+        expect(leaving, isNot(contains('violet')));
+      }
     });
 
     testWidgets('meets accessibility guidelines with and without the '

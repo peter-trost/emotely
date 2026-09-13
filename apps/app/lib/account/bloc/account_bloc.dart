@@ -34,8 +34,12 @@ class AccountBloc({
       return;
     }
     unawaited(_analytics.accountDeleted());
-    // The user no longer exists, so only the local session can be ended;
-    // the SDK still tells the server and shrugs off its refusal.
+    // The user no longer exists, so only the local session can be ended:
+    // the SDK's default `SignOutScope.local` is the right one, since a
+    // global sign-out would only be refused (403) and every other device's
+    // refresh fails on its own now. The SDK still tells the server and
+    // shrugs off that refusal (401/403/404); anything else is caught here,
+    // because the local session is gone either way.
     try {
       await _supabase.auth.signOut();
     } on Exception {
