@@ -1,11 +1,17 @@
 name: App release
 
 # Ships the Flutter app to TestFlight and to the Play internal track (ADR 0013).
-# Manual, or on an app-v* tag. Both jobs share one monotonic build number.
+# Continuous delivery: every merge to main that touches the app, plus manual
+# runs. Both jobs share one monotonic build number.
 on:
   workflow_dispatch:
   push:
-    tags: ['app-v*']
+    branches: [main]
+    paths:
+      - 'apps/app/**'
+      # The Dart contract is pinned against the emitted JSON Schema.
+      - 'packages/contract/contract.schema.json'
+      - '.github/workflows/app-release.yml'
 
 concurrency:
   group: app-release

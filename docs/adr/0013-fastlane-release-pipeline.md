@@ -20,9 +20,11 @@ Xcode, and a certificate exported by hand from someone's keychain.
   from secrets; without them a release build falls back to the debug key so
   `flutter run --release` works on a dev machine.
 - **GitHub Actions** (`.github/workflows/app-release.yml`) runs both lanes in
-  the `release` environment, on `workflow_dispatch` and on `app-v*` tags. The
-  build number is `1000 + run_number`: monotonic, and above anything the
-  legacy app ever shipped (ADR 0012).
+  the `release` environment on every merge to `main` that touches the app
+  (continuous delivery: `main` is already gated by `ci-ok`), and on
+  `workflow_dispatch`. The build number is `1000 + run_number`: monotonic,
+  and above anything the legacy app ever shipped (ADR 0012). iOS builds on
+  `macos-26`, because App Store Connect rejects anything below the iOS 26 SDK.
 
 ## Secrets (environment `release`)
 
