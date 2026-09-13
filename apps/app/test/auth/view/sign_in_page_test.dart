@@ -3,7 +3,8 @@ import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthApiException, AuthException, AuthRetryableFetchException;
 
 import '../../helpers/helpers.dart';
 import '../sign_in_robot.dart';
@@ -103,6 +104,22 @@ void main() {
 
       expect(robot.emailField, findsOneWidget);
       expect(robot.errorText, SignInPage.couldNotSendMessage);
+      // Supabase's own words travel with the exception; the email does not.
+      expect(robot.analytics.exceptions, [
+        captured(
+          isA<AuthApiException>()
+              .having((error) => error.code, 'code', 'validation_failed')
+              .having(
+                (error) => error.message,
+                'message',
+                'Unable to validate email address',
+              ),
+          {'step': 'sign_in_code_request'},
+        ),
+      ]);
+      for (final leaving in robot.analytics.outgoingStrings) {
+        expect(leaving, isNot(contains('nobody@example.invalid')));
+      }
     });
 
     testWidgets('treats a code answer without a session as rejected', (
@@ -154,6 +171,11 @@ void main() {
       await robot.requestCode();
 
       expect(robot.errorText, SignInPage.unreachableMessage);
+      expect(robot.analytics.exceptions, [
+        captured(isA<AuthRetryableFetchException>(), {
+          'step': 'sign_in_code_request',
+        }),
+      ]);
     });
 
     testWidgets('rejects a wrong code and lets the user try again', (
@@ -256,6 +278,7 @@ void main() {
           create: (_) => AuthBloc(
             supabase: supabase.supabase,
             analytics: spy.authAnalytics,
+            errors: spy.errorReporter,
           ),
           child: const MaterialApp(home: SignInPage()),
         ),

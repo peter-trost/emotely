@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/error_reporter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 // gotrue has its own AuthState (the stream event); ours is the bloc state.
@@ -17,6 +18,7 @@ part 'auth_state.dart';
 class AuthBloc({
   required final SupabaseClient _supabase,
   required final AuthAnalytics _analytics,
+  required final ErrorReporter _errors,
 }) extends Bloc<AuthEvent, AuthState> {
   this : super(_initial(_supabase.auth.currentSession)) {
     on<AuthCodeRequested>(_onCodeRequested);
@@ -51,8 +53,9 @@ class AuthBloc({
     try {
       await _supabase.auth.signInWithOtp(email: event.email);
       emit(AuthState.codeSent(email: event.email));
-    } on Exception catch (error) {
+    } on Exception catch (error, stackTrace) {
       unawaited(_analytics.codeRequestFailed());
+      unawaited(_errors.codeRequestFailed(error, stackTrace));
       emit(
         AuthState.signedOut(
           error: _describe(error, fallback: couldNotSendMessage),

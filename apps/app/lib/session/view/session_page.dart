@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/environment.dart';
 import 'package:emotely/journal/journal_models.dart';
@@ -22,6 +23,7 @@ class const SessionPage({final OpenSession? resume, super.key})
     create: (context) => SessionBloc(
       agentClient: context.read<AgentClient>(),
       analytics: context.read<SessionAnalytics>(),
+      errors: context.read<ErrorReporter>(),
       store: context.read<JournalStore>(),
     )..add(SessionEvent.started(resume: resume)),
     child: const SessionView(),

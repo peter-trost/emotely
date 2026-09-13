@@ -1,4 +1,5 @@
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/theme.dart';
@@ -19,6 +20,7 @@ class const EmotelyApp({
   required final SupabaseClient supabase,
   required final AuthAnalytics authAnalytics,
   required final JournalAnalytics journalAnalytics,
+  required final ErrorReporter errorReporter,
   super.key,
 }) extends StatelessWidget {
   @override
@@ -30,9 +32,14 @@ class const EmotelyApp({
       RepositoryProvider.value(value: authAnalytics),
       RepositoryProvider(create: (_) => JournalStore(supabase: supabase)),
       RepositoryProvider.value(value: journalAnalytics),
+      RepositoryProvider.value(value: errorReporter),
     ],
     child: BlocProvider(
-      create: (_) => AuthBloc(supabase: supabase, analytics: authAnalytics),
+      create: (_) => AuthBloc(
+        supabase: supabase,
+        analytics: authAnalytics,
+        errors: errorReporter,
+      ),
       child: MaterialApp(
         title: 'emotely',
         theme: lightTheme,

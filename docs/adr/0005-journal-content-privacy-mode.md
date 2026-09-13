@@ -34,3 +34,16 @@ bug. Its CI test walks a whole session with sentinel strings in the question,
 the typed answer, the summary and the recorded answers, and asserts none of them
 appears in any captured event name or property.
 
+**2026-09-13, error tracking:** handled failures also reach PostHog as
+exceptions (type, stack trace, the step and ids), through one class,
+`ErrorReporter`. PostHog records an exception's `toString()`, and some of
+those quote what they choked on — a Postgres error can name the failing row
+(the transcript), a JSON error the body it could not parse (a question, a
+summary). So the reporter forwards the message only for types known to carry
+the server's own words or a transport error (`AgentException`,
+`AuthApiException`, `AuthRetryableFetchException`, `ClientException`,
+`TimeoutException`) and sends every other exception as its type plus an
+error code with the message withheld. The needle tests cover the reported
+exceptions too: a non-JSON body and Postgres refusals quoting the needle
+never reach an outgoing string.
+

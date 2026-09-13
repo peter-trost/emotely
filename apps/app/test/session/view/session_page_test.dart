@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:emotely/contract/contract.dart';
+import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:emotely/session/widgets/longtext_input.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:material_ui/material_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../helpers/helpers.dart';
 import '../session_robot.dart';
@@ -314,10 +319,13 @@ void main() {
         tester,
       ) async {
         // Needles in every place content can appear: question text, the
-        // typed answer, the agent's summary and the recorded answers.
+        // typed answer, the agent's summary and the recorded answers — and
+        // in every failure that quotes what it choked on: a body that is
+        // not JSON, a Postgres error naming the failing row.
         const needle = 'NEEDLE';
         final agent = AgentStub()
           ..script([
+            raw('<html>$needle</html>', 200),
             awaiting(
               toolCallId: 'c1',
               question: SessionRobot.best.copyWith(
@@ -329,17 +337,40 @@ void main() {
               answers: const {'q-best': Answer.longtext('$needle answer')},
             ),
           ]);
-        final robot = SessionRobot(tester, agent);
+        final supabase = SupabaseStub()
+          ..rest('POST /rest/v1/sessions', [
+            restRefused(message: 'Failing row contains ($needle answer)'),
+          ])
+          ..rest('POST /rest/v1/rpc/complete_session', [
+            restRefused(message: 'Failing row contains (A $needle day.)'),
+          ]);
+        final robot = SessionRobot(tester, agent, supabase: supabase);
         await robot.launch();
         await robot.settle();
+        await robot.tapRetry();
         await robot.answerLongtext('$needle answer');
+        await robot.tapRetry();
 
         expect(robot.summary, findsOneWidget);
-        // journal_viewed, session_started, question_asked, answer_submitted,
-        // session_completed: the whole story, none of it content.
-        expect(robot.analytics.events, hasLength(5));
-        for (final outgoing in robot.analytics.outgoingStrings) {
-          expect(outgoing, isNot(contains(needle)));
+        // journal_viewed, session_started, session_failed, session_retried,
+        // question_asked, session_save_failed, answer_submitted,
+        // entry_save_failed, session_retried, session_completed: the whole
+        // story, none of it content.
+        expect(robot.analytics.events, hasLength(10));
+        expect(robot.analytics.exceptions, [
+          captured(withheld(FormatException), {'step': 'session_round'}),
+          captured(withheld(PostgrestException, code: 'XX000'), {
+            'step': 'session_save',
+          }),
+          captured(withheld(PostgrestException, code: 'XX000'), {
+            'step': 'entry_save',
+            'session_id': SupabaseStub.sessionId,
+          }),
+        ]);
+        final outgoing = robot.analytics.outgoingStrings.toList();
+        expect(outgoing, isNotEmpty);
+        for (final leaving in outgoing) {
+          expect(leaving, isNot(contains(needle)));
         }
       });
 
@@ -371,6 +402,69 @@ void main() {
             'index': 0,
           }),
         ]);
+        // The counting events say how often; the exceptions say why: the
+        // server's refusal with its status, then the transport error.
+        expect(robot.analytics.exceptions, [
+          captured(
+            isA<AgentException>()
+                .having((error) => error.statusCode, 'statusCode', 429)
+                .having((error) => error.message, 'message', 'rate limited'),
+            {'step': 'session_round', 'status_code': 429},
+          ),
+          captured(
+            isA<http.ClientException>().having(
+              (error) => error.message,
+              'message',
+              'Connection refused',
+            ),
+            {'step': 'session_round'},
+          ),
+        ]);
+      });
+
+      testWidgets('reports a hung round as the timeout it hit', (tester) async {
+        final agent = AgentStub()
+          ..script([
+            delayed(
+              awaiting(toolCallId: 'c1', question: SessionRobot.rate),
+              AgentClient.defaultTimeout + const Duration(seconds: 1),
+            ),
+          ]);
+        final robot = SessionRobot(tester, agent);
+        await robot.launch();
+        await robot.settle();
+
+        expect(robot.analytics.exceptions, [
+          captured(isA<TimeoutException>(), {'step': 'session_round'}),
+        ]);
+
+        await tester.pump(const Duration(seconds: 2));
+      });
+
+      testWidgets('still reports a round that fails after the session was '
+          'left', (tester) async {
+        // The bloc is closed while the round is in flight; the failure that
+        // lands afterwards has nowhere to be shown, but it did happen.
+        final agent = AgentStub()..script([delayed(unreachable())]);
+        final robot = SessionRobot(tester, agent);
+        await robot.launch();
+
+        expect(robot.thinking, findsOneWidget);
+
+        await tester.pageBack();
+        await tester.pump();
+
+        expect(find.byType(JournalPage), findsOneWidget);
+        expect(robot.analytics.exceptions, isEmpty);
+
+        // Nothing animates on the journal, so run the clock past the round.
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(robot.analytics.exceptions, [
+          captured(isA<http.ClientException>(), {'step': 'session_round'}),
+        ]);
+        expect(robot.analytics.events.last, event('session_failed'));
+        expect(tester.takeException(), isNull);
       });
     });
 

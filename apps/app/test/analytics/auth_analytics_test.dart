@@ -1,5 +1,6 @@
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../auth/sign_in_robot.dart';
 import '../helpers/helpers.dart';
@@ -34,18 +35,34 @@ void main() {
     testWidgets('never sends the email or the code (ADR 0005)', (tester) async {
       const needleEmail = 'needle.person@example.com';
       const needleCode = '918273';
+      // The first request is refused, so a reported exception is among what
+      // leaves; the second goes through.
       final supabase = SupabaseStub()
-        ..script(otp: [codeSent()], verify: [sessionGranted()]);
+        ..script(
+          otp: [
+            authRefused(
+              statusCode: 400,
+              errorCode: 'validation_failed',
+              message: 'Unable to validate email address',
+            ),
+            codeSent(),
+          ],
+          verify: [sessionGranted()],
+        );
       final agent = AgentStub()..script([unreachable()]);
       final robot = SignInRobot(tester, supabase: supabase, agent: agent);
       await robot.launch();
 
+      await robot.requestCode(needleEmail);
       await robot.requestCode(needleEmail);
       await robot.enterCode(needleCode);
       await robot.tapSignIn();
       await robot.settle();
 
       expect(robot.home, findsOneWidget);
+      expect(robot.analytics.exceptions, [
+        captured(isA<AuthApiException>(), {'step': 'sign_in_code_request'}),
+      ]);
       final outgoing = robot.analytics.outgoingStrings.toList();
       expect(outgoing, isNotEmpty);
       for (final leaving in outgoing) {

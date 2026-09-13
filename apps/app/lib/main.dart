@@ -1,6 +1,7 @@
 // coverage:ignore-file
 // Composition root; behavior lives in EmotelyApp and is tested there.
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/app.dart';
@@ -14,7 +15,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Posthog().setup(PostHogConfig(posthogKey)..host = posthogHost);
+  final posthogConfig = PostHogConfig(posthogKey)..host = posthogHost;
+  // Uncaught errors go to PostHog error tracking (ADR 0004, no Sentry):
+  // framework errors, errors on the platform dispatcher and isolate
+  // errors. Handled failures are reported by ErrorReporter.
+  posthogConfig.errorTrackingConfig
+    ..captureFlutterErrors = true
+    ..capturePlatformDispatcherErrors = true
+    ..captureIsolateErrors = true;
+  await Posthog().setup(posthogConfig);
   // Sign-in is a typed code, never a link, so no deep links and no PKCE
   // exchange; the session itself is persisted and refreshed by the SDK.
   final supabase = await Supabase.initialize(
@@ -40,6 +49,7 @@ Future<void> main() async {
       supabase: supabase.client,
       authAnalytics: AuthAnalytics(posthog: posthog),
       journalAnalytics: JournalAnalytics(posthog: posthog),
+      errorReporter: ErrorReporter(posthog: posthog),
     ),
   );
 }
