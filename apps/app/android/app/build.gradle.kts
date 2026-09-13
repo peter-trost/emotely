@@ -5,7 +5,9 @@ plugins {
 }
 
 android {
-    namespace = "com.trostsystems.emotely"
+    // The app's store identity, shared with the original emotely listings on
+    // both stores (see docs/adr/0012). It must never change.
+    namespace = "de.emotely.emotely"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +17,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.trostsystems.emotely"
+        applicationId = "de.emotely.emotely"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
