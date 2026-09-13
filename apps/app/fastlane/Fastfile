@@ -30,8 +30,13 @@ def dart_defines
   defines
 end
 
+# apps/app. Lanes run from here, but `sh` runs inside fastlane/, so the
+# flutter command gets an explicit `cd`.
+APP_DIR = File.expand_path("..", FastlaneCore::FastlaneFolder.path)
+
 def flutter(*args)
-  sh("flutter", *args)
+  require "shellwords"
+  sh("cd #{Shellwords.escape(APP_DIR)} && flutter #{Shellwords.join(args)}")
 end
 
 platform :ios do
@@ -75,9 +80,9 @@ platform :ios do
       *dart_defines
     )
 
-    ipa = Dir.glob("../build/ios/ipa/*.ipa").first
+    ipa = Dir.glob(File.join(APP_DIR, "build/ios/ipa/*.ipa")).first
     UI.user_error!("no IPA under build/ios/ipa") if ipa.nil?
-    lane_context[:IPA_OUTPUT_PATH] = File.expand_path(ipa)
+    lane_context[:IPA_OUTPUT_PATH] = ipa
   end
 
   desc "Build the release IPA and upload it to TestFlight"
@@ -106,7 +111,7 @@ platform :android do
     upload_to_play_store(
       package_name: "de.emotely.emotely",
       track: "internal",
-      aab: "build/app/outputs/bundle/release/app-release.aab",
+      aab: File.join(APP_DIR, "build/app/outputs/bundle/release/app-release.aab"),
       json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON"),
       skip_upload_metadata: true,
       skip_upload_changelogs: true,
