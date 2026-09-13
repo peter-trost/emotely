@@ -1,0 +1,15 @@
+# Signing material lives encrypted in a private repo (ADR 0013). CI reads it
+# with a deploy key (MATCH_DEPLOY_KEY) and decrypts with MATCH_PASSWORD; both
+# are secrets of the `release` environment. Nothing here is ever edited by
+# hand: `bundle exec fastlane ios certificates` (re)generates it.
+git_url("git@github.com:peter-trost/emotely-certificates.git")
+storage_mode("git")
+git_branch("main")
+
+type("appstore")
+app_identifier(["de.emotely.emotely"])
+team_id("VCZSHMZY25")
+
+# Default to read-only so a CI run can never mint new certificates by accident.
+# The `certificates` lane flips this explicitly.
+readonly(true)

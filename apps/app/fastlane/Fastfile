@@ -1,0 +1,122 @@
+# frozen_string_literal: true
+
+# Release lanes for the Flutter app (ADR 0013). Everything an agent needs to
+# ship a build runs from here; the human steps are the store dashboards.
+#
+#   bundle exec fastlane ios certificates   one-time / rotation: mint the
+#                                           App Store certificate + profile
+#                                           into the match repo (needs the
+#                                           ASC API key + MATCH_PASSWORD)
+#   bundle exec fastlane ios beta           build the IPA, upload to TestFlight
+#   bundle exec fastlane android beta       build the AAB, upload to Play internal
+#
+# Inputs, all environment variables (secrets of the `release` environment):
+#   APP_STORE_CONNECT_API_KEY_ID / _ISSUER_ID / _API_KEY_P8   the ASC API key
+#   MATCH_PASSWORD                                            match encryption
+#   PLAY_SERVICE_ACCOUNT_JSON                                 Play upload account
+#   POSTHOG_KEY                                               analytics token
+#   BUILD_NUMBER                                              monotonic build id
+
+# The rebuild starts at 2.0.0 (ADR 0012): the legacy app got to 1.21.15.
+BUILD_NAME = "2.0.0"
+
+def build_number
+  ENV.fetch("BUILD_NUMBER") { UI.user_error!("BUILD_NUMBER is not set") }
+end
+
+def dart_defines
+  defines = []
+  defines << "--dart-define=POSTHOG_KEY=#{ENV.fetch("POSTHOG_KEY")}" if ENV["POSTHOG_KEY"].to_s != ""
+  defines
+end
+
+# apps/app. Lanes run from here, but `sh` runs inside fastlane/, so the
+# flutter command gets an explicit `cd`.
+APP_DIR = File.expand_path("..", FastlaneCore::FastlaneFolder.path)
+
+def flutter(*args)
+  require "shellwords"
+  sh("cd #{Shellwords.escape(APP_DIR)} && flutter #{Shellwords.join(args)}")
+end
+
+platform :ios do
+  private_lane :asc_api_key do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_API_KEY_P8"),
+      in_house: false
+    )
+  end
+
+  desc "Mint (or rotate) the App Store signing certificate and profile into the match repo"
+  lane :certificates do
+    match(type: "appstore", readonly: false, api_key: asc_api_key)
+  end
+
+  desc "Build the release IPA, signed with what match holds (no upload)"
+  lane :build do
+    api_key = asc_api_key
+    # On CI, a throwaway keychain that match can import into.
+    setup_ci if ENV["CI"]
+    match(type: "appstore", readonly: true, api_key: api_key)
+
+    # Xcode signs manually with what match installed; CODE_SIGN_STYLE in the
+    # project stays Automatic for local development.
+    update_code_signing_settings(
+      path: "ios/Runner.xcodeproj",
+      use_automatic_signing: false,
+      team_id: "VCZSHMZY25",
+      code_sign_identity: "Apple Distribution",
+      bundle_identifier: "de.emotely.emotely",
+      profile_name: ENV.fetch("sigh_de.emotely.emotely_appstore_profile-name"),
+      targets: ["Runner"]
+    )
+
+    flutter(
+      "build", "ipa", "--release",
+      "--build-name=#{BUILD_NAME}", "--build-number=#{build_number}",
+      "--export-options-plist=fastlane/ExportOptions.plist",
+      *dart_defines
+    )
+
+    ipa = Dir.glob(File.join(APP_DIR, "build/ios/ipa/*.ipa")).first
+    UI.user_error!("no IPA under build/ios/ipa") if ipa.nil?
+    lane_context[:IPA_OUTPUT_PATH] = ipa
+  end
+
+  desc "Build the release IPA and upload it to TestFlight"
+  lane :beta do
+    build
+    upload_to_testflight(
+      api_key: asc_api_key,
+      ipa: lane_context[:IPA_OUTPUT_PATH],
+      app_identifier: "de.emotely.emotely",
+      # Processing takes Apple a while; the build shows up in TestFlight on
+      # its own. Tester groups are assigned in App Store Connect for now.
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
+
+platform :android do
+  desc "Build the release App Bundle and upload it to the Play internal track"
+  lane :beta do
+    flutter(
+      "build", "appbundle", "--release",
+      "--build-name=#{BUILD_NAME}", "--build-number=#{build_number}",
+      *dart_defines
+    )
+
+    upload_to_play_store(
+      package_name: "de.emotely.emotely",
+      track: "internal",
+      aab: File.join(APP_DIR, "build/app/outputs/bundle/release/app-release.aab"),
+      json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON"),
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
