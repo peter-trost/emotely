@@ -11,10 +11,6 @@ concurrency:
   group: app-release
   cancel-in-progress: false
 
-env:
-  # Monotonic, and above anything the legacy app shipped (ADR 0012).
-  BUILD_NUMBER: ${{ 1000 + github.run_number }}
-
 jobs:
   ios:
     runs-on: macos-15
@@ -38,6 +34,9 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.MATCH_DEPLOY_KEY }}
       - run: flutter pub get
+      # Monotonic, and above anything the legacy app shipped (ADR 0012).
+      # Expressions cannot do arithmetic, hence the shell.
+      - run: echo "BUILD_NUMBER=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
       - run: bundle exec fastlane ios beta
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -76,6 +75,7 @@ jobs:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
       - run: flutter pub get
+      - run: echo "BUILD_NUMBER=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
       - run: bundle exec fastlane android beta
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
