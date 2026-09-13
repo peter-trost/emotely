@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/error_reporter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -17,6 +18,7 @@ part 'account_state.dart';
 class AccountBloc({
   required final SupabaseClient _supabase,
   required final AuthAnalytics _analytics,
+  required final ErrorReporter _errors,
 }) extends Bloc<AccountEvent, AccountState> {
   this : super(const AccountState.idle()) {
     on<AccountDeletionRequested>(_onDeletionRequested);
@@ -29,7 +31,9 @@ class AccountBloc({
     emit(const AccountState.deleting());
     try {
       await _supabase.rpc<Object?>('delete_account');
-    } on Exception {
+    } on Exception catch (error, stackTrace) {
+      // Still attributed to the user: PostHog only forgets them below.
+      unawaited(_errors.accountDeletionFailed(error, stackTrace));
       emit(const AccountState.failure());
       return;
     }

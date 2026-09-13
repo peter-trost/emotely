@@ -18,5 +18,13 @@
   `test/helpers/app_harness.dart` wires the three together the way `main.dart`
   does.
   What may NOT be mocked: blocs, repositories with logic, widgets.
+- PostHog is the `MockPosthog` behind `AnalyticsSpy`: `capture` lands in
+  `spy.events`, `captureException` in `spy.exceptions`, and
+  `spy.outgoingStrings` is everything that would leave the device (event
+  names, properties, identities, each exception's type, text, cause chain,
+  properties and stack trace) — what the needle tests scan. Assert a report
+  with `captured(error, {'step': ..., ...})`; an exception whose message the
+  reporter withholds is `withheld(PostgrestException, code: 'XX000')` or
+  `withheld(AuthApiException, code: ..., statusCode: ...)`.
 - No tests for pure passthrough layers — a delegation with no logic gets its
   coverage from the layer above.

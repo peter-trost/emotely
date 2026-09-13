@@ -1,6 +1,7 @@
 import 'package:emotely/account/view/account_page.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../helpers/helpers.dart';
 import '../account_robot.dart';
@@ -142,6 +143,14 @@ void main() {
       expect(robot.retry, findsOneWidget);
       expect(robot.supabase.to(logout), isEmpty);
       expect(robot.analytics.events, [event('journal_viewed', journalViewed)]);
+      // Reported while PostHog still knows who this is: the user is only
+      // forgotten once the deletion went through.
+      expect(robot.analytics.exceptions, [
+        captured(withheld(PostgrestException, code: 'XX000'), {
+          'step': 'account_deletion',
+        }),
+      ]);
+      expect(robot.analytics.resets, 0);
 
       await robot.tap(robot.retry);
 
@@ -204,9 +213,14 @@ void main() {
       tester,
     ) async {
       const needle = 'needle: the day the sea turned violet';
+      // The refusal quotes the row it choked on, as Postgres does; the
+      // report of it must not.
       final robot = robotWith(
         tester,
-        deletions: [restRefused(), rpcReturned(null)],
+        deletions: [
+          restRefused(message: 'Failing row contains ($needle)'),
+          rpcReturned(null),
+        ],
       );
       robot.supabase.rest('GET /rest/v1/entries', [
         rows([
@@ -223,6 +237,7 @@ void main() {
       await robot.tap(robot.retry);
 
       expect(robot.signIn, findsOneWidget);
+      expect(robot.analytics.exceptions, hasLength(1));
       final outgoing = robot.analytics.outgoingStrings.toList();
       expect(outgoing, contains('account_deleted'));
       for (final leaving in outgoing) {

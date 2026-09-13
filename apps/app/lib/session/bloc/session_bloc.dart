@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/contract/contract.dart';
 import 'package:emotely/journal/journal_models.dart';
@@ -19,11 +20,12 @@ part 'session_state.dart';
 /// transcript this bloc holds between rounds, and every round is written to
 /// the user's journal so nothing is lost with the app (ADR 0010).
 ///
-/// Analytics calls are fire-and-forget: they describe the session, they
-/// never gate it.
+/// Analytics and error reports are fire-and-forget: they describe the
+/// session, they never gate it.
 class SessionBloc({
   required final AgentClient _agentClient,
   required final SessionAnalytics _analytics,
+  required final ErrorReporter _errors,
   required final JournalStore _store,
 }) extends Bloc<SessionEvent, SessionState> {
   this : super(const SessionState.initial()) {
@@ -129,11 +131,15 @@ class SessionBloc({
         case Completed(:final entry):
           await _file(entry, emit);
       }
-    } on AgentException catch (error) {
+    } on AgentException catch (error, stackTrace) {
       unawaited(_analytics.sessionFailed(statusCode: error.statusCode));
+      unawaited(
+        _errors.sessionFailed(error, stackTrace, statusCode: error.statusCode),
+      );
       emit(SessionState.failure(message: error.message));
-    } on Exception {
+    } on Exception catch (error, stackTrace) {
       unawaited(_analytics.sessionFailed());
+      unawaited(_errors.sessionFailed(error, stackTrace));
       emit(
         const SessionState.failure(
           message: 'Could not reach the journaling assistant.',
@@ -183,8 +189,11 @@ class SessionBloc({
         questions: _asked.values,
         appVersion: _agentClient.appVersion,
       );
-    } on Exception {
+    } on Exception catch (error, stackTrace) {
       unawaited(_analytics.sessionSaveFailed());
+      unawaited(
+        _errors.sessionSaveFailed(error, stackTrace, sessionId: _sessionId),
+      );
     }
   }
 
@@ -208,8 +217,11 @@ class SessionBloc({
         entry: entry,
         questions: _asked.values,
       );
-    } on Exception {
+    } on Exception catch (error, stackTrace) {
       unawaited(_analytics.entrySaveFailed());
+      unawaited(
+        _errors.entrySaveFailed(error, stackTrace, sessionId: _sessionId),
+      );
       emit(const SessionState.failure(message: entrySaveFailedMessage));
       return;
     }

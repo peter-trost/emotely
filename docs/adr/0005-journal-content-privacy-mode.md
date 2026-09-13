@@ -34,3 +34,32 @@ bug. Its CI test walks a whole session with sentinel strings in the question,
 the typed answer, the summary and the recorded answers, and asserts none of them
 appears in any captured event name or property.
 
+**2026-09-13, error tracking:** exceptions reach PostHog on two paths, and
+the rule holds on both. PostHog records an exception's `toString()`, and
+many of those quote what they choked on — a Postgres error names the
+failing row (the transcript), a JSON error the body it could not parse (a
+question, a summary), GoTrue the address it validated (`Unable to validate
+email address: …`) and, for a 5xx, gotrue keeps the whole response body.
+
+1. *Handled failures* go through one class, `ErrorReporter` (type, stack
+   trace, the step and ids). It forwards the message only for
+   `AgentException` (the agent's own error text) and the two transport
+   errors that only name a host (`ClientException`, `TimeoutException`);
+   every other exception — every `AuthException` and `PostgrestException`
+   among them — goes out as its type plus the error code and status with
+   the message withheld.
+2. *Uncaught errors* are captured by the SDK itself (`FlutterError`,
+   platform dispatcher, isolates; release builds only). A `beforeSend`
+   hook, `contentFreeExceptions`, applies the same rule on the wire to
+   every `$exception` event: each exception item keeps its type and stack
+   frames but loses its text unless the type is one of the three above,
+   and the Flutter error details keep only the library and the silent
+   flag (`context`, `information` and `error_summary` can quote a widget's
+   content). Exception steps (free-text breadcrumbs in a native buffer)
+   stay off.
+
+The needle tests cover the reported exceptions: a non-JSON body, Postgres
+refusals and GoTrue refusals (4xx and 5xx) quoting the needle never reach
+an outgoing string, and the scrubber is unit-tested with a needle in every
+free-text field the SDK emits.
+

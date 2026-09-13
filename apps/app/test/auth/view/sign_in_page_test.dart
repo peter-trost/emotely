@@ -3,7 +3,8 @@ import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthApiException, AuthException, AuthRetryableFetchException;
 
 import '../../helpers/helpers.dart';
 import '../sign_in_robot.dart';
@@ -103,6 +104,21 @@ void main() {
 
       expect(robot.emailField, findsOneWidget);
       expect(robot.errorText, SignInPage.couldNotSendMessage);
+      // GoTrue's error code and status travel; its message, which quotes
+      // the address it validated, does not.
+      expect(robot.analytics.exceptions, [
+        captured(
+          withheld(
+            AuthApiException,
+            code: 'validation_failed',
+            statusCode: '400',
+          ),
+          {'step': 'sign_in_code_request'},
+        ),
+      ]);
+      for (final leaving in robot.analytics.outgoingStrings) {
+        expect(leaving, isNot(contains('nobody@example.invalid')));
+      }
     });
 
     testWidgets('treats a code answer without a session as rejected', (
@@ -154,6 +170,12 @@ void main() {
       await robot.requestCode();
 
       expect(robot.errorText, SignInPage.unreachableMessage);
+      // No status: the request never got an answer.
+      expect(robot.analytics.exceptions, [
+        captured(withheld(AuthRetryableFetchException), {
+          'step': 'sign_in_code_request',
+        }),
+      ]);
     });
 
     testWidgets('rejects a wrong code and lets the user try again', (
@@ -180,6 +202,13 @@ void main() {
       await robot.tapSignIn();
       await robot.settle();
 
+      // A refused code is a handled failure like a refused request.
+      expect(robot.analytics.exceptions, [
+        captured(
+          withheld(AuthApiException, code: 'otp_expired', statusCode: '403'),
+          {'step': 'sign_in_code_verify'},
+        ),
+      ]);
       expect(robot.codeField, findsOneWidget);
       expect(robot.errorText, SignInPage.wrongCodeMessage);
 
@@ -256,6 +285,7 @@ void main() {
           create: (_) => AuthBloc(
             supabase: supabase.supabase,
             analytics: spy.authAnalytics,
+            errors: spy.errorReporter,
           ),
           child: const MaterialApp(home: SignInPage()),
         ),

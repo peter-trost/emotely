@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:emotely/account/bloc/account_bloc.dart';
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -14,6 +15,7 @@ class const AccountPage({super.key}) extends StatelessWidget {
     create: (context) => AccountBloc(
       supabase: context.read<SupabaseClient>(),
       analytics: context.read<AuthAnalytics>(),
+      errors: context.read<ErrorReporter>(),
     ),
     child: const AccountView(),
   );
