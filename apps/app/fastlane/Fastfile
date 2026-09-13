@@ -49,8 +49,8 @@ platform :ios do
     match(type: "appstore", readonly: false, api_key: asc_api_key)
   end
 
-  desc "Build the release IPA and upload it to TestFlight"
-  lane :beta do
+  desc "Build the release IPA, signed with what match holds (no upload)"
+  lane :build do
     api_key = asc_api_key
     # On CI, a throwaway keychain that match can import into.
     setup_ci if ENV["CI"]
@@ -75,12 +75,17 @@ platform :ios do
       *dart_defines
     )
 
-    ipa = Dir.glob("build/ios/ipa/*.ipa").first
+    ipa = Dir.glob("../build/ios/ipa/*.ipa").first
     UI.user_error!("no IPA under build/ios/ipa") if ipa.nil?
+    lane_context[:IPA_OUTPUT_PATH] = File.expand_path(ipa)
+  end
 
+  desc "Build the release IPA and upload it to TestFlight"
+  lane :beta do
+    build
     upload_to_testflight(
-      api_key: api_key,
-      ipa: ipa,
+      api_key: asc_api_key,
+      ipa: lane_context[:IPA_OUTPUT_PATH],
       app_identifier: "de.emotely.emotely",
       # Processing takes Apple a while; the build shows up in TestFlight on
       # its own. Tester groups are assigned in App Store Connect for now.
