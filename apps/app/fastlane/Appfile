@@ -1,0 +1,6 @@
+# The store identity on both platforms (ADR 0012). Never changes.
+app_identifier("de.emotely.emotely")
+package_name("de.emotely.emotely")
+
+# The Apple Developer team that holds the app: peter@petertrost.com.
+team_id("VCZSHMZY25")
