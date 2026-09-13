@@ -139,7 +139,7 @@ created on the hosted project through the Auth admin API on 2026-09-13.
 password above, and these instructions (the field allows 500 characters):
 
 > Open the app, enter the user name above as the email address and tap
-> Continue. This is a designated reviewer account, so the app asks for a
+> Send code. This is a designated reviewer account, so the app asks for a
 > password instead of emailing a one-time code; enter the password above.
 > Regular users sign in with a one-time code sent by email. Account
 > deletion: Your journal -> account icon (top right) -> Delete account ->
@@ -151,7 +151,7 @@ required.** User name `app-store-review@getemotely.com`, the password above,
 Notes:
 
 > Demo account for review. Open the app, enter the user name above as the
-> email address and tap Continue. Because this address is a designated
+> email address and tap Send code. Because this address is a designated
 > reviewer account, the app asks for a password instead of sending a
 > one-time code; enter the password above. Regular users sign in with a
 > one-time code sent by email. Account deletion: Your journal -> account
