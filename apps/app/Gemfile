@@ -4,3 +4,6 @@ source "https://rubygems.org"
 # (pilot) and the Play upload (supply). Driven by fastlane/Fastfile, run in
 # .github/workflows/app-release.yml and locally for the one-time signing setup.
 gem "fastlane", "2.239.0"
+# `flutter build ipa` runs `pod install`; under `bundle exec` only gems from
+# this file are visible, so CocoaPods has to be one of them.
+gem "cocoapods", "1.17.0"
