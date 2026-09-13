@@ -224,6 +224,54 @@ describe("advance-session handler", () => {
     assert.equal(res.status, 413);
   });
 
+  describe("during a signing-secret rotation", () => {
+    const PREVIOUS = "retired-secret";
+
+    function rotating(previousSecret: string = PREVIOUS) {
+      return createAdvanceSessionHandler({
+        secret: SECRET,
+        previousSecret,
+        minAppVersion: "1.0.0",
+        verifyCaller: signedIn,
+        advance: async () => awaiting,
+      });
+    }
+
+    /** A round whose transcript was signed by a server holding `secret`. */
+    function round(
+      secret: string,
+      transcript: unknown[] = awaiting.messages,
+    ): Request {
+      return post({
+        transcript,
+        signature: signTranscript(transcript, secret),
+        answer: { tool_call_id: "c1", value: 7 },
+      });
+    }
+
+    it("advances a transcript signed with the previous secret and re-signs it with the current one", async () => {
+      const res = await rotating()(round(PREVIOUS));
+      assert.equal(res.status, 200);
+      const body = await bodyOf(res);
+      assert.equal(body.signature, signTranscript(body.transcript, SECRET));
+      // Migrated: the next round verifies with the current secret alone.
+      const after = await handler()(round(SECRET, body.transcript));
+      assert.equal(after.status, 200);
+    });
+
+    it("still rejects a transcript signed with neither secret", async () => {
+      assert.equal((await rotating()(round("third-secret"))).status, 401);
+    });
+
+    it("rejects the retired secret once the previous secret is unset again", async () => {
+      assert.equal((await handler()(round(PREVIOUS))).status, 401);
+    });
+
+    it("does not accept the empty key when the previous secret is left blank", async () => {
+      assert.equal((await rotating("")(round(""))).status, 401);
+    });
+  });
+
   it("answers in the shape packages/contract publishes for both outcomes", async () => {
     const finished: AdvanceResult = {
       ...awaiting,

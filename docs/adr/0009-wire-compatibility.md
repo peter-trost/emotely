@@ -30,10 +30,11 @@ here on.
 5. **Signing-secret rotation keeps in-flight sessions alive.** When
    `SESSION_SIGNING_SECRET` is rotated the server must accept the previous
    secret for a grace window as long as the transcript cap makes a session
-   plausible. *Not implemented yet*
-   ([#50](https://github.com/peter-trost/emotely/issues/50)): rotation has
-   not happened, and the verifier accepts one secret. Implement it before the
-   first rotation, never during.
+   plausible. Implemented in
+   [#50](https://github.com/peter-trost/emotely/issues/50): the verifier
+   accepts `SESSION_SIGNING_SECRET_PREVIOUS` alongside the current secret
+   while it is set, signing always uses the current one, and the runbook is
+   in [`apps/agent/README.md`](../../apps/agent/README.md).
 
 ## How the rules are enforced, not just written down
 

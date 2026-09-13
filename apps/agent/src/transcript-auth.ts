@@ -13,8 +13,8 @@ export function signTranscript(transcript: unknown, secret: string): string {
     .digest("base64url");
 }
 
-/** Constant-time verification; malformed signatures are false, never throws. */
-export function verifyTranscript(
+/** Constant-time comparison against one secret; malformed signatures are false. */
+function matchesSecret(
   transcript: unknown,
   signature: string,
   secret: string,
@@ -24,4 +24,32 @@ export function verifyTranscript(
   return (
     expected.length === provided.length && timingSafeEqual(expected, provided)
   );
+}
+
+/**
+ * Constant-time verification against the current secret and, during a
+ * rotation, the previous one (ADR 0009 rule 5). Signing always uses the
+ * current secret, so a transcript accepted under the previous one migrates
+ * on its next round. Never throws.
+ *
+ * Both comparisons always run, and only then are the results combined: an
+ * `||` between the two calls would stop after a current-secret match, so the
+ * response time would reveal which secret a signature was made with (one
+ * HMAC + compare versus two). With both evaluated unconditionally the work
+ * is the same for every input that reaches this function. An empty
+ * previous secret counts as unset, so an env var left as "" cannot open the
+ * endpoint to signatures under the empty key.
+ */
+export function verifyTranscript(
+  transcript: unknown,
+  signature: string,
+  secret: string,
+  previousSecret?: string,
+): boolean {
+  const current = matchesSecret(transcript, signature, secret);
+  const previous =
+    previousSecret === undefined || previousSecret === ""
+      ? false
+      : matchesSecret(transcript, signature, previousSecret);
+  return current || previous;
 }
