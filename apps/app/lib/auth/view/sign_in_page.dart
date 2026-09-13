@@ -17,6 +17,7 @@ class const SignInPage({super.key}) extends StatelessWidget {
   static const errorKey = Key('sign_in_page.error');
 
   static const tooManyCodesMessage = AuthBloc.tooManyCodesMessage;
+  static const tooManyAttemptsMessage = AuthBloc.tooManyAttemptsMessage;
   static const couldNotSendMessage = AuthBloc.couldNotSendMessage;
   static const wrongCodeMessage = AuthBloc.wrongCodeMessage;
   static const wrongPasswordMessage = AuthBloc.wrongPasswordMessage;

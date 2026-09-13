@@ -40,8 +40,11 @@ authenticated request from here on.
    (`apps/app/lib/auth/review_accounts.dart`) sign in with a password, because
    App Review, Google Play's reviewers and the pre-launch crawler have no
    mailbox to read a code from, and the crawler's retries were burning the
-   email quota. They are created server-side by the release skill's script;
-   the app still has no sign-up path.
+   email quota. They are created server-side by the release skill's script,
+   an operator-run, out-of-band service-role path: the key is fetched blind
+   through the maintainer's Supabase CLI login for the length of one run and
+   never enters the app, CI or Vercel — decision 2 stands. The app still has
+   no sign-up path.
 5. **Schema and auth configuration are code, gated and deployed like
    everything else.** `supabase/migrations/` and `supabase/config.toml` (with
    the sign-in email template) are the source of truth. CI applies the

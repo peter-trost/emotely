@@ -1,7 +1,8 @@
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+// gotrue has its own AuthState (the stream event); ours is the bloc state.
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../auth/sign_in_robot.dart';
 import '../helpers/helpers.dart';
@@ -171,8 +172,8 @@ void main() {
         // identity; only the user id travels.
         expect(leaving, isNot(contains(address)));
       }
-      // Nor does the event, should a bloc observer or an error log ever
-      // print one.
+      // Nor do the events and states, should a bloc observer or an error
+      // log ever print a transition.
       expect(
         '${const AuthEvent.passwordSubmitted(needlePassword)}',
         isNot(contains('needle')),
@@ -181,6 +182,15 @@ void main() {
         '${const AuthEvent.emailSubmitted(address)}',
         isNot(contains('@')),
       );
+      for (final state in [
+        const AuthState.passwordRequired(email: address, error: 'needle'),
+        const AuthState.checkingPassword(email: address),
+        const AuthState.codeSent(email: address, error: 'needle'),
+        const AuthState.signedIn(userId: 'needle'),
+      ]) {
+        expect('$state', isNot(contains('@')));
+        expect('$state', isNot(contains('needle')));
+      }
     });
   });
 }

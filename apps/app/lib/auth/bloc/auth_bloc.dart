@@ -184,18 +184,25 @@ class AuthBloc({
   }
 
   /// User-facing copy for the failures a sign-in can hit; the raw message
-  /// never reaches the screen. Anything Supabase refused that is not the
-  /// rate limit is the step's own [fallback].
-  static String _describe(Exception error, {required String fallback}) =>
-      switch (error) {
-        AuthApiException(code: 'over_email_send_rate_limit') =>
-          tooManyCodesMessage,
-        AuthRetryableFetchException() => unreachableMessage,
-        _ => fallback,
-      };
+  /// never reaches the screen. Anything Supabase refused that is not a rate
+  /// limit is the step's own [fallback]. The two limits are GoTrue's, per
+  /// IP: the email one for sending codes, the request one on every sign-in
+  /// bucket (`sign_in_sign_ups`, `token_verifications`) — where a
+  /// credential may well be right, so it must not be called wrong.
+  static String _describe(
+    Exception error, {
+    required String fallback,
+  }) => switch (error) {
+    AuthApiException(code: 'over_email_send_rate_limit') => tooManyCodesMessage,
+    AuthApiException(code: 'over_request_rate_limit') => tooManyAttemptsMessage,
+    AuthRetryableFetchException() => unreachableMessage,
+    _ => fallback,
+  };
 
   static const tooManyCodesMessage =
       'Too many codes were requested. Please try again later.';
+  static const tooManyAttemptsMessage =
+      'Too many attempts. Wait a few minutes and try again.';
   static const couldNotSendMessage =
       'Could not send a code to that email. Check the address and try again.';
   static const wrongCodeMessage =

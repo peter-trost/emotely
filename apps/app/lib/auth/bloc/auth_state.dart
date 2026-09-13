@@ -1,7 +1,11 @@
 part of 'auth_bloc.dart';
 
 /// Where sign-in stands; the screen renders exactly one step per state.
-@freezed
+///
+/// No generated `toString`: the variants carry the email and the user id,
+/// and a `BlocObserver` or an error log printing a transition must never
+/// print those (ADR 0005). `Instance of 'AuthCodeSent'` is all it shows.
+@Freezed(toStringOverride: false)
 sealed class AuthState with _$AuthState {
   /// Nobody is signed in; the email step, with the last [error] if any.
   const factory signedOut({String? error}) = AuthSignedOut;

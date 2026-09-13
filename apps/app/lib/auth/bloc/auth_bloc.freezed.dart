@@ -520,10 +520,6 @@ bool operator ==(Object other) {
 @override
 int get hashCode => runtimeType.hashCode;
 
-@override
-String toString() {
-    return 'AuthState()';
-}
 
 
 }
@@ -722,10 +718,6 @@ int get hashCode {
     return Object.hash(runtimeType,error);
 }
 
-@override
-String toString() {
-    return 'AuthState.signedOut(error: $error)';
-}
 
 
 }
@@ -790,10 +782,6 @@ int get hashCode {
     return Object.hash(runtimeType,email);
 }
 
-@override
-String toString() {
-    return 'AuthState.requestingCode(email: $email)';
-}
 
 
 }
@@ -859,10 +847,6 @@ int get hashCode {
     return Object.hash(runtimeType,email,error);
 }
 
-@override
-String toString() {
-    return 'AuthState.codeSent(email: $email, error: $error)';
-}
 
 
 }
@@ -928,10 +912,6 @@ int get hashCode {
     return Object.hash(runtimeType,email);
 }
 
-@override
-String toString() {
-    return 'AuthState.verifying(email: $email)';
-}
 
 
 }
@@ -997,10 +977,6 @@ int get hashCode {
     return Object.hash(runtimeType,email,error);
 }
 
-@override
-String toString() {
-    return 'AuthState.passwordRequired(email: $email, error: $error)';
-}
 
 
 }
@@ -1066,10 +1042,6 @@ int get hashCode {
     return Object.hash(runtimeType,email);
 }
 
-@override
-String toString() {
-    return 'AuthState.checkingPassword(email: $email)';
-}
 
 
 }
@@ -1134,10 +1106,6 @@ int get hashCode {
     return Object.hash(runtimeType,userId);
 }
 
-@override
-String toString() {
-    return 'AuthState.signedIn(userId: $userId)';
-}
 
 
 }

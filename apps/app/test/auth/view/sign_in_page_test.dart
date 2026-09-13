@@ -219,6 +219,34 @@ void main() {
       expect(robot.home, findsOneWidget);
     });
 
+    testWidgets('tells the user to wait when code checks are rate limited', (
+      tester,
+    ) async {
+      // The `token_verifications` bucket, per IP: the code may well be
+      // right, so the message must not call it wrong.
+      final supabase = SupabaseStub()
+        ..script(
+          otp: [codeSent()],
+          verify: [
+            authRefused(
+              statusCode: 429,
+              errorCode: 'over_request_rate_limit',
+              message: 'Request rate limit reached',
+            ),
+          ],
+        );
+      final robot = SignInRobot(tester, supabase: supabase, agent: AgentStub());
+      await robot.launch();
+      await robot.requestCode();
+
+      await robot.enterCode(code);
+      await robot.tapSignIn();
+      await robot.settle();
+
+      expect(robot.codeField, findsOneWidget);
+      expect(robot.errorText, SignInPage.tooManyAttemptsMessage);
+    });
+
     testWidgets('lets the user go back and change the email', (tester) async {
       final supabase = SupabaseStub()..script(otp: [codeSent(), codeSent()]);
       final robot = SignInRobot(tester, supabase: supabase, agent: AgentStub());
@@ -406,6 +434,47 @@ void main() {
 
         expect(robot.home, findsOneWidget);
         expect(supabase.to(tokenGrant), hasLength(2));
+      });
+
+      testWidgets('is told to wait when the sign-in bucket is exhausted', (
+        tester,
+      ) async {
+        // Many crawler instances behind one egress hit the per-IP limit
+        // (`sign_in_sign_ups`); that is not a wrong password.
+        final supabase = SupabaseStub()
+          ..script(
+            password: [
+              authRefused(
+                statusCode: 429,
+                errorCode: 'over_request_rate_limit',
+                message: 'Request rate limit reached',
+              ),
+            ],
+          );
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+        await robot.launch();
+        await robot.submitEmail(address);
+
+        await robot.enterPassword(password);
+        await robot.tapPasswordSignIn();
+        await robot.settle();
+
+        expect(robot.passwordField, findsOneWidget);
+        expect(robot.errorText, SignInPage.tooManyAttemptsMessage);
+        expect(robot.analytics.exceptions, [
+          captured(
+            withheld(
+              AuthApiException,
+              code: 'over_request_rate_limit',
+              statusCode: '429',
+            ),
+            {'step': 'sign_in_password'},
+          ),
+        ]);
       });
 
       testWidgets('submits the password from the keyboard', (tester) async {
