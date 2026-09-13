@@ -35,19 +35,33 @@ void main() {
     testWidgets('never sends the email or the code (ADR 0005)', (tester) async {
       const needleEmail = 'needle.person@example.com';
       const needleCode = '918273';
-      // The first request is refused, so a reported exception is among what
-      // leaves; the second goes through.
+      // GoTrue quotes the address in a 4xx message and, for a 5xx, gotrue
+      // keeps the whole body; a wrong code comes back in the refusal too.
+      // Every reported exception is among what leaves; the last try of
+      // each step goes through.
       final supabase = SupabaseStub()
         ..script(
           otp: [
             authRefused(
               statusCode: 400,
               errorCode: 'validation_failed',
-              message: 'Unable to validate email address',
+              message: 'Unable to validate email address: $needleEmail',
+            ),
+            authRefused(
+              statusCode: 500,
+              errorCode: 'unexpected_failure',
+              message: 'Error sending magic link email to $needleEmail',
             ),
             codeSent(),
           ],
-          verify: [sessionGranted()],
+          verify: [
+            authRefused(
+              statusCode: 403,
+              errorCode: 'otp_expired',
+              message: 'Token $needleCode has expired or is invalid',
+            ),
+            sessionGranted(),
+          ],
         );
       final agent = AgentStub()..script([unreachable()]);
       final robot = SignInRobot(tester, supabase: supabase, agent: agent);
@@ -55,13 +69,30 @@ void main() {
 
       await robot.requestCode(needleEmail);
       await robot.requestCode(needleEmail);
+      await robot.requestCode(needleEmail);
       await robot.enterCode(needleCode);
+      await robot.tapSignIn();
+      await robot.settle();
       await robot.tapSignIn();
       await robot.settle();
 
       expect(robot.home, findsOneWidget);
       expect(robot.analytics.exceptions, [
-        captured(isA<AuthApiException>(), {'step': 'sign_in_code_request'}),
+        captured(
+          withheld(
+            AuthApiException,
+            code: 'validation_failed',
+            statusCode: '400',
+          ),
+          {'step': 'sign_in_code_request'},
+        ),
+        captured(withheld(AuthRetryableFetchException, statusCode: '500'), {
+          'step': 'sign_in_code_request',
+        }),
+        captured(
+          withheld(AuthApiException, code: 'otp_expired', statusCode: '403'),
+          {'step': 'sign_in_code_verify'},
+        ),
       ]);
       final outgoing = robot.analytics.outgoingStrings.toList();
       expect(outgoing, isNotEmpty);

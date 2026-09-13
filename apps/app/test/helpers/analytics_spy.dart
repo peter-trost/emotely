@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/journal_analytics.dart';
@@ -95,8 +97,8 @@ class AnalyticsSpy() {
   ErrorReporter get errorReporter => ErrorReporter(posthog: posthog);
 
   /// Every string that would leave the device: event names, properties,
-  /// identities, and each reported exception's type, text, properties and
-  /// stack trace.
+  /// identities, and each reported exception's type, text, causes,
+  /// properties and stack trace.
   Iterable<String> get outgoingStrings sync* {
     yield* identified;
     for (final event in events) {
@@ -104,8 +106,7 @@ class AnalyticsSpy() {
       yield* _strings(event['properties']! as Map<String, Object>);
     }
     for (final exception in exceptions) {
-      yield '${exception.error.runtimeType}';
-      yield '${exception.error}';
+      yield* _errorStrings(exception.error, Set.identity());
       yield '${exception.stackTrace}';
       yield* _strings(exception.properties);
     }
@@ -115,6 +116,44 @@ class AnalyticsSpy() {
     for (final MapEntry(:key, :value) in properties.entries) {
       yield key;
       yield '$value';
+    }
+  }
+
+  /// The SDK appends an error's causes as further exception items: an
+  /// [AsyncError]'s error, every failure of a [ParallelWaitError], and a
+  /// duck-typed `cause` getter. Mirror that walk, cycle-guarded.
+  static Iterable<String> _errorStrings(Object error, Set<Object> seen) sync* {
+    if (!seen.add(error)) {
+      return;
+    }
+    yield '${error.runtimeType}';
+    yield '$error';
+    for (final cause in _causes(error)) {
+      yield* _errorStrings(cause, seen);
+    }
+  }
+
+  static Iterable<Object> _causes(Object error) sync* {
+    switch (error) {
+      case AsyncError(:final error):
+        yield error;
+      case ParallelWaitError<Object?, Object?>(:final errors):
+        if (errors case final Iterable<Object?> errors) {
+          yield* errors.nonNulls;
+        }
+      default:
+        final Object? cause;
+        try {
+          cause = (error as dynamic).cause as Object?;
+          // The SDK probes the getter exactly like this; an error without
+          // one is the normal case, not a bug to surface.
+          // ignore: avoid_catching_errors
+        } on NoSuchMethodError {
+          return;
+        }
+        if (cause != null) {
+          yield cause;
+        }
     }
   }
 }
@@ -132,5 +171,5 @@ Matcher captured(Object error, Map<String, Object> properties) =>
         .having((captured) => captured.stackTrace, 'stackTrace', isNotNull);
 
 /// What a [type] of exception looks like once its message is withheld.
-WithheldException withheld(Type type, {String? code}) =>
-    WithheldException(type, code: code);
+WithheldException withheld(Type type, {String? code, String? statusCode}) =>
+    WithheldException(type, code: code, statusCode: statusCode);

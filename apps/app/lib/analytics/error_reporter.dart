@@ -13,8 +13,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///
 /// Content-free by construction like the analytics (ADR 0005): the
 /// properties are ids, status codes and the step, and an exception's message
-/// only travels when its type is known to carry server or transport text —
-/// see [contentFree]. The version is stamped by the SDK (`$app_version`).
+/// only travels when its type is known to carry the agent's own words or a
+/// transport error — see [contentFree]. Uncaught errors take the SDK's own
+/// path, where `contentFreeExceptions` (error_tracking.dart) applies the
+/// same rule on the wire. The version is stamped by the SDK
+/// (`$app_version`).
 class const ErrorReporter({required final Posthog posthog}) {
   /// A session round failed against the agent; [statusCode] is absent when
   /// the server was unreachable.
@@ -58,6 +61,10 @@ class const ErrorReporter({required final Posthog posthog}) {
   Future<void> codeRequestFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'sign_in_code_request');
 
+  /// Supabase refused the code the user typed.
+  Future<void> codeVerifyFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'sign_in_code_verify');
+
   /// The `delete_account` call failed.
   Future<void> accountDeletionFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'account_deletion');
@@ -74,36 +81,55 @@ class const ErrorReporter({required final Posthog posthog}) {
   );
 
   /// [error] as it may leave the device. PostHog records an exception's
-  /// `toString()`, so only types whose text is known to be the server's own
-  /// words or a transport error naming a host go out as they are; anything
-  /// else may quote what it choked on — a Postgres error the failing row, a
-  /// JSON error the body — and goes out as a [WithheldException] instead.
+  /// `toString()`, so only types whose text is the agent's own error
+  /// message or a transport error naming a host go out as they are (the
+  /// same set `forwardedTypes` lets through on the wire). Everything else
+  /// may quote what it choked on — a Postgres error the failing row, a JSON
+  /// error the body, GoTrue the address it validated or, for a 5xx, the
+  /// whole response body — and goes out as a [WithheldException] instead.
   static Exception contentFree(Exception error) => switch (error) {
-    AgentException() ||
-    AuthApiException() ||
-    AuthRetryableFetchException() ||
-    http.ClientException() ||
-    TimeoutException() => error,
-    PostgrestException(:final code) || AuthException(:final code) =>
-      WithheldException(error.runtimeType, code: code),
+    AgentException() || http.ClientException() || TimeoutException() => error,
+    PostgrestException(:final code) => WithheldException(
+      error.runtimeType,
+      code: code,
+    ),
+    AuthException(:final code, :final statusCode) => WithheldException(
+      error.runtimeType,
+      code: code,
+      statusCode: statusCode,
+    ),
     _ => WithheldException(error.runtimeType),
   };
 }
 
-/// An exception reported without its message: [type] says what failed and
-/// [code] (a SQLSTATE, an auth error code) which way; the text stays on the
-/// device because it may quote the journal (ADR 0005).
+/// An exception reported without its message: [type] says what failed,
+/// [code] (a SQLSTATE, a GoTrue error code) and [statusCode] which way; the
+/// text stays on the device because it may quote the journal or the user
+/// (ADR 0005).
+///
+/// What a debugger gives up: for a `PostgrestException` the `message`,
+/// `details` and `hint` — i.e. which constraint or policy objected, only
+/// the SQLSTATE class survives; for an `AuthException` GoTrue's sentence.
+/// The way back is to reproduce locally with the ids the report carries,
+/// or to add a field to the allowlist in [ErrorReporter.contentFree] once
+/// it is proven content-free for every value it can take.
 @immutable
-class const WithheldException(final Type type, {final String? code})
-    implements Exception {
+class const WithheldException(
+  final Type type, {
+  final String? code,
+  final String? statusCode,
+}) implements Exception {
   @override
   String toString() =>
-      '$type${code == null ? '' : ' $code'} (message withheld, ADR 0005)';
+      '${[type, ?statusCode, ?code].join(' ')} (message withheld, ADR 0005)';
 
   @override
   bool operator ==(Object other) =>
-      other is WithheldException && other.type == type && other.code == code;
+      other is WithheldException &&
+      other.type == type &&
+      other.code == code &&
+      other.statusCode == statusCode;
 
   @override
-  int get hashCode => Object.hash(type, code);
+  int get hashCode => Object.hash(type, code, statusCode);
 }

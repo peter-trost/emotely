@@ -83,6 +83,23 @@ curl -s -H "Authorization: Bearer $PHX" "https://eu.posthog.com/api/projects/262
 Properties must be ids, types, counts and status codes only — never content
 (ADR 0005).
 
+The same endpoint answers for error tracking. Provoke a handled failure on
+the device (the cheapest: request a sign-in code for an address Supabase
+refuses, e.g. a second request within 60 s), then list the `$exception`
+events since the run started; the SDK stamps `$app_version`/`$app_build`
+and `ErrorReporter` adds `step`:
+
+```bash
+AFTER=$(date -u +%Y-%m-%dT%H:%M:%SZ)   # take this BEFORE provoking the failure
+curl -s -H "Authorization: Bearer $PHX" "https://eu.posthog.com/api/projects/262464/events/?event=%24exception&limit=5&after=$AFTER" | jq '.results[] | {timestamp, exceptions: [.properties["$exception_list"][] | {type, value, handled: .mechanism.handled}], step: .properties.step, status_code: .properties.status_code, app_version: .properties["$app_version"], app_build: .properties["$app_build"]}'
+```
+
+`value` must be the type plus a code (`… (message withheld, ADR 0005)`) for
+everything but `AgentException`, `ClientException` and `TimeoutException`.
+Uncaught-error autocapture is off in debug builds, so a simulator run only
+shows handled failures. The SDK flushes on a timer or when the app goes to
+the background: press HOME and give it ~45 s before querying.
+
 ## Unit gate (what CI runs)
 
 ```bash

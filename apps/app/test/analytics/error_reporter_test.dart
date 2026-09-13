@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:emotely/analytics/error_reporter.dart';
+import 'package:emotely/analytics/error_tracking.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -18,7 +19,16 @@ void main() {
       const refused = AgentException(429, 'rate limited');
       final unreachable = http.ClientException('Connection refused');
       const saveRefused = PostgrestException(message: 'refused', code: '42501');
-      const noCode = AuthApiException('email rate limit exceeded');
+      const noCode = AuthApiException(
+        'email rate limit exceeded',
+        statusCode: '429',
+        code: 'over_email_send_rate_limit',
+      );
+      const wrongCode = AuthApiException(
+        'Token has expired or is invalid',
+        statusCode: '403',
+        code: 'otp_expired',
+      );
 
       await reporter.sessionFailed(refused, trace, statusCode: 429);
       await reporter.sessionFailed(unreachable, trace);
@@ -26,6 +36,7 @@ void main() {
       await reporter.sessionSaveFailed(saveRefused, trace);
       await reporter.entrySaveFailed(saveRefused, trace, sessionId: 's-1');
       await reporter.codeRequestFailed(noCode, trace);
+      await reporter.codeVerifyFailed(wrongCode, trace);
       await reporter.accountDeletionFailed(saveRefused, trace);
 
       expect(spy.exceptions, [
@@ -42,7 +53,18 @@ void main() {
           'step': 'entry_save',
           'session_id': 's-1',
         }),
-        captured(noCode, {'step': 'sign_in_code_request'}),
+        captured(
+          withheld(
+            AuthApiException,
+            code: 'over_email_send_rate_limit',
+            statusCode: '429',
+          ),
+          {'step': 'sign_in_code_request'},
+        ),
+        captured(
+          withheld(AuthApiException, code: 'otp_expired', statusCode: '403'),
+          {'step': 'sign_in_code_verify'},
+        ),
         captured(withheld(PostgrestException, code: '42501'), {
           'step': 'account_deletion',
         }),
@@ -53,28 +75,36 @@ void main() {
     });
 
     test('forwards only messages that are known to be free of content', () {
-      // Server text the issue allows, and transport errors that only ever
-      // name a host: sent as they are.
+      // The agent's own words, and transport errors that only ever name a
+      // host: sent as they are — and the wire scrubber lets them through.
       const agent = AgentException(500, 'model unavailable');
-      const auth = AuthApiException(
-        'Signups not allowed',
-        code: 'otp_disabled',
-      );
-      final fetch = AuthRetryableFetchException(message: 'Connection refused');
       final client = http.ClientException('Connection refused');
       final timeout = TimeoutException('Future not completed');
-      for (final error in [agent, auth, fetch, client, timeout]) {
+      for (final error in [agent, client, timeout]) {
         expect(ErrorReporter.contentFree(error), same(error));
+        expect(forwardedTypes, contains('${error.runtimeType}'));
       }
 
       // Anything else could quote what it choked on: a Postgres error the
-      // failing row, a JSON error the body. Only the type and a code travel.
+      // failing row, a JSON error the body, GoTrue the email it validated
+      // or — for a 5xx — the whole response body. Only the type and the
+      // codes travel.
+      const needle = 'needle.person@example.com';
       const jsonBody = '{"summary": "the day the sea turned violet"}';
       const json = FormatException('Unexpected character', jsonBody);
       const postgrest = PostgrestException(
         message: 'new row violates check constraint',
         code: '23514',
         details: 'Failing row contains (the day the sea turned violet)',
+      );
+      const api = AuthApiException(
+        'Unable to validate email address: $needle',
+        statusCode: '400',
+        code: 'validation_failed',
+      );
+      final fetch = AuthRetryableFetchException(
+        message: '{"message":"Error sending magic link email to $needle"}',
+        statusCode: '500',
       );
       final unknown = AuthUnknownException(
         message: 'unexpected',
@@ -87,19 +117,30 @@ void main() {
         withheld(PostgrestException, code: '23514'),
       );
       expect(
+        ErrorReporter.contentFree(api),
+        withheld(
+          AuthApiException,
+          code: 'validation_failed',
+          statusCode: '400',
+        ),
+      );
+      expect(
+        ErrorReporter.contentFree(fetch),
+        withheld(AuthRetryableFetchException, statusCode: '500'),
+      );
+      expect(
         ErrorReporter.contentFree(unknown),
         withheld(AuthUnknownException),
       );
       expect(ErrorReporter.contentFree(other), withheld(other.runtimeType));
-      for (final error in [json, postgrest, unknown, other]) {
-        expect(
-          '${ErrorReporter.contentFree(error)}',
-          isNot(contains('violet')),
-        );
+      for (final error in [json, postgrest, api, fetch, unknown, other]) {
+        final leaving = '${ErrorReporter.contentFree(error)}';
+        expect(leaving, isNot(contains('violet')));
+        expect(leaving, isNot(contains('needle')));
       }
     });
 
-    test('a withheld exception is a value: same type and code, same one', () {
+    test('a withheld exception is a value: same type and codes, same one', () {
       // What PostHog groups by is all that is left of it, so two failures
       // of the same kind must read as one.
       expect({
@@ -118,9 +159,39 @@ void main() {
         'PostgrestException 23514 (message withheld, ADR 0005)',
       );
       expect(
+        '${withheld(AuthApiException, code: 'otp_expired', statusCode: '403')}',
+        'AuthApiException 403 otp_expired (message withheld, ADR 0005)',
+      );
+      expect(
         '${withheld(FormatException)}',
         'FormatException (message withheld, ADR 0005)',
       );
     });
+
+    test('the spy sees the cause chain the SDK walks', () async {
+      // PostHog appends an error's causes (`cause`, AsyncError,
+      // ParallelWaitError) as further exception items, so they leave too.
+      final spy = AnalyticsSpy();
+      final caused = _Caused(cause: Exception('root: violet'));
+      final async = AsyncError(Exception('async: violet'), trace);
+      final parallel = ParallelWaitError<List<Object?>, List<AsyncError?>>(
+        const [null],
+        [AsyncError(Exception('parallel: violet'), trace)],
+      );
+
+      for (final error in [caused, async, parallel]) {
+        await spy.posthog.captureException(error: error, stackTrace: trace);
+      }
+
+      final outgoing = spy.outgoingStrings.toList();
+      expect(outgoing, contains(contains('root: violet')));
+      expect(outgoing, contains(contains('async: violet')));
+      expect(outgoing, contains(contains('parallel: violet')));
+    });
   });
+}
+
+class const _Caused({required final Object cause}) implements Exception {
+  @override
+  String toString() => '_Caused';
 }

@@ -85,7 +85,8 @@ class AuthBloc({
         } else {
           _rejected(email, wrongCodeMessage, emit);
         }
-      } on Exception catch (error) {
+      } on Exception catch (error, stackTrace) {
+        unawaited(_errors.codeVerifyFailed(error, stackTrace));
         _rejected(email, _describe(error, fallback: wrongCodeMessage), emit);
       }
     }

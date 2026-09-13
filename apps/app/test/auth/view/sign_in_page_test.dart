@@ -104,16 +104,15 @@ void main() {
 
       expect(robot.emailField, findsOneWidget);
       expect(robot.errorText, SignInPage.couldNotSendMessage);
-      // Supabase's own words travel with the exception; the email does not.
+      // GoTrue's error code and status travel; its message, which quotes
+      // the address it validated, does not.
       expect(robot.analytics.exceptions, [
         captured(
-          isA<AuthApiException>()
-              .having((error) => error.code, 'code', 'validation_failed')
-              .having(
-                (error) => error.message,
-                'message',
-                'Unable to validate email address',
-              ),
+          withheld(
+            AuthApiException,
+            code: 'validation_failed',
+            statusCode: '400',
+          ),
           {'step': 'sign_in_code_request'},
         ),
       ]);
@@ -171,8 +170,9 @@ void main() {
       await robot.requestCode();
 
       expect(robot.errorText, SignInPage.unreachableMessage);
+      // No status: the request never got an answer.
       expect(robot.analytics.exceptions, [
-        captured(isA<AuthRetryableFetchException>(), {
+        captured(withheld(AuthRetryableFetchException), {
           'step': 'sign_in_code_request',
         }),
       ]);
@@ -202,6 +202,13 @@ void main() {
       await robot.tapSignIn();
       await robot.settle();
 
+      // A refused code is a handled failure like a refused request.
+      expect(robot.analytics.exceptions, [
+        captured(
+          withheld(AuthApiException, code: 'otp_expired', statusCode: '403'),
+          {'step': 'sign_in_code_verify'},
+        ),
+      ]);
       expect(robot.codeField, findsOneWidget);
       expect(robot.errorText, SignInPage.wrongCodeMessage);
 
