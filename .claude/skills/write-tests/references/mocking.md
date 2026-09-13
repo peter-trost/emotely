@@ -18,6 +18,11 @@
   `test/helpers/app_harness.dart` wires the three together the way `main.dart`
   does.
   What may NOT be mocked: blocs, repositories with logic, widgets.
+- `SupabaseStub.script(otp:, verify:, password:, logout:)` queues the auth
+  endpoints (`/auth/v1/otp`, `/verify`, `/token`, `/logout`). Rounds are
+  keyed on `METHOD /path` only: `password:` serves every
+  `POST /auth/v1/token`, whatever its `grant_type` query says — assert the
+  query on the recorded request (`to(...).single.query['grant_type']`).
 - PostHog is the `MockPosthog` behind `AnalyticsSpy`: `capture` lands in
   `spy.events`, `captureException` in `spy.exceptions`, and
   `spy.outgoingStrings` is everything that would leave the device (event

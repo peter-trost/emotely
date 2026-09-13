@@ -20,6 +20,8 @@ class SignInRobot(
   Finder get sendCode => find.byKey(SignInPage.sendCodeKey);
   Finder get codeField => find.byKey(SignInPage.codeKey);
   Finder get submitCode => find.byKey(SignInPage.signInKey);
+  Finder get passwordField => find.byKey(SignInPage.passwordKey);
+  Finder get submitPassword => find.byKey(SignInPage.passwordSignInKey);
   Finder get changeEmail => find.byKey(SignInPage.changeEmailKey);
   Finder get error => find.byKey(SignInPage.errorKey);
   Finder get busy => find.byType(CircularProgressIndicator);
@@ -30,6 +32,10 @@ class SignInRobot(
       tester.widget<FilledButton>(sendCode).onPressed != null;
   bool get canSubmitCode =>
       tester.widget<FilledButton>(submitCode).onPressed != null;
+  bool get canSubmitPassword =>
+      tester.widget<FilledButton>(submitPassword).onPressed != null;
+  bool get passwordObscured =>
+      tester.widget<TextField>(passwordField).obscureText;
 
   Widget get app =>
       appUnderTest(agent: agent, supabase: supabase, analytics: analytics);
@@ -66,10 +72,31 @@ class SignInRobot(
     await tester.pump();
   }
 
-  /// The happy path up to the code step.
-  Future<void> requestCode([String email = SupabaseStub.email]) async {
+  Future<void> enterPassword(String password) async {
+    await tester.enterText(passwordField, password);
+    await tester.pump();
+  }
+
+  Future<void> tapPasswordSignIn() async {
+    await tester.tap(submitPassword);
+    await tester.pump();
+  }
+
+  /// The keyboard's "done" action on the password field.
+  Future<void> submitPasswordFromKeyboard() async {
+    await tester.showKeyboard(passwordField);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+  }
+
+  /// Enters [email] and goes on to whichever step follows it.
+  Future<void> submitEmail(String email) async {
     await enterEmail(email);
     await tapSendCode();
     await settle();
   }
+
+  /// The happy path up to the code step.
+  Future<void> requestCode([String email = SupabaseStub.email]) =>
+      submitEmail(email);
 }

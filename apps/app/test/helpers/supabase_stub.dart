@@ -98,10 +98,14 @@ class SupabaseStub() {
   void script({
     List<AuthRound> otp = const [],
     List<AuthRound> verify = const [],
+    List<AuthRound> password = const [],
     List<AuthRound> logout = const [],
   }) {
     rest('POST /auth/v1/otp', otp);
     rest('POST /auth/v1/verify', verify);
+    // The password grant posts to `/token?grant_type=password`; the query
+    // is recorded on the request, not part of the key.
+    rest('POST /auth/v1/token', password);
     rest('POST /auth/v1/logout', logout);
   }
 

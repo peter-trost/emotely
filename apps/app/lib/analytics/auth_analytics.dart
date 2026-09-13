@@ -17,6 +17,11 @@ class const AuthAnalytics({required final Posthog posthog}) {
   Future<void> codeRejected() =>
       posthog.capture(eventName: 'sign_in_code_rejected');
 
+  /// A review account's password sign-in did not go through (wrong
+  /// password, outage).
+  Future<void> passwordFailed() =>
+      posthog.capture(eventName: 'sign_in_password_failed');
+
   /// [userId] is the person behind this device's events, whether they just
   /// signed in or the session was restored.
   Future<void> identify({required String userId}) =>
