@@ -27,6 +27,7 @@ class const EmotelyApp({
       RepositoryProvider.value(value: agentClient),
       RepositoryProvider.value(value: analytics),
       RepositoryProvider.value(value: supabase),
+      RepositoryProvider.value(value: authAnalytics),
       RepositoryProvider(create: (_) => JournalStore(supabase: supabase)),
       RepositoryProvider.value(value: journalAnalytics),
     ],

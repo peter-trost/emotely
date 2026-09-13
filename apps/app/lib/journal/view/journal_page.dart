@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:emotely/account/view/account_page.dart';
 import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/journal/bloc/journal_bloc.dart';
@@ -27,6 +28,7 @@ class const JournalView({super.key}) extends StatelessWidget {
   static const startKey = Key('journal_view.start');
   static const continueKey = Key('journal_view.continue');
   static const discardKey = Key('journal_view.discard');
+  static const accountKey = Key('journal_view.account');
   static const signOutKey = Key('journal_view.sign_out');
   static const retryKey = Key('journal_view.retry');
   static const emptyKey = Key('journal_view.empty');
@@ -39,6 +41,14 @@ class const JournalView({super.key}) extends StatelessWidget {
     appBar: AppBar(
       title: const Text('Your journal'),
       actions: [
+        IconButton(
+          key: accountKey,
+          tooltip: 'Account',
+          icon: const Icon(Icons.manage_accounts_outlined),
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const AccountPage())),
+        ),
         IconButton(
           key: signOutKey,
           tooltip: 'Sign out',

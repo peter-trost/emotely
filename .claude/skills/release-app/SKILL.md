@@ -65,6 +65,17 @@ Set blind, never echoed: `gh secret set NAME -R peter-trost/emotely --env releas
 The list is in ADR 0013. `PLAY_SERVICE_ACCOUNT_JSON` is the JSON key of
 `google-play-upload-konto@pc-api-5174249003608815741-70.iam.gserviceaccount.com`.
 
+## Account deletion (store requirements)
+
+- **App Store** (guideline 5.1.1(v)): deletion is in the app. Put the path
+  in the review notes: **Your journal → account icon (top right) → Delete
+  account → confirm**. It calls `public.delete_account()`, which removes
+  the auth user and every session and entry by cascade, then signs the
+  device out.
+- **Google Play** additionally requires a **web** deletion URL declared in
+  the Data safety form, which the app cannot satisfy on its own. Out of
+  scope of the in-app path; tracked in #86.
+
 ## App Store Connect prep for a new version
 
 Version records, the app name and TestFlight Test Information are set through

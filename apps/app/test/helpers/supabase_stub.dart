@@ -48,8 +48,9 @@ class SupabaseStub() {
         method: method,
         path: uri.path,
         query: uri.queryParameters,
+        // A parameterless RPC is posted as the JSON literal `null`.
         body: raw is String && raw.isNotEmpty
-            ? jsonDecode(raw) as Object
+            ? jsonDecode(raw) as Object?
             : null,
       ),
     );
