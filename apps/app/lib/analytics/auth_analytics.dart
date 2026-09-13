@@ -30,4 +30,11 @@ class const AuthAnalytics({required final Posthog posthog}) {
     await posthog.capture(eventName: 'signed_out');
     await posthog.reset();
   }
+
+  /// The user deleted their account: PostHog forgets who this device
+  /// belonged to.
+  Future<void> accountDeleted() async {
+    await posthog.capture(eventName: 'account_deleted');
+    await posthog.reset();
+  }
 }

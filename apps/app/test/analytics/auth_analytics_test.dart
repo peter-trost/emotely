@@ -16,6 +16,7 @@ void main() {
       await analytics.identify(userId: 'user-1');
       await analytics.signedIn();
       await analytics.signedOut();
+      await analytics.accountDeleted();
 
       expect(spy.identified, ['user-1']);
       expect(spy.events, [
@@ -24,8 +25,10 @@ void main() {
         event('sign_in_code_rejected'),
         event('signed_in'),
         event('signed_out'),
+        event('account_deleted'),
       ]);
-      expect(spy.resets, 1);
+      // Signing out and deleting the account each make PostHog forget.
+      expect(spy.resets, 2);
     });
 
     testWidgets('never sends the email or the code (ADR 0005)', (tester) async {
