@@ -44,6 +44,14 @@ annotation carries only what genuinely differs, e.g.
   Answer`), never inside the class. No private `const Foo._()` constructor:
   editing an extension does not touch generated code, so no regeneration.
 
+- **Suppress `toString` on any union whose variants carry a secret or
+  personal data** — `@Freezed(toStringOverride: false)` with a comment
+  saying which field (the auth bloc's events and states: password, code,
+  email). The generated `toString` interpolates every field, and a
+  `BlocObserver`, an assertion or an error log prints events and states
+  as-is; `Instance of 'AuthPasswordSubmitted'` leaks nothing (ADR 0005).
+  Pin it with a needle assertion on `'$value'` in the leak test.
+
 ## Primary constructors (non-freezed classes too)
 
 `use_primary_constructors` is on: `class const HexColorConverter() implements

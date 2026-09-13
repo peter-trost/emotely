@@ -29,6 +29,11 @@ void main() {
         statusCode: '403',
         code: 'otp_expired',
       );
+      const wrongPassword = AuthApiException(
+        'Invalid login credentials',
+        statusCode: '400',
+        code: 'invalid_credentials',
+      );
 
       await reporter.sessionFailed(refused, trace, statusCode: 429);
       await reporter.sessionFailed(unreachable, trace);
@@ -37,6 +42,7 @@ void main() {
       await reporter.entrySaveFailed(saveRefused, trace, sessionId: 's-1');
       await reporter.codeRequestFailed(noCode, trace);
       await reporter.codeVerifyFailed(wrongCode, trace);
+      await reporter.passwordSignInFailed(wrongPassword, trace);
       await reporter.accountDeletionFailed(saveRefused, trace);
 
       expect(spy.exceptions, [
@@ -64,6 +70,14 @@ void main() {
         captured(
           withheld(AuthApiException, code: 'otp_expired', statusCode: '403'),
           {'step': 'sign_in_code_verify'},
+        ),
+        captured(
+          withheld(
+            AuthApiException,
+            code: 'invalid_credentials',
+            statusCode: '400',
+          ),
+          {'step': 'sign_in_password'},
         ),
         captured(withheld(PostgrestException, code: '42501'), {
           'step': 'account_deletion',

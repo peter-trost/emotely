@@ -29,9 +29,11 @@ KEY=$(grep -E '^POSTHOG_KEY=' apps/agent/.env.local | cut -d= -f2- | tr -d '"' |
 
 The smoke user's credentials live in the same file (`SMOKE_EMAIL`,
 `SMOKE_PASSWORD`) and are read the same way. On a device, sign in by hand:
-the app asks for an email and the six-digit code Supabase mails to it. Against
-the local Supabase stack (`supabase start`, see the supabase skill) the code
-shows up in Inbucket at http://127.0.0.1:54324 instead of a mailbox.
+the app asks for an email and the six-digit code Supabase mails to it, unless
+the address is a store review account (release-app skill), which is asked
+for a password instead. Against the local Supabase stack (`supabase start`,
+see the supabase skill) the code shows up in Inbucket at
+http://127.0.0.1:54324 instead of a mailbox.
 
 ## Toolchain
 
