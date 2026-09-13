@@ -47,6 +47,7 @@ dependencies:
 dev_dependencies:
   build_runner: 2.16.1
   flutter_agent_lints: 1.0.1
+  flutter_launcher_icons: 0.14.4
   flutter_test:
     sdk: flutter
   freezed: 4.0.1
@@ -105,3 +106,19 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# App launcher icons, generated from the web favicon (apps/web/web/favicon.svg).
+# Regenerate after changing assets/icon/*: `dart run flutter_launcher_icons`.
+# iOS gets the favicon composition full-bleed; Android gets an adaptive icon
+# with the glyph centred inside the safe zone (the favicon's off-centre "e"
+# would be clipped by circular masks).
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#231f20"
+  android: true
+  adaptive_icon_background: "#231f20"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  adaptive_icon_foreground_inset: 0
+  adaptive_icon_monochrome: "assets/icon/icon_foreground.png"
