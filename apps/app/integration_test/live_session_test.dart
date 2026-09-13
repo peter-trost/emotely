@@ -8,7 +8,8 @@
 //     [--dart-define=EMOTELY_AGENT_URL=…]
 //
 // The agent serves signed-in users only, so the run signs in as the smoke
-// user (password sign-in exists for that user alone; the app uses codes).
+// user (a password account like the store review accounts; everyone else
+// signs in with a code through the app's own screen).
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/journal_analytics.dart';

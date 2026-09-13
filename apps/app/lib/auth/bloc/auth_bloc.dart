@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
+import 'package:emotely/auth/review_accounts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 // gotrue has its own AuthState (the stream event); ours is the bloc state.
@@ -12,17 +13,20 @@ part 'auth_event.dart';
 part 'auth_state.dart';
 
 /// Who is signed in, and the two-step email code sign-in that gets there:
-/// request a code for an email, then verify it. Supabase Auth owns the
-/// session (persistence, refresh); this bloc mirrors it into UI state and
-/// tells PostHog who the user is.
+/// request a code for an email, then verify it. The app stores' review
+/// accounts ([reviewAccounts]) take a password at the second step instead,
+/// since a reviewer has no mailbox to read. Supabase Auth owns the session
+/// (persistence, refresh); this bloc mirrors it into UI state and tells
+/// PostHog who the user is.
 class AuthBloc({
   required final SupabaseClient _supabase,
   required final AuthAnalytics _analytics,
   required final ErrorReporter _errors,
 }) extends Bloc<AuthEvent, AuthState> {
   this : super(_initial(_supabase.auth.currentSession)) {
-    on<AuthCodeRequested>(_onCodeRequested);
+    on<AuthEmailSubmitted>(_onEmailSubmitted);
     on<AuthCodeSubmitted>(_onCodeSubmitted);
+    on<AuthPasswordSubmitted>(_onPasswordSubmitted);
     on<AuthEmailChangeRequested>(_onEmailChangeRequested);
     on<AuthSignOutRequested>(_onSignOutRequested);
     on<AuthSessionChanged>(_onSessionChanged);
@@ -44,15 +48,21 @@ class AuthBloc({
       ? const AuthState.signedOut()
       : AuthState.signedIn(userId: session.user.id);
 
-  Future<void> _onCodeRequested(
-    AuthCodeRequested event,
+  Future<void> _onEmailSubmitted(
+    AuthEmailSubmitted event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthState.requestingCode(email: event.email));
+    final email = event.email.trim();
+    // No code, no email: the review account is asked for its password.
+    if (isReviewAccount(email)) {
+      emit(AuthState.passwordRequired(email: email));
+      return;
+    }
+    emit(AuthState.requestingCode(email: email));
     unawaited(_analytics.codeRequested());
     try {
-      await _supabase.auth.signInWithOtp(email: event.email);
-      emit(AuthState.codeSent(email: event.email));
+      await _supabase.auth.signInWithOtp(email: email);
+      emit(AuthState.codeSent(email: email));
     } on Exception catch (error, stackTrace) {
       unawaited(_analytics.codeRequestFailed());
       unawaited(_errors.codeRequestFailed(error, stackTrace));
@@ -88,6 +98,37 @@ class AuthBloc({
       } on Exception catch (error, stackTrace) {
         unawaited(_errors.codeVerifyFailed(error, stackTrace));
         _rejected(email, _describe(error, fallback: wrongCodeMessage), emit);
+      }
+    }
+  }
+
+  /// The password grant for a review account. Only ever `signInWithPassword`:
+  /// the app has no sign-up path, so an address that is not on the server
+  /// is refused like a wrong password.
+  Future<void> _onPasswordSubmitted(
+    AuthPasswordSubmitted event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state case AuthPasswordRequired(:final email)) {
+      emit(AuthState.checkingPassword(email: email));
+      try {
+        final response = await _supabase.auth.signInWithPassword(
+          email: email,
+          password: event.password,
+        );
+        if (response.session case final session?) {
+          unawaited(_analytics.signedIn());
+          _signedIn(session.user.id, emit);
+        } else {
+          _passwordRefused(email, wrongPasswordMessage, emit);
+        }
+      } on Exception catch (error, stackTrace) {
+        unawaited(_errors.passwordSignInFailed(error, stackTrace));
+        _passwordRefused(
+          email,
+          _describe(error, fallback: wrongPasswordMessage),
+          emit,
+        );
       }
     }
   }
@@ -132,6 +173,11 @@ class AuthBloc({
     emit(AuthState.codeSent(email: email, error: error));
   }
 
+  void _passwordRefused(String email, String error, Emitter<AuthState> emit) {
+    unawaited(_analytics.passwordFailed());
+    emit(AuthState.passwordRequired(email: email, error: error));
+  }
+
   void _signedIn(String userId, Emitter<AuthState> emit) {
     unawaited(_analytics.identify(userId: userId));
     emit(AuthState.signedIn(userId: userId));
@@ -154,6 +200,7 @@ class AuthBloc({
       'Could not send a code to that email. Check the address and try again.';
   static const wrongCodeMessage =
       'That code is wrong or has expired. Request a new one if needed.';
+  static const wrongPasswordMessage = 'That password was not accepted.';
   static const unreachableMessage = 'Could not reach the sign-in service.';
 
   @override

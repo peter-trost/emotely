@@ -36,6 +36,12 @@ authenticated request from here on.
    provider is added ([#51](https://github.com/peter-trost/emotely/issues/51)).
    No anonymous sign-in: it needs CAPTCHA and a cleanup job per Supabase's
    own guidance, and a journal that is not persisted is not the product.
+   *2026-09-13, one exception:* the two store reviewer accounts
+   (`apps/app/lib/auth/review_accounts.dart`) sign in with a password, because
+   App Review, Google Play's reviewers and the pre-launch crawler have no
+   mailbox to read a code from, and the crawler's retries were burning the
+   email quota. They are created server-side by the release skill's script;
+   the app still has no sign-up path.
 5. **Schema and auth configuration are code, gated and deployed like
    everything else.** `supabase/migrations/` and `supabase/config.toml` (with
    the sign-in email template) are the source of truth. CI applies the

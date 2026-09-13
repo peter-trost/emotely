@@ -65,6 +65,11 @@ class const ErrorReporter({required final Posthog posthog}) {
   Future<void> codeVerifyFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'sign_in_code_verify');
 
+  /// Supabase refused a review account's password (never the password
+  /// itself: an `AuthException` goes out with its message withheld).
+  Future<void> passwordSignInFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'sign_in_password');
+
   /// The `delete_account` call failed.
   Future<void> accountDeletionFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'account_deletion');

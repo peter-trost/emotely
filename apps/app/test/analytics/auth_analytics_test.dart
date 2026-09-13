@@ -1,4 +1,5 @@
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -14,6 +15,7 @@ void main() {
       await analytics.codeRequested();
       await analytics.codeRequestFailed();
       await analytics.codeRejected();
+      await analytics.passwordFailed();
       await analytics.identify(userId: 'user-1');
       await analytics.signedIn();
       await analytics.signedOut();
@@ -24,6 +26,7 @@ void main() {
         event('sign_in_code_requested'),
         event('sign_in_code_request_failed'),
         event('sign_in_code_rejected'),
+        event('sign_in_password_failed'),
         event('signed_in'),
         event('signed_out'),
         event('account_deleted'),
@@ -102,6 +105,82 @@ void main() {
         expect(leaving, isNot(contains(needleCode)));
       }
       expect(robot.analytics.identified, [SupabaseStub.userId]);
+    });
+
+    testWidgets("never sends a review account's password (ADR 0005)", (
+      tester,
+    ) async {
+      const address = 'app-store-review@getemotely.com';
+      const needlePassword = 'needle-hunter2-needle';
+      // A refusal may quote what it refused, and for a 5xx gotrue keeps the
+      // whole body; the last try goes through.
+      final supabase = SupabaseStub()
+        ..script(
+          password: [
+            authRefused(
+              statusCode: 400,
+              errorCode: 'invalid_credentials',
+              message: 'Invalid login credentials: $needlePassword',
+            ),
+            authRefused(
+              statusCode: 500,
+              errorCode: 'unexpected_failure',
+              message: 'Database error checking $needlePassword',
+            ),
+            sessionGranted(),
+          ],
+        );
+      final agent = AgentStub()..script([unreachable()]);
+      final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+      await robot.launch();
+
+      await robot.submitEmail(address);
+      for (var attempt = 0; attempt < 3; attempt++) {
+        await robot.enterPassword(needlePassword);
+        await robot.tapPasswordSignIn();
+        await robot.settle();
+      }
+
+      expect(robot.home, findsOneWidget);
+      expect(robot.analytics.exceptions, [
+        captured(
+          withheld(
+            AuthApiException,
+            code: 'invalid_credentials',
+            statusCode: '400',
+          ),
+          {'step': 'sign_in_password'},
+        ),
+        captured(withheld(AuthRetryableFetchException, statusCode: '500'), {
+          'step': 'sign_in_password',
+        }),
+      ]);
+      expect(robot.analytics.events, [
+        event('sign_in_password_failed'),
+        event('sign_in_password_failed'),
+        event('signed_in'),
+        event('journal_viewed', {'entries': 0, 'open_session': false}),
+      ]);
+      final outgoing = robot.analytics.outgoingStrings.toList();
+      expect(outgoing, isNotEmpty);
+      for (final leaving in outgoing) {
+        expect(leaving, isNot(contains(needlePassword)));
+        expect(leaving, isNot(contains('needle')));
+        expect(leaving, isNot(contains('hunter2')));
+        // The address is not journal content, but it is the reviewer's
+        // identity; only the user id travels.
+        expect(leaving, isNot(contains(address)));
+      }
+      // Nor does the event, should a bloc observer or an error log ever
+      // print one.
+      expect(
+        '${const AuthEvent.passwordSubmitted(needlePassword)}',
+        isNot(contains('needle')),
+      );
+      expect(
+        '${const AuthEvent.emailSubmitted(address)}',
+        isNot(contains('@')),
+      );
     });
   });
 }

@@ -15,6 +15,15 @@ sealed class AuthState with _$AuthState {
   /// The code for [email] is being checked.
   const factory verifying({required String email}) = AuthVerifying;
 
+  /// [email] is a review account and needs its password, with the last
+  /// [error] if any.
+  const factory passwordRequired({required String email, String? error}) =
+      AuthPasswordRequired;
+
+  /// The password for [email] is being checked.
+  const factory checkingPassword({required String email}) =
+      AuthCheckingPassword;
+
   /// [userId] is signed in.
   const factory signedIn({required String userId}) = AuthSignedIn;
 }

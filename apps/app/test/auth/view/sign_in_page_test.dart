@@ -295,6 +295,279 @@ void main() {
       expect(find.byType(FilledButton), findsNothing);
     });
 
+    group('a review account', () {
+      const address = 'google-play-review@getemotely.com';
+      const password = 'correct horse battery staple';
+      const tokenGrant = 'POST /auth/v1/token';
+      final wrongPassword = authRefused(
+        statusCode: 400,
+        errorCode: 'invalid_credentials',
+        message: 'Invalid login credentials',
+      );
+
+      testWidgets('signs in with a password and is never sent a code', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub()..script(password: [sessionGranted()]);
+        final agent = AgentStub()..script([unreachable()]);
+        final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+        await robot.launch();
+
+        // However the address is typed: the check trims and ignores case
+        // (Supabase matches the address case-insensitively too).
+        const typed = 'Google-Play-Review@getemotely.com';
+        await robot.submitEmail('  $typed ');
+
+        expect(supabase.to('POST /auth/v1/otp'), isEmpty);
+        expect(robot.codeField, findsNothing);
+        expect(robot.passwordField, findsOneWidget);
+        expect(robot.passwordObscured, isTrue);
+        expect(find.textContaining(typed), findsOneWidget);
+        expect(robot.canSubmitPassword, isFalse);
+
+        await robot.enterPassword(password);
+        expect(robot.canSubmitPassword, isTrue);
+        await robot.tapPasswordSignIn();
+        await robot.settle();
+
+        final grant = supabase.to(tokenGrant).single;
+        expect(grant.query['grant_type'], 'password');
+        expect((grant.body! as Map)['email'], typed);
+        expect((grant.body! as Map)['password'], password);
+        expect(supabase.to('POST /auth/v1/otp'), isEmpty);
+        expect(supabase.to('POST /auth/v1/signup'), isEmpty);
+        expect(robot.home, findsOneWidget);
+        expect(robot.signIn, findsNothing);
+        // No code was requested; the journal's own event follows sign-in.
+        expect(robot.analytics.events.first, event('signed_in'));
+        expect(
+          robot.analytics.events.map((captured) => captured['event']),
+          isNot(contains(startsWith('sign_in_code'))),
+        );
+        expect(robot.analytics.identified, [SupabaseStub.userId]);
+      });
+
+      testWidgets('is the only kind of address that skips the code', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub()..script(otp: [codeSent()]);
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+        await robot.launch();
+
+        // One character off a review address is an ordinary user.
+        await robot.submitEmail('google-play-review@getemotely.co');
+
+        expect(
+          supabase.bodies('/auth/v1/otp').single['email'],
+          ['google-play-review@getemotely.co'].single,
+        );
+        expect(supabase.to(tokenGrant), isEmpty);
+        expect(robot.codeField, findsOneWidget);
+        expect(robot.passwordField, findsNothing);
+      });
+
+      testWidgets('is told when the password is not accepted and may retry', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub()
+          ..script(password: [wrongPassword, sessionGranted()]);
+        final agent = AgentStub()..script([unreachable()]);
+        final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+        await robot.launch();
+        await robot.submitEmail(address);
+
+        await robot.enterPassword('wrong');
+        await robot.tapPasswordSignIn();
+        await robot.settle();
+
+        expect(robot.passwordField, findsOneWidget);
+        expect(robot.errorText, SignInPage.wrongPasswordMessage);
+        // GoTrue's code and status travel; its message does not, and the
+        // password never does.
+        expect(robot.analytics.exceptions, [
+          captured(
+            withheld(
+              AuthApiException,
+              code: 'invalid_credentials',
+              statusCode: '400',
+            ),
+            {'step': 'sign_in_password'},
+          ),
+        ]);
+        expect(robot.analytics.events, [event('sign_in_password_failed')]);
+
+        await robot.enterPassword(password);
+        await robot.tapPasswordSignIn();
+        await robot.settle();
+
+        expect(robot.home, findsOneWidget);
+        expect(supabase.to(tokenGrant), hasLength(2));
+      });
+
+      testWidgets('submits the password from the keyboard', (tester) async {
+        final supabase = SupabaseStub()..script(password: [sessionGranted()]);
+        final agent = AgentStub()..script([unreachable()]);
+        final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+        await robot.launch();
+        await robot.submitEmail(address);
+
+        // An empty field submits nothing.
+        await robot.submitPasswordFromKeyboard();
+        expect(supabase.to(tokenGrant), isEmpty);
+        expect(robot.passwordField, findsOneWidget);
+
+        await robot.enterPassword(password);
+        await robot.submitPasswordFromKeyboard();
+        await robot.settle();
+
+        expect(supabase.to(tokenGrant), hasLength(1));
+        expect(robot.home, findsOneWidget);
+      });
+
+      testWidgets('shows progress while the password is checked', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub()
+          ..script(password: [delayedAuth(sessionGranted())]);
+        final agent = AgentStub()..script([unreachable()]);
+        final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+        await robot.launch();
+        await robot.submitEmail(address);
+
+        await robot.enterPassword(password);
+        await robot.tapPasswordSignIn();
+
+        expect(robot.busy, findsOneWidget);
+        expect(robot.submitPassword, findsNothing);
+        expect(tester.widget<TextField>(robot.passwordField).enabled, isFalse);
+
+        await robot.settle();
+
+        expect(robot.home, findsOneWidget);
+      });
+
+      testWidgets('can go back to the email step', (tester) async {
+        final supabase = SupabaseStub()
+          ..script(password: [wrongPassword], otp: [codeSent()]);
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+        await robot.launch();
+        await robot.submitEmail(address);
+        await robot.enterPassword('wrong');
+        await robot.tapPasswordSignIn();
+        await robot.settle();
+        expect(robot.error, findsOneWidget);
+
+        await robot.tapChangeEmail();
+
+        expect(robot.emailField, findsOneWidget);
+        expect(robot.passwordField, findsNothing);
+        expect(robot.error, findsNothing);
+
+        await robot.requestCode();
+
+        expect(robot.codeField, findsOneWidget);
+        expect(
+          supabase.bodies('/auth/v1/otp').single['email'],
+          SupabaseStub.email,
+        );
+      });
+
+      testWidgets('treats a password answer without a session as rejected', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub()..script(password: [sessionWithheld()]);
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+        await robot.launch();
+        await robot.submitEmail(address);
+
+        await robot.enterPassword(password);
+        await robot.tapPasswordSignIn();
+        await robot.settle();
+
+        expect(robot.passwordField, findsOneWidget);
+        expect(robot.errorText, SignInPage.wrongPasswordMessage);
+        expect(robot.analytics.events, [event('sign_in_password_failed')]);
+        expect(robot.analytics.exceptions, isEmpty);
+      });
+
+      testWidgets('is told when Supabase is unreachable', (tester) async {
+        final supabase = SupabaseStub()..script(password: [authUnreachable()]);
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+        await robot.launch();
+        await robot.submitEmail(address);
+
+        await robot.enterPassword(password);
+        await robot.tapPasswordSignIn();
+        await robot.settle();
+
+        expect(robot.passwordField, findsOneWidget);
+        expect(robot.errorText, SignInPage.unreachableMessage);
+        expect(robot.analytics.exceptions, [
+          captured(withheld(AuthRetryableFetchException), {
+            'step': 'sign_in_password',
+          }),
+        ]);
+      });
+
+      testWidgets('survives the screen going away mid-request', (tester) async {
+        final supabase = SupabaseStub()
+          ..script(password: [delayedAuth(sessionGranted())]);
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+        await robot.launch();
+        await robot.submitEmail(address);
+        await robot.enterPassword(password);
+        await robot.tapPasswordSignIn();
+
+        // The whole app is torn down (bloc closed) before Supabase answers.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(tester.takeException(), isNull);
+        expect(supabase.to(tokenGrant), hasLength(1));
+      });
+
+      testWidgets('meets accessibility guidelines on the password step', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub()..script(password: [wrongPassword]);
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+
+        // With the error showing: everything the step can render at once.
+        await tester.expectMeetsAccessibilityGuidelines(
+          robot.app,
+          prepare: (tester) async {
+            await robot.submitEmail(address);
+            await robot.enterPassword('wrong');
+            await robot.tapPasswordSignIn();
+          },
+        );
+      });
+    });
+
     testWidgets('meets accessibility guidelines on both steps', (tester) async {
       final supabase = SupabaseStub()..script(otp: [codeSent()]);
       final robot = SignInRobot(tester, supabase: supabase, agent: AgentStub());
