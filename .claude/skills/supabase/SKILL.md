@@ -50,7 +50,11 @@ supabase stop
 
 Rules: grant privileges explicitly (nothing inherits from defaults), enable
 RLS on every table, `(select auth.uid())` in policies, never a service-role
-path. A mutation check is cheap and worth it for policies:
+path in the app, the agent, CI or Vercel. The one carve-out is operator-run
+and out of band: the release skill's `reviewer-accounts.sh` fetches the
+`service_role` key blind through the maintainer's CLI login for one run to
+(re)create the two store reviewer accounts (ADR 0010, decision 4). A
+mutation check is cheap and worth it for policies:
 `docker exec supabase_db_emotely psql -U postgres -c "alter table public.x disable row level security"`,
 run the suite, watch it fail, `supabase db reset --local`.
 

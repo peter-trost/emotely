@@ -92,17 +92,18 @@ trigger an email (`apps/app/lib/auth/review_accounts.dart`):
 
 The app shows a password step for exactly these addresses (trimmed,
 case-insensitive) and calls `signInWithPassword`; the accounts exist only on
-the server, the app has no sign-up path.
+the server, the app has no sign-up path. **The accounts must exist before the
+addresses are public** (in a store build or a console): they do, both were
+created on the hosted project through the Auth admin API on 2026-09-13.
 
 - **The password** is `REVIEWER_PASSWORD` in
-  `~/.config/emotely/reviewer-accounts.env` (mode 600, never in the repo) and
-  in Peter's iCloud Passwords. It is the same for both accounts. Paste it into
-  App Store Connect → App Review Information → Sign-in required, and Play
-  Console → App content → App access → "All or some functionality is
-  restricted" → sign-in details.
-- **Before every store submission, run the recreate script.** A reviewer
-  testing "Delete account" really deletes the account (the App Store path
-  above), and both stores may re-test at any time:
+  `~/.config/emotely/reviewer-accounts.env` (mode 600, never in the repo;
+  24 letters and digits) and in Peter's iCloud Passwords. It is the same for
+  both accounts and is what the consoles hold.
+- **Recreate whenever an account is gone, and before every store
+  submission.** A reviewer testing "Delete account" really deletes the
+  account (the App Store path above), and both stores may re-test at any
+  time:
 
   ```bash
   .claude/skills/release-app/scripts/reviewer-accounts.sh
@@ -110,18 +111,53 @@ the server, the app has no sign-up path.
 
   Idempotent: it reads the password from the env file (generating one with
   `openssl rand` and writing the file with `umask 077` if absent), obtains the
-  legacy `service_role` key blind through `supabase projects api-keys`, creates
-  each user pre-confirmed with `app_metadata.review_account = true` and, if it
+  legacy `service_role` key blind through `supabase projects api-keys` into a
+  curl config file (never argv), creates each user pre-confirmed and, if it
   already exists, resets its password. It prints status lines only, never a
   body, a key or the password. Needs the linked Supabase CLI login, `jq`,
-  `curl`, `openssl`.
+  `curl`, `openssl`. It stamps `app_metadata.review_account = true`, which is
+  informational only (dashboard, JWT) — nothing server-side reads it; the
+  app decides by address.
+- **The pre-launch crawler runs on every upload to a track**, and
+  `app-release.yml` uploads on every merge that touches `apps/app` — not only
+  on submissions. So an account a reviewer deleted stays broken, silently and
+  email-free by design, until the script is re-run. The symptom: a
+  pre-launch report whose crawls show the sign-in screen only, and in PostHog
+  a burst of `sign_in_password_failed` with no `signed_in`.
 - **Play Console pre-launch crawler.** The "Sign-in details" entry has a
   switch "allow Google to use these sign-in details for testing": on, the
   pre-launch report's crawler signs in with the reviewer account instead of
   hammering the sign-in screen with an address of its own. Leave it on.
 - The accounts are ordinary users under row-level security: whatever a
-  reviewer journals is theirs and gone with the next recreate only if they
-  deleted the account; the script never wipes an existing account's data.
+  reviewer journals is theirs; the script never wipes an existing account's
+  data, only resets the password.
+
+### What the consoles say (saved 2026-09-13)
+
+**Play Console → App content → App access → Sign-in details.** Entry name
+"Reviewer demo account", user name `google-play-review@getemotely.com`, the
+password above, and these instructions (the field allows 500 characters):
+
+> Open the app, enter the user name above as the email address and tap
+> Continue. This is a designated reviewer account, so the app asks for a
+> password instead of emailing a one-time code; enter the password above.
+> Regular users sign in with a one-time code sent by email. Account
+> deletion: Your journal -> account icon (top right) -> Delete account ->
+> confirm. Deleting the demo account really deletes it; if it no longer
+> signs in, email peter@petertrost.com and we recreate it.
+
+**App Store Connect → version → App Review Information → Sign-in
+required.** User name `app-store-review@getemotely.com`, the password above,
+Notes:
+
+> Demo account for review. Open the app, enter the user name above as the
+> email address and tap Continue. Because this address is a designated
+> reviewer account, the app asks for a password instead of sending a
+> one-time code; enter the password above. Regular users sign in with a
+> one-time code sent by email. Account deletion: Your journal -> account
+> icon (top right) -> Delete account -> confirm. Deleting the demo account
+> really deletes it; if it no longer signs in, contact peter@petertrost.com
+> and we recreate it within the hour.
 
 ## App Store Connect prep for a new version
 
