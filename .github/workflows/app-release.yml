@@ -13,7 +13,9 @@ concurrency:
 
 jobs:
   ios:
-    runs-on: macos-15
+    # App Store Connect only accepts builds made with the iOS 26 SDK (Xcode 26),
+    # which this image carries by default.
+    runs-on: macos-26
     environment: release
     defaults:
       run:
@@ -67,9 +69,11 @@ jobs:
           working-directory: apps/app
           bundler-cache: true
       # The upload keystore and its key.properties, straight from secrets.
+      # key.properties points at ../upload-keystore.jks relative to the app
+      # module, i.e. android/upload-keystore.jks.
       - run: |
           umask 077
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
           printf '%s\n' "$ANDROID_KEY_PROPERTIES" > android/key.properties
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
