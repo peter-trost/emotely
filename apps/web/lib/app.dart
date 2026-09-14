@@ -9,7 +9,8 @@ import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 /// The site: a header, one page per route, a footer. Built only on the
-/// server; the sole client-side island is the waitlist form.
+/// server; the client-side islands are the waitlist form, the waitlist
+/// confirmation and the account-deletion form.
 class const App({super.key}) extends StatelessComponent {
   @override
   Component build(BuildContext context) => div(classes: 'site', [
@@ -56,6 +57,10 @@ class const App({super.key}) extends StatelessComponent {
         a(href: '/imprint', [.text('Imprint')]),
         .text(' · '),
         a(href: '/privacy', [.text('Privacy')]),
+        .text(' · '),
+        // Google asks for the deletion route to be easy to find, so it
+        // sits in the footer of every page rather than only in privacy.
+        a(href: '/delete-account', [.text('Delete your account')]),
         .text(' · '),
         a(href: 'mailto:$contactEmail', [.text(contactEmail)]),
       ]),

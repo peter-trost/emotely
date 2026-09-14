@@ -42,11 +42,31 @@ enum _Step { address, code, done }
 class _DeleteAccountFormState extends State<DeleteAccountForm> {
   var _email = '';
   var _code = '';
+  // A field no person sees or fills; bots fill everything. Same trick as
+  // the waitlist form, and this form is the more sensitive of the two.
+  var _website = '';
+  var _understood = false;
   _Step _step = .address;
   var _busy = false;
   String? _message;
 
+  /// Back to the start: a mistyped address, or a code that went stale
+  /// (GoTrue expires them after ten minutes) needs a fresh one.
+  void _startOver() {
+    setState(() {
+      _step = .address;
+      _code = '';
+      _understood = false;
+      _message = null;
+    });
+  }
+
   Future<void> _sendCode() async {
+    if (_website.isNotEmpty) {
+      // Answer a bot exactly like a person, without spending a mail on it.
+      setState(() => _step = .code);
+      return;
+    }
     final email = _email.trim();
     if (!looksLikeEmail(email)) {
       setState(() => _message = "That doesn't look like an email address.");
@@ -87,9 +107,18 @@ class _DeleteAccountFormState extends State<DeleteAccountForm> {
   }
 
   Future<void> _delete() async {
-    final code = _code.trim();
+    // Pasting from a mail app brings spaces along ("12 34 56"); a correct
+    // code should not be refused for how it travelled.
+    final code = normaliseCode(_code);
     if (!looksLikeCode(code)) {
       setState(() => _message = 'The code is six digits.');
+      return;
+    }
+    if (!_understood) {
+      setState(
+        () => _message =
+            'Tick the box first: this cannot be undone once it runs.',
+      );
       return;
     }
     setState(() {
@@ -167,6 +196,19 @@ class _DeleteAccountFormState extends State<DeleteAccountForm> {
           'inputmode': 'email',
         },
       ),
+      input<String>(
+        key: const Key('website'),
+        classes: 'hp',
+        type: .text,
+        name: 'website',
+        value: _website,
+        onInput: (value) => _website = value,
+        attributes: const {
+          'tabindex': '-1',
+          'autocomplete': 'off',
+          'aria-hidden': 'true',
+        },
+      ),
       button(
         key: const Key('send-code'),
         type: .submit,
@@ -174,9 +216,17 @@ class _DeleteAccountFormState extends State<DeleteAccountForm> {
         disabled: _busy,
         [.text(_busy ? 'Sending the code…' : 'Send me a code')],
       ),
-      if (_message case final message?)
-        p(classes: 'delete-account-message', [.text(message)]),
+      if (_message case final message?) _alert(message),
     ],
+  );
+
+  /// The one place a message is rendered, so every one of them announces
+  /// itself to a screen reader where it stands.
+  Component _alert(String message) => p(
+    key: const Key('message'),
+    classes: 'delete-account-message',
+    attributes: const {'role': 'alert'},
+    [.text(message)],
   );
 
   Component _codeStep() => form(
@@ -194,8 +244,8 @@ class _DeleteAccountFormState extends State<DeleteAccountForm> {
       const p([
         .text(
           'If that address has an account, a six-digit code is on its way '
-          'to it. Type the code below and the account is deleted — there '
-          'is no confirmation step after this one.',
+          'to it. Type the code below, confirm that you mean it, and the '
+          'account is deleted.',
         ),
       ]),
       const label(htmlFor: 'delete-code', [.text('The six-digit code')]),
@@ -210,9 +260,27 @@ class _DeleteAccountFormState extends State<DeleteAccountForm> {
           'placeholder': '123456',
           'autocomplete': 'one-time-code',
           'inputmode': 'numeric',
-          'maxlength': '6',
+          // Spaces are stripped before the check, so a pasted "12 34 56"
+          // must be allowed to land in the field first.
+          'maxlength': '8',
+          // The step just changed under the reader; put them in the field.
+          'autofocus': '',
         },
       ),
+      label(classes: 'delete-account-consent', htmlFor: 'delete-understood', [
+        input<bool>(
+          key: const Key('understood'),
+          id: 'delete-understood',
+          type: .checkbox,
+          name: 'understood',
+          checked: _understood,
+          onInput: (value) => setState(() => _understood = value),
+        ),
+        const .text(
+          ' I understand this deletes my account and everything in it, '
+          'and that it cannot be undone.',
+        ),
+      ]),
       button(
         key: const Key('delete'),
         type: .submit,
@@ -220,8 +288,16 @@ class _DeleteAccountFormState extends State<DeleteAccountForm> {
         disabled: _busy,
         [.text(_busy ? 'Deleting…' : 'Delete my account for good')],
       ),
-      if (_message case final message?)
-        p(classes: 'delete-account-message', [.text(message)]),
+      if (_message case final message?) _alert(message),
+      p(classes: 'delete-account-restart', [
+        button(
+          key: const Key('start-over'),
+          type: .button,
+          classes: 'linklike',
+          onClick: _startOver,
+          const [.text('Start over with a different address')],
+        ),
+      ]),
     ],
   );
 }

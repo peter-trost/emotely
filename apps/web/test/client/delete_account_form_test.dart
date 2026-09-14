@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/client_test.dart';
+import 'package:universal_web/web.dart' as web;
 
 /// Shaped like an access token, obviously not one (a secret scanner reads
 /// this): three dot-separated segments, no signature over anything.
@@ -35,8 +36,8 @@ Future<void> withApi(
         jsonEncode({'access_token': accessToken}),
         200,
       ),
-      // `delete_account` returns void: PostgREST answers 204, no body.
-      _ => http.Response('', 204),
+      // `delete_account()` reports that a row really went.
+      _ => http.Response('true', 200),
     };
   }),
 );
@@ -76,6 +77,7 @@ void main() {
         expect(find.textContaining('has an account'), findsOneComponent);
 
         await tester.input(find.byKey(const Key('code')), value: '123456');
+        await tester.input(find.byKey(const Key('understood')), checked: true);
         await tester.click(find.byKey(const Key('delete')));
         await pumpEventQueue();
 
@@ -127,6 +129,110 @@ void main() {
 
         expect(seen, isEmpty);
         expect(find.textContaining("doesn't look like"), findsOneComponent);
+        // A screen reader is told without having to be moved there.
+        final alert = tester.findNode<web.HTMLElement>(
+          find.byKey(const Key('message')),
+        );
+        expect(alert?.getAttribute('role'), 'alert');
+      });
+    });
+
+    testClient('the irreversible step is gated by an explicit consent', (
+      tester,
+    ) async {
+      final seen = <http.Request>[];
+      await withApi(seen: seen, () async {
+        tester.pumpComponent(const DeleteAccountForm());
+        await tester.input(
+          find.byKey(const Key('email')),
+          value: 'alice@example.com',
+        );
+        await tester.click(find.byKey(const Key('send-code')));
+        await pumpEventQueue();
+        await tester.input(find.byKey(const Key('code')), value: '123456');
+        // Straight to delete, without ticking the box.
+        await tester.click(find.byKey(const Key('delete')));
+        await pumpEventQueue();
+
+        // Only the code request went out; nothing was deleted.
+        expect(seen, hasLength(1));
+        expect(find.textContaining('cannot be undone'), findsComponents);
+        expect(find.textContaining('account is gone'), findsNothing);
+
+        await tester.input(find.byKey(const Key('understood')), checked: true);
+        await tester.click(find.byKey(const Key('delete')));
+        await pumpEventQueue();
+
+        expect(seen, hasLength(3));
+        expect(find.textContaining('account is gone'), findsOneComponent);
+      });
+    });
+
+    testClient('a pasted code keeps its spaces off the shape check', (
+      tester,
+    ) async {
+      final seen = <http.Request>[];
+      await withApi(seen: seen, () async {
+        tester.pumpComponent(const DeleteAccountForm());
+        await tester.input(
+          find.byKey(const Key('email')),
+          value: 'alice@example.com',
+        );
+        await tester.click(find.byKey(const Key('send-code')));
+        await pumpEventQueue();
+        // How a mail app hands it over.
+        await tester.input(find.byKey(const Key('code')), value: '12 34 56');
+        await tester.input(find.byKey(const Key('understood')), checked: true);
+        await tester.click(find.byKey(const Key('delete')));
+        await pumpEventQueue();
+
+        expect(seen, hasLength(3));
+        expect(jsonDecode(seen[1].body), containsPair('token', '123456'));
+        expect(find.textContaining('account is gone'), findsOneComponent);
+      });
+    });
+
+    testClient('start over returns to the address step', (tester) async {
+      final seen = <http.Request>[];
+      await withApi(seen: seen, () async {
+        tester.pumpComponent(const DeleteAccountForm());
+        await tester.input(
+          find.byKey(const Key('email')),
+          value: 'typo@example.com',
+        );
+        await tester.click(find.byKey(const Key('send-code')));
+        await pumpEventQueue();
+        expect(find.byKey(const Key('code')), findsOneComponent);
+
+        await tester.click(find.byKey(const Key('start-over')));
+        await pumpEventQueue();
+
+        // Back to the address field, with nothing deleted on the way.
+        expect(find.byKey(const Key('email')), findsOneComponent);
+        expect(find.byKey(const Key('code')), findsNothing);
+        expect(seen, hasLength(1));
+      });
+    });
+
+    testClient('a bot that fills every field is thanked, not obeyed', (
+      tester,
+    ) async {
+      final seen = <http.Request>[];
+      await withApi(seen: seen, () async {
+        tester.pumpComponent(const DeleteAccountForm());
+        await tester.input(
+          find.byKey(const Key('email')),
+          value: 'alice@example.com',
+        );
+        await tester.input(
+          find.byKey(const Key('website')),
+          value: 'https://spam.example',
+        );
+        await tester.click(find.byKey(const Key('send-code')));
+        await pumpEventQueue();
+
+        // No request at all: the honeypot answers without touching GoTrue.
+        expect(seen, isEmpty);
       });
     });
 
@@ -146,9 +252,19 @@ void main() {
           await tester.click(find.byKey(const Key('send-code')));
           await pumpEventQueue();
           await tester.input(find.byKey(const Key('code')), value: '000000');
+          await tester.input(
+            find.byKey(const Key('understood')),
+            checked: true,
+          );
           await tester.click(find.byKey(const Key('delete')));
           await pumpEventQueue();
 
+          // The code request and the refused verify; no deletion followed.
+          expect(seen, hasLength(2));
+          expect(
+            seen.map((request) => request.url.path),
+            isNot(contains('/rest/v1/rpc/delete_account')),
+          );
           expect(find.textContaining('did not match'), findsOneComponent);
           expect(find.textContaining('account is gone'), findsNothing);
           // Still on the code step, so the reader can try the right code.
@@ -173,6 +289,10 @@ void main() {
           await tester.click(find.byKey(const Key('send-code')));
           await pumpEventQueue();
           await tester.input(find.byKey(const Key('code')), value: '12345');
+          await tester.input(
+            find.byKey(const Key('understood')),
+            checked: true,
+          );
           await tester.click(find.byKey(const Key('delete')));
           await pumpEventQueue();
 
@@ -216,6 +336,7 @@ void main() {
         await tester.click(find.byKey(const Key('send-code')));
         await pumpEventQueue();
         await tester.input(find.byKey(const Key('code')), value: '123456');
+        await tester.input(find.byKey(const Key('understood')), checked: true);
         await tester.click(find.byKey(const Key('delete')));
         await pumpEventQueue();
 

@@ -43,16 +43,32 @@ bool looksLikeCode(String value) => _codeShape.hasMatch(value);
 
 final _codeShape = RegExp(r'^\d{6}$');
 
+/// Drops every kind of space a code picks up on its way out of a mail app
+/// and through a clipboard — "12 34 56", a stray newline, the non-breaking
+/// space some clients insert — so a correct code is not refused for how it
+/// was pasted. Anything else is left alone for [looksLikeCode] to judge.
+String normaliseCode(String value) => value.replaceAll(_spaces, '');
+
+final _spaces = RegExp(r'\s+', unicode: true);
+
 /// Asks GoTrue to mail a one-time code to [email], **without creating an
 /// account** for an address that has none (`create_user: false`): someone
 /// asking to be deleted must never be signed up as a side effect.
 ///
 /// That flag makes GoTrue answer `422 otp_disabled` for an unknown address
-/// and `200` for a known one, which is an account-existence oracle for
-/// anyone who can type an address into this form. So both are reported as
-/// [CodeRequestOutcome.sent] and the page says "if that address has an
-/// account, the code is on its way" — the caller cannot tell the two apart,
-/// and neither can the page's analytics.
+/// and `200` for a known one. Both are reported as [CodeRequestOutcome.sent]
+/// and the page says "if that address has an account, the code is on its
+/// way", so the page never relays the distinction to its reader or its
+/// analytics.
+///
+/// This does not *close* the oracle, and the page is not what opens it:
+/// `/auth/v1/otp` is public, the app's own sign-in calls it the same way,
+/// and a scripted caller reads the 422-vs-200 (or the send latency)
+/// straight from GoTrue whether this page exists or not. Closing it needs a
+/// server-side control — tracked in
+/// [#94](https://github.com/peter-trost/emotely/issues/94). What this page
+/// owes its reader is not to amplify it into a UI that answers the
+/// question for them, and that is what the shared copy does.
 Future<CodeRequestOutcome> requestDeletionCode(
   http.Client client, {
   required String email,
@@ -130,13 +146,42 @@ Future<DeletionOutcome> deleteAccountWithCode(
       },
       body: '{}',
     );
-    // The function returns void, so PostgREST answers 204 with no body.
-    return switch (deleted.statusCode) {
-      200 || 204 => DeletionOutcome.deleted,
-      _ => DeletionOutcome.failed,
-    };
+    // `delete_account()` answers true only when a row really went, so a
+    // 2xx alone is not enough to promise the reader their account is gone.
+    if (deleted.statusCode == 200 && deleted.body.trim() == 'true') {
+      // The cascade took the session with the user; nothing to give back.
+      return DeletionOutcome.deleted;
+    }
+    // Verify minted a session (access and refresh token) that nothing
+    // deleted. Hand it back rather than leave it alive for its refresh
+    // window — best effort, and the outcome is a failure either way.
+    await _logout(client, accessToken, supabaseUrl, publishableKey);
+    return DeletionOutcome.failed;
   } on http.ClientException {
     return DeletionOutcome.failed;
+  }
+}
+
+/// Ends the session [accessToken] belongs to, ignoring whatever comes back:
+/// this runs on a path that already failed, and a session that outlives the
+/// page is the only thing worth avoiding here.
+Future<void> _logout(
+  http.Client client,
+  String accessToken,
+  Uri supabaseUrl,
+  String publishableKey,
+) async {
+  try {
+    await client.post(
+      supabaseUrl.resolve('/auth/v1/logout'),
+      headers: {
+        'apikey': publishableKey,
+        'authorization': 'Bearer $accessToken',
+        'content-type': 'application/json',
+      },
+    );
+  } on http.ClientException {
+    // Offline: the token expires on its own, and there is nothing to retry.
   }
 }
 

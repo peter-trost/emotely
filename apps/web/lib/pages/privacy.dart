@@ -143,8 +143,11 @@ class const Privacy({super.key}) extends StatelessComponent {
       a(href: '/delete-account', [.text('the deletion page')]),
       .text(
         '. Deleting removes the account, every journal entry and session '
-        'in it, and the address itself, immediately and without a backup '
-        'copy.',
+        'in it, and the address itself from the live database immediately. '
+        'Routine encrypted backups of the database may still hold a copy '
+        'until they age out of the provider’s retention window; they '
+        'are only ever used to recover from a failure, never to restore a '
+        'deleted account.',
       ),
     ]),
 

@@ -3,7 +3,7 @@
 -- or as `anon` with none. What a user can see or touch is exactly their own
 -- rows; anything else fails before it reaches a row.
 begin;
-select plan(27);
+select plan(28);
 
 -- Impersonation helpers. auth.uid() reads `sub` from request.jwt.claims,
 -- which is how PostgREST hands the verified JWT to Postgres.
@@ -182,7 +182,13 @@ select throws_ok(
 -- Account deletion takes everything with it -------------------------------------
 
 select pg_temp.login('00000000-0000-0000-0000-00000000000a');
-select lives_ok('select public.delete_account()', 'a user can delete their account');
+-- The return value is what the web page shows its confirmation on, so it
+-- has to mean "a row really went", not merely "the statement ran".
+select results_eq(
+  'select public.delete_account()',
+  $$values (true)$$,
+  'deleting your account reports that a row was deleted'
+);
 
 select pg_temp.logout();
 select is_empty(
@@ -194,6 +200,16 @@ select is_empty(
     where user_id = '00000000-0000-0000-0000-00000000000a'$$,
   'their sessions and entries cascade away'
 );
+
+-- A caller whose row is already gone deletes nothing and is told so, which
+-- is the difference between "it ran" and "it deleted".
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+select results_eq(
+  'select public.delete_account()',
+  $$values (false)$$,
+  'deleting an account that is already gone reports nothing deleted'
+);
+select pg_temp.logout();
 
 select * from finish();
 rollback;

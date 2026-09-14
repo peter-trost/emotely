@@ -85,7 +85,6 @@ void main() {
     ) {
       tester.pumpComponent(const DeleteAccount());
 
-      expect(find.textContaining('no backup'), findsComponents);
       expect(find.textContaining('journal entry'), findsComponents);
       expect(find.textContaining('hello@getemotely.com'), findsComponents);
     });
@@ -95,6 +94,41 @@ void main() {
 
       // Deleting is immediate; no "we will get back to you within 30 days".
       expect(find.textContaining('immediate'), findsComponents);
+    });
+
+    testComponents('names the app and developer as the Play listing has them', (
+      tester,
+    ) {
+      tester.pumpComponent(const DeleteAccount());
+
+      // The Play record keeps the legacy title until the first new
+      // version (ADR 0012); when it is renamed, this test says so.
+      expect(
+        find.textContaining('Reflect Therapy AI: emotely'),
+        findsOneComponent,
+      );
+      expect(find.textContaining('Peter Trost'), findsComponents);
+    });
+
+    testComponents('is honest about backups rather than claiming none', (
+      tester,
+    ) {
+      tester.pumpComponent(const DeleteAccount());
+
+      expect(find.textContaining('live database'), findsComponents);
+      expect(find.textContaining('retention window'), findsComponents);
+      // The old copy claimed there was no backup copy at all.
+      expect(find.textContaining('no backup'), findsNothing);
+    });
+
+    testComponents('says what survives the deletion, and calls it that', (
+      tester,
+    ) {
+      tester.pumpComponent(const DeleteAccount());
+
+      expect(find.text('What is not deleted'), findsOneComponent);
+      // "anonymous" would overstate what the counting actually is.
+      expect(find.textContaining('pseudonymous'), findsComponents);
     });
   });
 
@@ -146,6 +180,8 @@ void main() {
 
       expect(find.textContaining('the deletion page'), findsOneComponent);
       expect(find.textContaining('Delete account'), findsComponents);
+      // Truthful about backups, rather than promising none exist.
+      expect(find.textContaining('retention window'), findsComponents);
     });
   });
 }

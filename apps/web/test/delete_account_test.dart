@@ -103,7 +103,8 @@ void main() {
         if (request.url.path == '/auth/v1/verify') {
           return http.Response(jsonEncode({'access_token': accessToken}), 200);
         }
-        return http.Response('', 204);
+        // `delete_account()` reports whether a row really went.
+        return http.Response('true', 200);
       });
 
       final outcome = await deleteAccountWithCode(
@@ -115,6 +116,7 @@ void main() {
       );
 
       expect(outcome, DeletionOutcome.deleted);
+      // Verify and delete, and no logout: the cascade took the session.
       expect(seen, hasLength(2));
 
       final verify = seen.first;
@@ -186,7 +188,9 @@ void main() {
     });
 
     test('a refused deletion is a failure, not a false confirmation', () async {
+      final seen = <http.Request>[];
       final client = MockClient((request) async {
+        seen.add(request);
         if (request.url.path == '/auth/v1/verify') {
           return http.Response(jsonEncode({'access_token': accessToken}), 200);
         }
@@ -202,6 +206,34 @@ void main() {
       );
 
       expect(outcome, DeletionOutcome.failed);
+      // Verify minted a session that nothing deleted, so it is given back
+      // rather than left to live out its refresh window.
+      final logout = seen.last;
+      expect(logout.url.path, '/auth/v1/logout');
+      expect(logout.headers['authorization'], 'Bearer $accessToken');
+    });
+
+    test('a deletion that deleted nothing is not a confirmation', () async {
+      final seen = <http.Request>[];
+      final client = MockClient((request) async {
+        seen.add(request);
+        if (request.url.path == '/auth/v1/verify') {
+          return http.Response(jsonEncode({'access_token': accessToken}), 200);
+        }
+        // 200, but the function says it found no row to delete.
+        return http.Response('false', 200);
+      });
+
+      final outcome = await deleteAccountWithCode(
+        client,
+        email: 'alice@example.com',
+        code: '123456',
+        supabaseUrl: supabase,
+        publishableKey: key,
+      );
+
+      expect(outcome, DeletionOutcome.failed);
+      expect(seen.last.url.path, '/auth/v1/logout');
     });
 
     test('a network error is a failure, not an exception', () async {
@@ -219,6 +251,17 @@ void main() {
     });
   });
 
+  group('normaliseCode', () {
+    test('drops the spaces a paste from a mail app brings along', () {
+      expect(normaliseCode('12 34 56'), '123456');
+      expect(normaliseCode('  123456 '), '123456');
+      expect(normaliseCode('123 456'), '123456');
+    });
+    test('leaves anything else to the shape check', () {
+      expect(normaliseCode('12345a'), '12345a');
+    });
+  });
+
   group('looksLikeCode', () {
     test('accepts exactly six digits', () {
       expect(looksLikeCode('123456'), isTrue);
@@ -228,6 +271,7 @@ void main() {
       expect(looksLikeCode('1234567'), isFalse);
       expect(looksLikeCode('12345a'), isFalse);
       expect(looksLikeCode(''), isFalse);
+      // Spaces are stripped by normaliseCode before this check sees them.
       expect(looksLikeCode('12 34 56'), isFalse);
     });
   });

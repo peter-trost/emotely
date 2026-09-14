@@ -13,12 +13,22 @@ class const DeleteAccount({super.key}) extends StatelessComponent {
   @override
   Component build(BuildContext context) => const main_(classes: 'page prose', [
     h1([.text('Delete your account')]),
+    // Google asks the deletion resource to name the app and the developer
+    // as they appear on the store listing. The Play record still carries
+    // the legacy title until the first new version ships (ADR 0012), so
+    // both names are given rather than only the one we use here.
+    p(classes: 'delete-account-identity', [
+      .text(
+        'This page is for emotely (listed on Google Play as '
+        '"Reflect Therapy AI: emotely"), by Peter Trost.',
+      ),
+    ]),
     p([
       .text(
-        'Deleting is immediate and total: the account, every journal entry '
-        'and session in it, and the email address itself are removed from '
-        'the database. There is no grace period, no archive and no backup '
-        'copy to ask for afterwards.',
+        'Deleting is immediate: the account, every journal entry and '
+        'session in it, and the email address itself are removed from the '
+        'live database as soon as you confirm. There is no grace period '
+        'and no archive to ask for afterwards.',
       ),
     ]),
 
@@ -69,11 +79,46 @@ class const DeleteAccount({super.key}) extends StatelessComponent {
       .text(
         'Journal content lives in one database and nowhere else — it is '
         'never sent to an analytics provider — so deleting the account '
-        'deletes it everywhere. What remains afterwards is anonymous '
-        'counting that was never tied to you: how many people opened a '
-        'page or finished a session, with no address and no identifier in '
-        'it. If you also joined the waitlist with the same address, that '
-        'is a separate list; write to ',
+        'deletes it everywhere it was stored.',
+      ),
+    ]),
+
+    h2([.text('What is not deleted')]),
+    p([
+      .text(
+        'Two things outlive the account, and neither contains your journal '
+        'or your address.',
+      ),
+    ]),
+    ul([
+      li([
+        strong([.text('Counting.')]),
+        .text(
+          ' The site and the app count things like how many people opened '
+          'a page or finished a session. These records are pseudonymous '
+          'rather than anonymous: the site groups visits by a hash that '
+          'changes every day and never reaches your browser, and the app '
+          'counts events against a random account identifier that carries '
+          'no journal text and no email address. Deleting the account '
+          'breaks the link between that identifier and you, but the counts '
+          'themselves remain.',
+        ),
+      ]),
+      li([
+        strong([.text('Backups.')]),
+        .text(
+          ' Deletion takes effect in the live database immediately. '
+          'Routine encrypted backups of the database as a whole may still '
+          'hold a copy until they age out of the provider’s retention '
+          'window, and they are never used to bring a deleted account '
+          'back — only to recover the database after a failure.',
+        ),
+      ]),
+    ]),
+    p([
+      .text(
+        'If you also joined the waitlist with the same address, that is a '
+        'separate list and the deletion above does not touch it; write to ',
       ),
       a(href: 'mailto:$contactEmail', [.text(contactEmail)]),
       .text(' and it is removed too.'),

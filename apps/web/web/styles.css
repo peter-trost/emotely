@@ -412,6 +412,52 @@ p {
   border-color: var(--accent);
 }
 
+.delete-account .hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* The irreversible step is deliberately two deliberate acts, not one. */
+.delete-account-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font: 0.95rem/1.4 var(--sans);
+  font-weight: 400;
+}
+
+.delete-account-consent input {
+  width: auto;
+  margin-top: 0.15rem;
+}
+
+.delete-account-restart {
+  margin-top: 0.25rem;
+}
+
+/* A button, because it acts on the page; it reads as the link it is. */
+.linklike {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linklike:hover {
+  color: var(--ink);
+}
+
+.delete-account-identity {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
 @media (max-width: 40rem) {
   .site-header {
     flex-direction: column;
