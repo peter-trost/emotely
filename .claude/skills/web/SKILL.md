@@ -7,7 +7,8 @@ description: How to run, test, build and deploy the landing page (apps/web, Jasp
 
 A static [Jaspr](https://jaspr.site) site in Dart: `lib/main.server.dart`
 renders every route to HTML at build time, `lib/main.client.dart` mounts the
-one `@client` island (`components/waitlist_form.dart`) in the browser. Plain
+`@client` islands in the browser: the waitlist form, the waitlist
+confirmation, and the account-deletion form (`components/`). Plain
 CSS in `web/styles.css`. No Node anywhere in this app.
 
 Everything below is agent-executable; run from `apps/web`.
@@ -74,7 +75,21 @@ ADR 0011) owns validation, silent de-duplication and rate limits and answers
 201 / 429 (`PT429`) / 400. The confirmation mail the database sends links
 to `/confirm?t=<token>`; that page's island (`components/confirm_waitlist.dart`)
 calls the RPC `confirm_waitlist` once and shows confirmed / no longer valid /
-retry. Both islands are pre-rendered at build time, so anything that needs
+retry.
+
+`lib/delete_account.dart` is the third island's seam (`/delete-account`,
+`components/delete_account_form.dart`), the web deletion route Google Play's
+Data safety form requires. Two calls to GoTrue with the same publishable
+key — `POST /auth/v1/otp` with `create_user: false` so a deletion request
+never creates an account, then `POST /auth/v1/verify` — and the access token
+that comes back calls `rpc/delete_account` as the user, under RLS. Nothing
+privileged is involved and no session is kept. `create_user: false` makes
+GoTrue answer 422 `otp_disabled` for an unknown address and 200 for a known
+one; both map to `sent` and the copy is conditional ("if that address has an
+account"), because surfacing the difference would be an account-existence
+oracle. The events it sends carry an outcome name only — no address, no code.
+
+Every island is pre-rendered at build time, so anything that needs
 `window` sits behind `kIsWeb`. To exercise it locally, `supabase start` and pass
 `--dart-define=EMOTELY_SUPABASE_URL=http://127.0.0.1:54321` plus the local
 anon key to `jaspr serve` (see `lib/environment.dart`).

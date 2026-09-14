@@ -73,8 +73,24 @@ The list is in ADR 0013. `PLAY_SERVICE_ACCOUNT_JSON` is the JSON key of
   the auth user and every session and entry by cascade, then signs the
   device out.
 - **Google Play** additionally requires a **web** deletion URL declared in
-  the Data safety form, which the app cannot satisfy on its own. Out of
-  scope of the in-app path; tracked in #86.
+  the Data safety form, because some users ask after uninstalling. The URL
+  is `https://getemotely.com/delete-account` (`apps/web`, in the sitemap and
+  linked from the privacy page). The page explains the in-app path first,
+  then offers a self-serve form for people without the app: address → a
+  six-digit code from GoTrue with `create_user: false` (a deletion request
+  must never create an account) → the code is exchanged for the user's own
+  access token, which calls the same `public.delete_account()`. No operator
+  step, no mailbox to watch, no service-role key. An address with no account
+  is answered exactly like one that has, so the form cannot be used to find
+  out who has an emotely account.
+- **Declaring it is a human step in the Play Console** and the only part of
+  this that an agent cannot do: **Play Console → Policy → App content →
+  Data safety → Data deletion**, choose "users can request account deletion
+  from a web page", paste the URL above, save and submit. It is a release
+  blocker for the Play track: the Data safety form cannot be completed
+  without it.
+- **The in-app path is unchanged** by any of this — it remains the route
+  the App Store review notes name, and the one to give a reviewer.
 
 ## Store reviewer accounts
 

@@ -1,5 +1,6 @@
 import 'package:emotely_web/environment.dart';
 import 'package:emotely_web/pages/confirm.dart';
+import 'package:emotely_web/pages/delete_account.dart';
 import 'package:emotely_web/pages/home.dart';
 import 'package:emotely_web/pages/imprint.dart';
 import 'package:emotely_web/pages/privacy.dart';
@@ -36,6 +37,11 @@ class const App({super.key}) extends StatelessComponent {
           path: '/privacy',
           title: 'Privacy — emotely',
           builder: (_, _) => const Privacy(),
+        ),
+        Route(
+          path: '/delete-account',
+          title: 'Delete your account — emotely',
+          builder: (_, _) => const DeleteAccount(),
         ),
         Route(
           path: '/imprint',

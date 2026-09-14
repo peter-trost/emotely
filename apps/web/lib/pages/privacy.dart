@@ -133,6 +133,20 @@ class const Privacy({super.key}) extends StatelessComponent {
         'counts are aggregated and cannot be traced back to you.',
       ),
     ]),
+    p([
+      .text(
+        'An account in the app is a different thing from this list, and it '
+        'is deleted whenever you say so: in the app under Your journal → '
+        'the account icon → Delete account, or, if you no longer have the '
+        'app, on ',
+      ),
+      a(href: '/delete-account', [.text('the deletion page')]),
+      .text(
+        '. Deleting removes the account, every journal entry and session '
+        'in it, and the address itself, immediately and without a backup '
+        'copy.',
+      ),
+    ]),
 
     h2([.text('Your rights')]),
     p([
