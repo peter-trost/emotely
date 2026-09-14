@@ -7,7 +7,8 @@ description: How to run, test, build and deploy the landing page (apps/web, Jasp
 
 A static [Jaspr](https://jaspr.site) site in Dart: `lib/main.server.dart`
 renders every route to HTML at build time, `lib/main.client.dart` mounts the
-one `@client` island (`components/waitlist_form.dart`) in the browser. Plain
+`@client` islands in the browser: the waitlist form, the waitlist
+confirmation, and the account-deletion form (`components/`). Plain
 CSS in `web/styles.css`. No Node anywhere in this app.
 
 Everything below is agent-executable; run from `apps/web`.
@@ -30,6 +31,15 @@ dart test -p chrome test/client              # headless Chrome: the form island
 jaspr build --sitemap-domain https://getemotely.com   # → build/jaspr
 git diff --exit-code -- lib                  # generated *.options.dart must not drift
 ```
+
+A global hook denies `dart test` / `flutter test` to agents and points at
+the very_good CLI MCP `test` tool instead. That tool is the agent-side
+equivalent of the two test lines above, with one catch: run it with
+**`optimization: false`**. Its test optimizer bundles every file into one
+VM entrypoint, which pulls the `@TestOn('browser')` files in `test/client`
+into a VM compile and fails on `dart:js_interop`. Pass `platform: chrome`
+plus `paths: ["test/client"]` for the browser half. CI is unaffected — it
+runs the plain commands above.
 
 Rules the lints enforce beyond `apps/app`: `jaspr_lints` (HTML helpers over
 `Component.element`, children last, styles ordered). `@client` files must
@@ -74,7 +84,31 @@ ADR 0011) owns validation, silent de-duplication and rate limits and answers
 201 / 429 (`PT429`) / 400. The confirmation mail the database sends links
 to `/confirm?t=<token>`; that page's island (`components/confirm_waitlist.dart`)
 calls the RPC `confirm_waitlist` once and shows confirmed / no longer valid /
-retry. Both islands are pre-rendered at build time, so anything that needs
+retry.
+
+`lib/delete_account.dart` is the third island's seam (`/delete-account`,
+`components/delete_account_form.dart`), the web deletion route Google Play's
+Data safety form requires. Two calls to GoTrue with the same publishable
+key — `POST /auth/v1/otp` with `create_user: false` so a deletion request
+never creates an account, then `POST /auth/v1/verify` — and the access token
+that comes back calls `rpc/delete_account` as the user, under RLS. Nothing
+privileged is involved, the page requires the function's `true` before it
+claims anything, and a verify that mints a session which then fails to
+delete is followed by `POST /auth/v1/logout`, so no session outlives the
+attempt.
+
+`create_user: false` makes GoTrue answer 422 `otp_disabled` for an unknown
+address and 200 for a known one; both map to `sent` and the copy is
+conditional ("if that address has an account"). That does **not** close the
+oracle and the page is not what opens it — `/auth/v1/otp` is public, the
+app's own sign-in calls it the same way, and a scripted caller reads the
+422-vs-200 (or the send latency) straight from GoTrue. Closing it needs a
+server-side control, tracked in
+[#94](https://github.com/peter-trost/emotely/issues/94); what the page owes
+its reader is not to answer the question for them. The events it sends
+carry an outcome name only — no address, no code.
+
+Every island is pre-rendered at build time, so anything that needs
 `window` sits behind `kIsWeb`. To exercise it locally, `supabase start` and pass
 `--dart-define=EMOTELY_SUPABASE_URL=http://127.0.0.1:54321` plus the local
 anon key to `jaspr serve` (see `lib/environment.dart`).

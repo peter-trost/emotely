@@ -7,6 +7,8 @@
 import 'package:jaspr/server.dart';
 import 'package:emotely_web/components/confirm_waitlist.dart'
     as _confirm_waitlist;
+import 'package:emotely_web/components/delete_account_form.dart'
+    as _delete_account_form;
 import 'package:emotely_web/components/waitlist_form.dart' as _waitlist_form;
 
 /// Default [ServerOptions] for use with your Jaspr project.
@@ -30,6 +32,10 @@ ServerOptions get defaultServerOptions => ServerOptions(
   clients: {
     _confirm_waitlist.ConfirmWaitlist:
         ClientTarget<_confirm_waitlist.ConfirmWaitlist>('confirm_waitlist'),
+    _delete_account_form.DeleteAccountForm:
+        ClientTarget<_delete_account_form.DeleteAccountForm>(
+          'delete_account_form',
+        ),
     _waitlist_form.WaitlistForm: ClientTarget<_waitlist_form.WaitlistForm>(
       'waitlist_form',
     ),

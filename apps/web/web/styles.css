@@ -357,6 +357,107 @@ p {
   margin: 0 auto;
 }
 
+/* The deletion form (/delete-account): left-aligned in the prose column,
+   one field per row, and a confirm button that looks like what it does. */
+
+.delete-account {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.delete-account label {
+  font: 600 0.95rem var(--sans);
+}
+
+.delete-account input {
+  width: 100%;
+  max-width: 22rem;
+  font: 1rem var(--sans);
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+.delete-account input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.delete-account input[name="code"] {
+  max-width: 9rem;
+  font-size: 1.25rem;
+  letter-spacing: 0.25em;
+}
+
+.delete-account p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.delete-account-message {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.delete-account-done {
+  border-color: var(--accent);
+}
+
+.delete-account .hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* The irreversible step is deliberately two deliberate acts, not one. */
+.delete-account-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font: 0.95rem/1.4 var(--sans);
+  font-weight: 400;
+}
+
+.delete-account-consent input {
+  width: auto;
+  margin-top: 0.15rem;
+}
+
+.delete-account-restart {
+  margin-top: 0.25rem;
+}
+
+/* A button, because it acts on the page; it reads as the link it is. */
+.linklike {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linklike:hover {
+  color: var(--ink);
+}
+
+.delete-account-identity {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
 @media (max-width: 40rem) {
   .site-header {
     flex-direction: column;
