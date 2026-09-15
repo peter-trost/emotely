@@ -52,7 +52,9 @@ email address: …`) and, for a 5xx, gotrue keeps the whole response body.
    platform dispatcher, isolates; release builds only). A `beforeSend`
    hook, `contentFreeExceptions`, applies the same rule on the wire to
    every `$exception` event: each exception item keeps its type and stack
-   frames but loses its text unless the type is one of the three above,
+   frames but loses its text unless the type is one of the three above or
+   `WithheldException`, the stand-in path 1 substitutes, whose message is
+   already withheld — four in `forwardedTypes`, not three;
    and the Flutter error details keep only the library and the silent
    flag (`context`, `information` and `error_summary` can quote a widget's
    content). Exception steps (free-text breadcrumbs in a native buffer)
@@ -62,4 +64,19 @@ The needle tests cover the reported exceptions: a non-JSON body, Postgres
 refusals and GoTrue refusals (4xx and 5xx) quoting the needle never reach
 an outgoing string, and the scrubber is unit-tested with a needle in every
 free-text field the SDK emits.
+
+**2026-09-15, the model provider:** this ADR keeps journal content out of
+*telemetry*. The other place the content goes is the model itself — the
+transcript is the prompt — and that path is now covered too: every round
+requests `disallowPromptTraining` and `zeroDataRetention` from the gateway, so
+routing is restricted to providers contractually bound not to train on the
+prompt or retain it. Recorded in full, with the live measurement and the
+fail-closed consequence, in the
+[ADR 0003 amendment](0003-model-gateway-and-cost-ceiling.md).
+
+The two controls are **not** independent: Vercel states ZDR is a superset of
+the training opt-out, so setting both is defense in depth rather than two
+separate guarantees. Nor does either make the content *unseen* — the provider
+still processes the transcript to answer it. The claim is bounded: not trained
+on, not retained. The privacy notice must say exactly that and no more.
 

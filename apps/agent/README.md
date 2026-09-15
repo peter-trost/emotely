@@ -17,8 +17,25 @@ committed (see the root [`AGENTS.md`](../../AGENTS.md)).
 | `SESSION_SIGNING_SECRET_PREVIOUS` | no | The secret being retired. Set only for the grace window of a rotation (below); unset in normal operation. An empty value counts as unset. |
 | `SUPABASE_URL` | yes | The Supabase project whose users may call ([ADR 0010](../../docs/adr/0010-supabase-data-layer.md)). |
 | `AI_GATEWAY_API_KEY` | yes | Vercel AI Gateway key ([ADR 0003](../../docs/adr/0003-model-gateway-and-cost-ceiling.md)). |
-| `EMOTELY_MODEL` | no | Overrides `DEFAULT_MODEL` in `src/session-config.ts`. |
+| `EMOTELY_MODEL` | no | Overrides `DEFAULT_MODEL` in `src/session-config.ts`. The value must be served by providers that **all** qualify under the gateway's privacy filters (below), or every round fails. |
 | `POSTHOG_KEY`, `POSTHOG_HOST` | no | LLM observability; both or neither ([ADR 0004](../../docs/adr/0004-posthog-observability-stack.md)). |
+
+## Picking a model: it must qualify under the privacy filters
+
+Every round sends `disallowPromptTraining` and `zeroDataRetention` to the
+gateway ([ADR 0003](../../docs/adr/0003-model-gateway-and-cost-ceiling.md)
+amendment 2026-09-15). Both **fail closed**: if no provider serving the model
+qualifies, the gateway rejects the request and the session dies on its first
+round — there is no quiet fallback to a weaker provider.
+
+So a model is only eligible if the providers that serve it qualify under both
+filters. Measure before promoting one (via `EMOTELY_MODEL`, the `agent-model`
+flag, or the monthly benchmark): run a round and read
+`providerMetadata.gateway.routing.planningReasoning`, which names the planned
+providers and states whether they support ZDR and disallow prompt training.
+The benchmark does not score this yet — [issue #98](https://github.com/peter-trost/emotely/issues/98).
+Alarming on gateway rejections is [issue #99](https://github.com/peter-trost/emotely/issues/99),
+which owns the runbook.
 
 ## Rotating the signing secret
 

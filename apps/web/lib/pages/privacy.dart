@@ -11,10 +11,9 @@ class const Privacy({super.key}) extends StatelessComponent {
   Component build(BuildContext context) => const main_(classes: 'page prose', [
     h1([.text('Privacy')]),
     p([
-      .text(
-        'This page covers getemotely.com, the web site. The app has its own '
-        'notice inside it. Last updated 12 September 2026.',
-      ),
+      .text('This page covers getemotely.com, the web site. The app has its '),
+      a(href: '/app-privacy', [.text('own privacy notice')]),
+      .text('. Last updated 12 September 2026.'),
     ]),
 
     h2([.text('What the site stores')]),
