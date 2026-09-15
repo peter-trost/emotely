@@ -22,11 +22,22 @@ const NEEDLE = "NEEDLE_JOURNAL_TEXT_7b2c";
  * path this test exists to close.
  */
 function gatewayRejection(message: string): Error {
+  // The live APICallError's own keys, measured 2026-09-15:
+  // name, cause, url, requestBodyValues, statusCode, responseHeaders,
+  // responseBody, isRetryable, data. requestBodyValues is where the
+  // transcript sits, so the needle goes in every free-text field.
   const cause = Object.assign(new Error(`upstream said: ${NEEDLE}`), {
     name: "AI_APICallError",
+    url: "https://ai-gateway.vercel.sh/v4/ai/language-model",
     statusCode: 400,
-    requestBodyValues: { prompt: [{ content: [{ text: NEEDLE }] }] },
-    responseBody: JSON.stringify({ error: { message: NEEDLE } }),
+    isRetryable: false,
+    requestBodyValues: {
+      prompt: [{ role: "user", content: [{ type: "text", text: NEEDLE }] }],
+    },
+    responseBody: JSON.stringify({
+      error: { message: NEEDLE, type: "no_zdr_providers_available" },
+    }),
+    data: { error: { message: NEEDLE } },
   });
   return Object.assign(new Error(message), {
     name: "GatewayInternalServerError",
@@ -164,11 +175,10 @@ describe("content-free error reporting", () => {
     assert.ok(!FORWARDED_ERROR_TYPES.has("Error"));
   });
 
-  it("sends no source context, which the SDK reads off disk unbidden", async () => {
-    // posthog-node opens the file each stack frame names and uploads the
-    // surrounding lines (addSourceContext, context-lines.node), with no
-    // option to disable it. A frame that points at nothing has nothing to
-    // read — this asserts the frames stay bare.
+  it("keeps stack frames, so a report says where it came from", async () => {
+    // The guarantee is about the cause chain, not the stack: frames (and the
+    // source context posthog-node attaches to them) are what makes a report
+    // actionable. This fails if someone strips the stack again.
     const { client, wire } = recordingClient();
     const report = createErrorReporter(client);
 
@@ -178,14 +188,41 @@ describe("content-free error reporting", () => {
     });
     await client.shutdown();
 
-    const sent = wire();
+    const payload: unknown = JSON.parse(wire());
+    const event = (payload as { batch?: { properties?: unknown }[] })
+      .batch?.[0];
+    const list = (
+      event?.properties as { $exception_list?: unknown[] } | undefined
+    )?.$exception_list;
+    assert.ok(Array.isArray(list) && list.length > 0, "no exception captured");
+    const frames = (
+      list[0] as { stacktrace?: { frames?: unknown[] } } | undefined
+    )?.stacktrace?.frames;
     assert.ok(
-      !sent.includes("pre_context"),
-      "the SDK attached source lines to the exception",
+      Array.isArray(frames) && frames.length > 0,
+      "the exception carried no stack frames",
     );
+  });
+
+  it("keeps the needle out even with frames and their source context on", async () => {
+    // The two are independent: frames are enabled (previous test) *and* the
+    // transcript in the cause must still not reach the wire. Seeded into
+    // every field the live APICallError carries.
+    const { client, wire } = recordingClient();
+    const report = createErrorReporter(client);
+
+    report(gatewayRejection("No ZDR providers available"), {
+      step: "session_round",
+      userId: "user-1",
+      model: "moonshotai/kimi-k2",
+    });
+    await client.shutdown();
+
+    const sent = wire();
+    assert.ok(sent.includes("stacktrace"), "frames were not sent at all");
     assert.ok(
-      !sent.includes("context_line"),
-      "the SDK attached the throwing source line",
+      !sent.includes(NEEDLE),
+      "the transcript reached PostHog despite the cause being dropped",
     );
   });
 

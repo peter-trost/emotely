@@ -93,15 +93,17 @@ Exception reports are content-free by construction
 ([ADR 0005](../../docs/adr/0005-journal-content-privacy-mode.md)): the
 properties are the step, the model id, the failure kind and the upstream
 status, and only an allowlisted gateway error keeps its message.
-`src/error-tracking.ts` owns the rule and explains each decision. Three
-things are deliberately withheld, so do not go looking for them in PostHog:
+`src/error-tracking.ts` owns the rule and explains each decision.
+
+**You get the stack trace**, with the source context `posthog-node` attaches
+to each frame — that is what tells you where a failure came from.
+
+Two things are deliberately withheld, so do not go looking for them:
 
 - **The cause chain.** A `GatewayError`'s `cause` is an `APICallError` whose
   `requestBodyValues` hold the prompt — i.e. the journal transcript. It is
-  dropped before the SDK sees it.
-- **Stack traces.** `posthog-node` reads the source file behind every stack
-  frame and uploads the surrounding lines, with no option to disable it, so
-  the stack is stripped instead.
+  dropped before the SDK sees it, which is the whole reason this module
+  rebuilds the error instead of forwarding it.
 - **Any non-gateway error's message**, which arrives as a `WithheldError`
   naming only the type and status.
 

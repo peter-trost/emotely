@@ -19,6 +19,12 @@ import type { PostHog } from "posthog-node";
  * verbatim. Reporting that error as it stands hands PostHog the cause chain;
  * `responseBody` on the same object is whatever the upstream chose to echo.
  * So the cause chain is dropped and only an allowlisted `message` survives.
+ *
+ * **Stack traces are kept**, including the source context PostHog attaches to
+ * each frame by reading the file the frame names. That context is this
+ * repository's own source, and it is what makes a report actionable. The
+ * transcript never appears in a frame — it travels in the cause, which is
+ * exactly what is dropped above.
  */
 
 /**
@@ -169,9 +175,22 @@ export type ErrorContext = {
 };
 
 /**
- * [error] as it may leave this process: an allowlisted gateway error keeps
- * its message but loses its cause chain (a fresh Error, so PostHog has
- * nothing to walk); anything else becomes a [WithheldError].
+ * [error] as it may leave this process.
+ *
+ * The one thing that must not survive is the **cause chain**: a
+ * `GatewayError`'s `cause` is an `APICallError` whose `requestBodyValues`
+ * hold the prompt — the journal transcript — and PostHog walks `cause` into
+ * `$exception_list`. So the error is rebuilt as a fresh `Error` with no
+ * `cause` for PostHog to follow, rather than mutated: the original object is
+ * still the caller's to rethrow.
+ *
+ * The **message** survives only for an allowlisted gateway type, whose text
+ * is the gateway's own words about routing; anything else becomes a
+ * [WithheldError].
+ *
+ * The **stack is kept**, with the source context PostHog attaches to each
+ * frame. That context is this repository's own source, which is what makes a
+ * report actionable — where the throw came from, and the frames around it.
  */
 function contentFree(error: unknown): Error {
   if (!(error instanceof Error)) {
@@ -180,36 +199,15 @@ function contentFree(error: unknown): Error {
   const statusCode: unknown = (error as { statusCode?: unknown }).statusCode;
   const detail = typeof statusCode === "number" ? { statusCode } : {};
   if (!FORWARDED_ERROR_TYPES.has(error.name)) {
-    return withoutSourceContext(new WithheldError(error.name, detail));
+    const withheld = new WithheldError(error.name, detail);
+    // Keep where it was thrown; only the text is withheld.
+    withheld.stack = error.stack;
+    return withheld;
   }
-  // Rebuilt rather than mutated: `cause` is the prompt's way out, and the
-  // original object is the caller's to rethrow.
   const safe = new Error(error.message);
   safe.name = error.name;
-  return withoutSourceContext(safe);
-}
-
-/**
- * Strip the stack before the SDK sees it.
- *
- * `posthog-node` attaches source context to every stack frame — it opens the
- * file each frame names and sends the surrounding lines as `pre_context` /
- * `context_line` / `post_context`. That is wired into the Node entrypoint
- * with no option to turn it off (`addSourceContext`,
- * `extensions/error-tracking/modifiers/context-lines.node`), and it is a
- * content-free violation waiting to happen: whatever those source lines
- * contain is uploaded verbatim, and a frame's file is chosen by the
- * throw site rather than by us.
- *
- * A one-frame stack pointing at nothing on disk yields no file to read, so
- * the frames carry no source. What is given up is the server-side stack
- * trace; what is kept is the type, the message where allowlisted, and the
- * properties — which is what the runbook actually needs to tell a gateway
- * refusal from a bug. Revisit if PostHog exposes a switch for this.
- */
-function withoutSourceContext<E extends Error>(error: E): E {
-  error.stack = `${error.name}: ${error.message}`;
-  return error;
+  safe.stack = error.stack;
+  return safe;
 }
 
 export type ReportError = (error: unknown, context: ErrorContext) => void;
