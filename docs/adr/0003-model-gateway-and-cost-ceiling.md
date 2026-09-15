@@ -80,8 +80,18 @@ and cannot promise the data is not trained on. `disallowPromptTraining`
 "[r]estricts routing to providers that have agreements with Vercel for AI
 Gateway to not use prompts for model training"; `zeroDataRetention`
 "[r]estricts routing to providers with zero data retention agreements with
-Vercel for AI Gateway" — retention, not just training, so it is the stronger
-of the two and covers the weaker one.
+Vercel for AI Gateway" — retention, not just training.
+
+**The two are not independent guarantees; setting both is defense in depth.**
+Vercel is explicit that "ZDR is a superset of this control. If you enable ZDR,
+training opt-out is already covered"
+([ZDR on AI Gateway](https://vercel.com/blog/zdr-on-ai-gateway), read
+2026-09-15). So `disallowPromptTraining` adds no coverage on top of ZDR today.
+It is set anyway because they are separate request flags with separate
+eligibility sets: if ZDR ever has to be dropped — a plan change, or a model
+whose providers offer no ZDR agreement — the training opt-out must not vanish
+with it. The weaker, more widely supported filter is the one we would still be
+standing on, so it is stated explicitly rather than inherited.
 
 **Routing consequence: none measured, but both filters fail closed.** The
 gateway rejects the request outright when no eligible provider exists for the

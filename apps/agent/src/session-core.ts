@@ -164,6 +164,17 @@ const SESSION_TELEMETRY = {
  *
  * The keys are typed here rather than imported: `@ai-sdk/gateway` is a
  * transitive dependency of `ai`, not one this package declares.
+ *
+ * **The spelling of these keys is unguarded.** `GatewayProviderOptions` carries
+ * an index signature (`[key: string]: unknown`) so the Gateway can add options
+ * without an SDK release — which means a typo like `disallowPromptTrainingg`
+ * type-checks, is forwarded to the gateway verbatim, and is silently ignored
+ * there. Neither `satisfies GatewayProviderOptions` nor the unit test below
+ * would catch it: the test asserts what we send, not what the gateway
+ * understood. Only a live round proves the filter was applied — read
+ * `providerMetadata.gateway.routing.planningReasoning`, which states in words
+ * whether ZDR and the training opt-out were honoured. Treat the eval as the
+ * real check when editing these keys (issue #98).
  */
 const GATEWAY_PRIVACY_OPTIONS = {
   disallowPromptTraining: true,

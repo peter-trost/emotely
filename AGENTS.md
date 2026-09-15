@@ -36,11 +36,21 @@ handling. If a step is only documented for humans, move it into a skill.
   Never downgrade to save the ~20 USD/month while the app is distributed.
   Source: [Fair Use Guidelines](https://vercel.com/docs/limits/fair-use-guidelines)
   § "Commercial usage"; [Terms of Service](https://vercel.com/legal/terms) § 4.
-- **AI Gateway is not plan-gated**, so the agent runtime
-  ([ADR 0003](docs/adr/0003-model-gateway-and-cost-ceiling.md)) never depended
-  on the plan. Pro unlocks the peripheral features (team-wide provider
-  allowlist, Zero Data Retention, Trace Drains) and more than one firewall
-  rate-limit rule ([ADR 0008](docs/adr/0008-public-endpoint-abuse-controls.md)).
+- **The agent runtime now depends on Pro** (changed 2026-09-15). Gateway
+  *access* is not plan-gated, and until now Pro only unlocked peripheral
+  features (team-wide provider allowlist, Trace Drains) and more than one
+  firewall rate-limit rule
+  ([ADR 0008](docs/adr/0008-public-endpoint-abuse-controls.md)) — so the
+  runtime genuinely did not depend on the plan. It does now: every model round
+  requests **request-level Zero Data Retention**, which Vercel gates to **Pro
+  and Enterprise only**
+  ([ADR 0003](docs/adr/0003-model-gateway-and-cost-ceiling.md) amendment
+  2026-09-15). The gateway's privacy filters fail *closed*, so a downgrade
+  would not quietly fall back to weaker privacy — it would **fail every round
+  of every session**, taking the app down rather than degrading it. That is
+  the safer failure mode, and it turns "stay on Pro" from a billing
+  preference into a runtime requirement: a downgrade is an outage, not a
+  saving.
 
 ## Tooling
 
