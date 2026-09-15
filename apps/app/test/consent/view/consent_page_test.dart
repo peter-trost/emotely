@@ -170,6 +170,27 @@ void main() {
       expect(robot.consent, findsOneWidget);
     });
 
+    testWidgets('leaving the gate by the back arrow starts nothing', (
+      tester,
+    ) async {
+      final robot = robotWith(tester);
+      await robot.launch();
+      await robot.startSession();
+
+      // Dismissing the route is not an answer, and certainly not a yes.
+      await robot.back();
+
+      expect(robot.home, findsOneWidget);
+      expect(robot.session, findsNothing);
+      expect(robot.supabase.to(consentGrant), isEmpty);
+
+      // Nothing is left half-set: asking again is a clean question.
+      await robot.startSession();
+
+      expect(robot.consent, findsOneWidget);
+      expect(tester.widget<CheckboxListTile>(robot.checkbox).value, isFalse);
+    });
+
     testWidgets('a consent that cannot be recorded starts no session', (
       tester,
     ) async {
