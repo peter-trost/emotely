@@ -63,3 +63,18 @@ refusals and GoTrue refusals (4xx and 5xx) quoting the needle never reach
 an outgoing string, and the scrubber is unit-tested with a needle in every
 free-text field the SDK emits.
 
+**2026-09-15, the model provider:** this ADR keeps journal content out of
+*telemetry*. The other place the content goes is the model itself — the
+transcript is the prompt — and that path is now covered too: every round
+requests `disallowPromptTraining` and `zeroDataRetention` from the gateway, so
+routing is restricted to providers contractually bound not to train on the
+prompt or retain it. Recorded in full, with the live measurement and the
+fail-closed consequence, in the
+[ADR 0003 amendment](0003-model-gateway-and-cost-ceiling.md).
+
+The two controls are **not** independent: Vercel states ZDR is a superset of
+the training opt-out, so setting both is defense in depth rather than two
+separate guarantees. Nor does either make the content *unseen* — the provider
+still processes the transcript to answer it. The claim is bounded: not trained
+on, not retained. The privacy notice must say exactly that and no more.
+
