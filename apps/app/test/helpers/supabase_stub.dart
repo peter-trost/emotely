@@ -117,15 +117,29 @@ class SupabaseStub() {
   /// Answers every unscripted request to [endpoint] with [round].
   void always(String endpoint, AuthRound round) => _defaults[endpoint] = round;
 
+  /// Answers [endpoint] with [round] only if the test has not already said
+  /// what it should answer. Used by [journalWorks], which runs from
+  /// `appUnderTest` — i.e. *after* the test has set its own stubs up — so a
+  /// plain [always] there would silently overwrite them.
+  void unless(String endpoint, AuthRound round) =>
+      _defaults.putIfAbsent(endpoint, () => round);
+
   /// A journal that accepts everything: sessions are created as [sessionId],
   /// updated and closed without complaint. What most session tests want.
+  ///
+  /// Consent stands by default, so a test about sessions is about sessions.
+  /// Every default here yields to whatever the test set first, so the tests
+  /// that *are* about the gate (`test/consent/`) simply say so.
   void journalWorks({String sessionId = SupabaseStub.sessionId}) {
-    always('GET /rest/v1/entries', rows(const []));
-    always('GET /rest/v1/sessions', rows(const []));
-    always('DELETE /rest/v1/sessions', rowsChanged());
-    always('POST /rest/v1/sessions', rowCreated(sessionId));
-    always('PATCH /rest/v1/sessions', rowsChanged());
-    always('POST /rest/v1/rpc/complete_session', rpcReturned(entryId));
+    unless('GET /rest/v1/entries', rows(const []));
+    unless('GET /rest/v1/sessions', rows(const []));
+    unless('DELETE /rest/v1/sessions', rowsChanged());
+    unless('POST /rest/v1/sessions', rowCreated(sessionId));
+    unless('PATCH /rest/v1/sessions', rowsChanged());
+    unless('POST /rest/v1/rpc/complete_session', rpcReturned(entryId));
+    unless('POST /rest/v1/rpc/consent_stands', rpcReturned(true));
+    unless('POST /rest/v1/rpc/record_consent', rpcReturned(null));
+    unless('POST /rest/v1/rpc/withdraw_consent', rpcReturned(null));
   }
 
   /// Starts the client with a live session, as after a restored sign-in.

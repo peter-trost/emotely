@@ -11,11 +11,13 @@
 // user (a password account like the store review accounts; everyone else
 // signs in with a code through the app's own screen).
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/consent_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
+import 'package:emotely/consent/view/consent_page.dart';
 import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/view/entry_view.dart';
@@ -101,12 +103,29 @@ class LiveSessionRobot(final WidgetTester tester) {
         supabase: supabase.client,
         authAnalytics: AuthAnalytics(posthog: posthog),
         journalAnalytics: JournalAnalytics(posthog: posthog),
+        consentAnalytics: ConsentAnalytics(posthog: posthog),
         errorReporter: ErrorReporter(posthog: posthog),
       ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(JournalView.startKey));
+    await tester.pumpAndSettle();
+    await _consentIfAsked();
     await _settleRound();
+  }
+
+  /// The consent gate, the first time this account ever starts a session.
+  /// The smoke account consents once and the row stays, so later runs walk
+  /// straight past it — which is also what a store reviewer sees on the
+  /// account the release skill creates.
+  Future<void> _consentIfAsked() async {
+    if (find.byType(ConsentPage).evaluate().isEmpty) {
+      return;
+    }
+    await tester.tap(find.byKey(ConsentView.checkboxKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ConsentView.agreeKey));
+    await tester.pumpAndSettle();
   }
 
   Future<void> answerCurrentQuestion() async {

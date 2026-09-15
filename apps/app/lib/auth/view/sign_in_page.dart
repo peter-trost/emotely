@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:emotely/auth/bloc/auth_bloc.dart';
+import 'package:emotely/consent/consent_text.dart';
+import 'package:emotely/consent/view/consent_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -15,6 +19,7 @@ class const SignInPage({super.key}) extends StatelessWidget {
   static const passwordSignInKey = Key('sign_in_page.password_sign_in');
   static const changeEmailKey = Key('sign_in_page.change_email');
   static const errorKey = Key('sign_in_page.error');
+  static const privacyNoticeKey = Key('sign_in_page.privacy_notice');
 
   static const tooManyCodesMessage = AuthBloc.tooManyCodesMessage;
   static const tooManyAttemptsMessage = AuthBloc.tooManyAttemptsMessage;
@@ -29,25 +34,41 @@ class const SignInPage({super.key}) extends StatelessWidget {
     body: SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, state) => switch (state) {
-            AuthSignedOut(:final error) => _EmailStep(error: error),
-            AuthRequestingCode() => const _EmailStep(busy: true),
-            AuthCodeSent(:final email, :final error) => _CodeStep(
-              email: email,
-              error: error,
+        child: Column(
+          children: [
+            Expanded(
+              child: BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) => switch (state) {
+                  AuthSignedOut(:final error) => _EmailStep(error: error),
+                  AuthRequestingCode() => const _EmailStep(busy: true),
+                  AuthCodeSent(:final email, :final error) => _CodeStep(
+                    email: email,
+                    error: error,
+                  ),
+                  AuthVerifying(:final email) => _CodeStep(
+                    email: email,
+                    busy: true,
+                  ),
+                  AuthPasswordRequired(:final email, :final error) =>
+                    _PasswordStep(email: email, error: error),
+                  AuthCheckingPassword(:final email) => _PasswordStep(
+                    email: email,
+                    busy: true,
+                  ),
+                  AuthSignedIn() => const SizedBox.shrink(),
+                },
+              ),
             ),
-            AuthVerifying(:final email) => _CodeStep(email: email, busy: true),
-            AuthPasswordRequired(:final email, :final error) => _PasswordStep(
-              email: email,
-              error: error,
+            // Reachable before an account exists, and before an address has
+            // been typed: Play's disclosure expectations are stricter than
+            // Apple's about a policy that lives only behind a menu, and
+            // this is the first screen anyone sees.
+            TextButton(
+              key: privacyNoticeKey,
+              onPressed: () => unawaited(openPrivacyNotice()),
+              child: const Text(privacyNoticeLabel),
             ),
-            AuthCheckingPassword(:final email) => _PasswordStep(
-              email: email,
-              busy: true,
-            ),
-            AuthSignedIn() => const SizedBox.shrink(),
-          },
+          ],
         ),
       ),
     ),
