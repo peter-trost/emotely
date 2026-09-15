@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { QuestionSet } from "./session.ts";
-import { advanceSession } from "./session-core.ts";
+import { advanceSession, SESSION_PROVIDER_OPTIONS } from "./session-core.ts";
 import { scriptedSessionModel } from "./test-helpers.ts";
 
 const set: QuestionSet = {
@@ -123,6 +123,49 @@ describe("advanceSession", () => {
     assert.deepEqual(done.entry.answers["q-rate"], {
       answer_type: "rating",
       value: 7,
+    });
+  });
+});
+
+describe("gateway privacy options", () => {
+  it("sends the prompt-training and retention opt-out on every round", async () => {
+    // Journal transcripts are Art. 9 data: the opt-out has to reach the wire on
+    // every round, not just the first, so capture what the provider is handed.
+    const seen: (Record<string, unknown> | undefined)[] = [];
+    const scripted = scriptedSessionModel([
+      { record: { questionId: "q-rate", answerType: "rating", value: 7 } },
+      {
+        record: { questionId: "q-best", answerType: "longtext", value: "n/a" },
+      },
+      { complete: "Rated 7." },
+    ]);
+    const inner = scripted.doGenerate.bind(scripted);
+    scripted.doGenerate = async (options) => {
+      seen.push(options.providerOptions?.["gateway"]);
+      return await inner(options);
+    };
+
+    const done = await advanceSession({
+      questionSet: set,
+      model: scripted,
+      messages: [
+        { role: "user", content: "I am ready to start my journaling session." },
+      ],
+    });
+
+    assert.equal(done.status, "completed");
+    assert.equal(seen.length, 3);
+    for (const gateway of seen) {
+      assert.deepEqual(gateway, {
+        disallowPromptTraining: true,
+        zeroDataRetention: true,
+      });
+    }
+  });
+
+  it("exports the options it sends, so the opt-out cannot be dropped", () => {
+    assert.deepEqual(SESSION_PROVIDER_OPTIONS, {
+      gateway: { disallowPromptTraining: true, zeroDataRetention: true },
     });
   });
 });

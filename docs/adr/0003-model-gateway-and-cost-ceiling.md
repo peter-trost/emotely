@@ -66,3 +66,53 @@ previous default `zai/glm-4.7-flash` failed protocol or behavior in every
 run. Haiku 4.5 and Gemini 3.7 Flash pass everything but exceed the ceiling
 without explicit cache markers, and are 3× slower.
 
+## Amendment 2026-09-15: no prompt training, no provider retention
+
+Every model round sends `providerOptions.gateway.disallowPromptTraining: true`
+and `zeroDataRetention: true` (`roundSettings()` in `session-core.ts`).
+
+**Why.** A journal transcript is special-category data under GDPR Art. 9
+(health, emotions, relationships). The gateway does not train on prompts
+itself, but by default it does not route on the *providers'* training policies,
+and a provider whose stance is unknown is assumed to train. Without the opt-in
+the privacy notice cannot name a safeguard for the transfer under Art. 13(1)(f)
+and cannot promise the data is not trained on. `disallowPromptTraining`
+"[r]estricts routing to providers that have agreements with Vercel for AI
+Gateway to not use prompts for model training"; `zeroDataRetention`
+"[r]estricts routing to providers with zero data retention agreements with
+Vercel for AI Gateway" — retention, not just training.
+
+**The two are not independent guarantees; setting both is defense in depth.**
+Vercel is explicit that "ZDR is a superset of this control. If you enable ZDR,
+training opt-out is already covered"
+([ZDR on AI Gateway](https://vercel.com/blog/zdr-on-ai-gateway), read
+2026-09-15). So `disallowPromptTraining` adds no coverage on top of ZDR today.
+It is set anyway because they are separate request flags with separate
+eligibility sets: if ZDR ever has to be dropped — a plan change, or a model
+whose providers offer no ZDR agreement — the training opt-out must not vanish
+with it. The weaker, more widely supported filter is the one we would still be
+standing on, so it is stated explicitly rather than inherited.
+
+**Routing consequence: none measured, but both filters fail closed.** The
+gateway rejects the request outright when no eligible provider exists for the
+model, so a bad interaction here breaks every session rather than degrading
+quietly. Measured live on 2026-09-15 against `openai/gpt-oss-120b`: all eight
+providers that serve it (baseten, fireworks, bedrock, togetherai, nebius,
+parasail, groq, cerebras) satisfy *both* filters, so the fallback set is
+unchanged and ZDR costs no availability. The gateway said so in its own
+routing metadata — "ZDR requested: all 8 attempts support ZDR … Disallow
+prompt training requested: all 8 attempts disallow prompt training".
+
+**This is now a model-selection constraint.** The monthly benchmark (#4) and
+the `agent-model` flag can both change the default model, and a model whose
+providers do not all qualify would fail closed on every round. Re-measure the
+qualifying provider set before promoting a new default, not after.
+
+**Cost: no token surcharge**, and the ceiling is untouched — routing among
+equally-priced providers for the same model. There is a *plan* dependency,
+though: request-level ZDR is available only to Vercel Pro and Enterprise
+teams. That is not a new bill (the team is on Pro and must stay there while
+the app is in front of testers), but it does mean a downgrade would start
+failing every session rather than silently loosening privacy — which is the
+safer failure, and one more reason not to downgrade.
+
