@@ -22,11 +22,12 @@ here on.
 3. **Server before app.** One PR may change both sides, but the server side
    must be compatible with the app already in stores, because it goes live
    first and the app release follows whenever the store lets it.
-4. **The app reports its version, the server names its minimum.** Every request
-   carries `app_version` (bare semver from `pubspec.yaml`); every response
-   carries `min_app_version`. Below the minimum the app blocks with a
-   force-update screen. This is what allows rule 2's deletion: raising the
-   minimum past a version is the moment its endpoints can go.
+4. **The app reports its version, the server names its minimum.** Every session
+   request carries `app_version` (bare semver from `pubspec.yaml`); the minimum
+   comes from `GET /api/config`, which the app reads once at startup. Below the
+   minimum the app blocks with a force-update screen, before sign-in. This is
+   what allows rule 2's deletion: raising the minimum past a version is the
+   moment its endpoints can go.
 5. **Signing-secret rotation keeps in-flight sessions alive.** When
    `SESSION_SIGNING_SECRET` is rotated the server must accept the previous
    secret for a grace window as long as the transcript cap makes a session
@@ -49,8 +50,15 @@ here on.
 - **Nullable on the Dart side is the additive escape hatch.** The Dart pin
   treats a nullable field as optional, so a server field can be required in
   the schema (the server always sends it) and still nullable in the app (a
-  rollback to a build without it imposes nothing). `min_app_version` is the
-  worked example.
+  rollback to a build without it imposes nothing). `min_app_version` was the
+  worked example until it left the session envelope (below); the mechanism
+  stands for the next additive field.
+- **The config response is pinned the same way.** `config_response` is a zod
+  schema in `packages/contract` emitted into `contract.schema.json`, and the
+  Dart side pins `StartupConfig` against it through the real `toJson`/
+  `fromJson` path. Both its fields are **required on both sides**, unlike the
+  session envelope's optionals: this is the app's own gate, and a config it
+  can only half read is one it must not act on — it blocks instead.
 - **The minimum is code, not configuration.** `MIN_APP_VERSION` in
   `apps/agent/src/session-config.ts` is `1.0.0`: nothing is blocked. Raising it
   is a PR like any other: reviewed, versioned next to the code that needs it,
@@ -59,28 +67,54 @@ here on.
   where PostHog being down while the agent is up would leave the minimum
   unknown. That is rare and acceptable (the fallback is "no minimum"). The
   constant wins on review and history, not on availability.
-- **Carrying the minimum on the session response is interim.** It rides
-  there because a second public endpoint needs its own WAF rate-limit rule
-  and Hobby allows one ([ADR 0008](0008-public-endpoint-abuse-controls.md)).
-  Once the project is on Pro, a startup config endpoint takes over
-  ([#49](https://github.com/peter-trost/emotely/issues/49)): the app checks
-  once before its first session and blocks with a retry if that request
-  fails, the session code loses the version check, and `min_app_version`
-  leaves the session response by the retirement procedure below.
-  `app_version` stays on every session request either way, for rule 4.
+- **The minimum comes from `GET /api/config`, not from the session**
+  (amended 2026-09-15, [#49](https://github.com/peter-trost/emotely/issues/49)).
+  It used to ride on every session response because a second public endpoint
+  needs its own WAF rate-limit rule and Hobby allows one
+  ([ADR 0008](0008-public-endpoint-abuse-controls.md)); the project has been on
+  Pro since 2026-09-13, so that constraint is gone. The app now reads the
+  config **once at startup, above the auth gate**, and:
+
+  - **it blocks with a retry when that read fails.** Failing shut is the whole
+    point: the app cannot tell "no minimum" from "could not ask", and a build
+    the server has stopped serving must not walk past the gate whenever the
+    network is down. Revisit when offline capabilities arrive — a cached
+    last-known minimum could then let the app proceed.
+  - **the gate sits above sign-in.** The users it exists to block are on a
+    build the server refuses; making them sign in first to learn that puts a
+    screen they may no longer be able to drive in front of the one telling
+    them why. That is also why the endpoint takes no token.
+  - **`app_version` stays on every session request**, for rule 4:
+    server-side gating stays per version even though the app-side block does
+    not live in the session any more.
+
+  `min_app_version` was **removed from the session response in the same PR**
+  rather than retired gradually. The retirement procedure below exists to
+  protect installed apps, and there were none: the app had never been
+  distributed to a tester, and every build ever produced reports `1.0.0`
+  against a `MIN_APP_VERSION` of `1.0.0`, so no build was blocked either way.
+  A field that no app in anyone's hands reads is not a compatibility surface.
+  **This is the exception, not the precedent** — with real installs the same
+  change would have had to keep sending the field and follow the procedure.
 
 ### Raising the minimum
 
 1. Check PostHog: `posthog_flutter` stamps `$app_version` on every event, so
    the share of sessions on versions below the candidate minimum is one
    breakdown away. Raise only when that share is zero or accepted.
-2. Bump `MIN_APP_VERSION`, merge. From that deploy on, those users see the
-   force-update screen and PostHog receives `update_required` with both
-   versions, so the effect is measurable the same hour.
+2. Bump `MIN_APP_VERSION`, merge. Those users then see the force-update
+   screen at their next launch, and PostHog receives `update_required` with
+   both versions, so the effect is measurable the same hour. The config
+   response is cached at the edge (`s-maxage=300`, `stale-while-revalidate`),
+   so a raise takes a few minutes to reach every region rather than landing
+   with the deploy — which is why it is a planned step, not an emergency stop.
 3. Only then delete the endpoints or wire shapes the blocked versions needed.
 
-The force-update screen sends users to `EMOTELY_STORE_URL` (dart-define;
-the releases page until the store listings exist, #9).
+The force-update screen sends users to the `store_url` the config response
+names (`EMOTELY_STORE_URL` on the server, the releases page until the store
+listings exist, #9). It moved off the app's dart-defines deliberately: the
+only people who ever see that link are the ones who cannot install a build
+carrying a corrected one, so it has to be fixable without a release.
 
 ## Recovery goes through the pipeline; Instant Rollback is break-glass
 

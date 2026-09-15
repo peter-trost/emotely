@@ -10,7 +10,6 @@ type HandlerBody = {
   transcript: unknown[];
   signature: string;
   prompt_id?: string;
-  min_app_version?: string;
   pending?: { tool_call_id: string; question: { question_id: string } };
   entry?: { summary: string };
 };
@@ -40,7 +39,6 @@ const signedIn = async () => ({ userId: "user-1" });
 function handler(result: AdvanceResult = awaiting) {
   return createAdvanceSessionHandler({
     secret: SECRET,
-    minAppVersion: "1.0.0",
     verifyCaller: signedIn,
     advance: async () => result,
   });
@@ -59,7 +57,6 @@ describe("advance-session handler", () => {
     let advanced = false;
     const anonymous = createAdvanceSessionHandler({
       secret: SECRET,
-      minAppVersion: "1.0.0",
       verifyCaller: async () => undefined,
       advance: async () => {
         advanced = true;
@@ -76,7 +73,6 @@ describe("advance-session handler", () => {
     let seen: string | undefined;
     const h = createAdvanceSessionHandler({
       secret: SECRET,
-      minAppVersion: "1.0.0",
       verifyCaller: signedIn,
       advance: async ({ userId }) => {
         seen = userId;
@@ -103,7 +99,6 @@ describe("advance-session handler", () => {
   it("names the minimum app version it still serves, and takes the client's", async () => {
     const res = await handler()(post({ app_version: "1.2.3" }));
     assert.equal(res.status, 200);
-    assert.equal((await bodyOf(res)).min_app_version, "1.0.0");
   });
 
   it("rejects a malformed app version", async () => {
@@ -189,7 +184,6 @@ describe("advance-session handler", () => {
   it("maps a mismatched answer tool_call_id to 400, not a crash", async () => {
     const strict = createAdvanceSessionHandler({
       secret: SECRET,
-      minAppVersion: "1.0.0",
       verifyCaller: signedIn,
       advance: async ({ answer }) => {
         if (answer?.toolCallId !== "c1") {
@@ -231,7 +225,6 @@ describe("advance-session handler", () => {
       return createAdvanceSessionHandler({
         secret: SECRET,
         previousSecret,
-        minAppVersion: "1.0.0",
         verifyCaller: signedIn,
         advance: async () => awaiting,
       });

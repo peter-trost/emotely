@@ -17,6 +17,7 @@ import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
+import 'package:emotely/config/config_client.dart';
 import 'package:emotely/consent/view/consent_page.dart';
 import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/agent/agent_client.dart';
@@ -91,10 +92,18 @@ class LiveSessionRobot(final WidgetTester tester) {
       password: _smokePassword,
     );
     final posthog = Posthog();
+    // The real startup gate against the real endpoint: if the deployed config
+    // is unreadable or blocks this build, the app never reaches the journal
+    // and this test says so.
+    final httpClient = http.Client();
     await tester.pumpWidget(
       EmotelyApp(
+        configClient: ConfigClient(
+          httpClient: httpClient,
+          endpoint: Uri.parse(configUrl),
+        ),
         agentClient: AgentClient(
-          httpClient: http.Client(),
+          httpClient: httpClient,
           endpoint: Uri.parse(agentUrl),
           appVersion: (await PackageInfo.fromPlatform()).version,
           accessToken: () => supabase.client.auth.currentSession?.accessToken,

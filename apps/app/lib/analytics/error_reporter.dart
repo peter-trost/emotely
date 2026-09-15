@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:emotely/config/config_client.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
@@ -74,6 +75,12 @@ class const ErrorReporter({required final Posthog posthog}) {
   Future<void> accountDeletionFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'account_deletion');
 
+  /// The startup config could not be read. The app blocks entirely on this,
+  /// so it is the most user-visible failure there is: worth knowing about
+  /// the moment it starts happening.
+  Future<void> configLoadFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'config_load');
+
   /// Whether consent stands could not be read. The gate stays shut on this,
   /// so it is worth knowing how often it happens.
   Future<void> consentLoadFailed(Exception error, StackTrace stackTrace) =>
@@ -104,7 +111,12 @@ class const ErrorReporter({required final Posthog posthog}) {
   /// error the body, GoTrue the address it validated or, for a 5xx, the
   /// whole response body — and goes out as a [WithheldException] instead.
   static Exception contentFree(Exception error) => switch (error) {
-    AgentException() || http.ClientException() || TimeoutException() => error,
+    // ConfigException wraps a transport error or a status code, never a
+    // journal or a user — it is written here, not by a server or a database.
+    AgentException() ||
+    ConfigException() ||
+    http.ClientException() ||
+    TimeoutException() => error,
     PostgrestException(:final code) => WithheldException(
       error.runtimeType,
       code: code,

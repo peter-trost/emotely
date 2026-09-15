@@ -124,6 +124,29 @@ if (forged.code !== 401) {
   throw new Error(`forged signature accepted: ${forged.code}`);
 }
 
+// The startup config (#49): the app blocks when this fails, so a broken
+// deploy here is a hard outage even though no model is involved. It must
+// answer WITHOUT a token — the version gate runs before sign-in.
+const configRes = await fetch(`${BASE}/api/config`);
+if (configRes.status !== 200) {
+  throw new Error(`config refused an anonymous caller: ${configRes.status}`);
+}
+const config = (await configRes.json()) as {
+  min_app_version?: string;
+  store_url?: string;
+};
+if (!/^\d+\.\d+\.\d+$/.test(config.min_app_version ?? "")) {
+  throw new Error(
+    `config min_app_version malformed: ${config.min_app_version}`,
+  );
+}
+if (!/^https?:\/\//.test(config.store_url ?? "")) {
+  throw new Error(`config store_url malformed: ${config.store_url}`);
+}
+if (!(configRes.headers.get("cache-control") ?? "").includes("s-maxage")) {
+  throw new Error("config is not cacheable at the edge");
+}
+
 console.log(
-  `# live-smoke OK: ${askedOrder.length} questions, summary ${res.entry.summary.length} chars, 401s verified (anonymous, tampered, forged)`,
+  `# live-smoke OK: ${askedOrder.length} questions, summary ${res.entry.summary.length} chars, 401s verified (anonymous, tampered, forged), config min ${config.min_app_version}`,
 );

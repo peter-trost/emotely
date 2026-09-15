@@ -15,6 +15,7 @@ import 'package:posthog_flutter/posthog_flutter.dart';
 const forwardedTypes = {
   'AgentException',
   'ClientException',
+  'ConfigException',
   'TimeoutException',
   'WithheldException',
 };

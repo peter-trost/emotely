@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/session_analytics.dart';
-import 'package:emotely/app/environment.dart';
 import 'package:emotely/journal/journal_models.dart';
 import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/session/agent/advance_response.dart';
@@ -12,7 +9,6 @@ import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/widgets/answer_input.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Wires a [SessionBloc] to the [AgentClient] in scope and starts a session,
 /// or picks [resume] up where the journal left it.
@@ -34,8 +30,6 @@ class const SessionPage({final OpenSession? resume, super.key})
 class const SessionView({super.key}) extends StatelessWidget {
   static const retryKey = Key('session_view.retry');
   static const questionKey = Key('session_view.question');
-  static const updateRequiredKey = Key('session_view.update_required');
-  static const updateKey = Key('session_view.update');
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -55,9 +49,6 @@ class const SessionView({super.key}) extends StatelessWidget {
               questions: questions,
             ),
             SessionFailure(:final message) => _Failure(message: message),
-            SessionUpdateRequired(:final minAppVersion) => _UpdateRequired(
-              minAppVersion: minAppVersion,
-            ),
           },
         ),
       ),
@@ -105,39 +96,6 @@ class const _Question({
       ),
     );
   }
-}
-
-/// The force-update screen: no retry, no way around it. This is what lets
-/// the server delete deprecated wire shapes instead of keeping them (#37).
-class const _UpdateRequired({required final String minAppVersion})
-    extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Center(
-    key: SessionView.updateRequiredKey,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 16,
-      children: [
-        Text(
-          'This version of emotely is no longer supported. '
-          'Please update to $minAppVersion or newer to continue.',
-          textAlign: TextAlign.center,
-        ),
-        FilledButton(
-          key: SessionView.updateKey,
-          // Fire-and-forget: if the store cannot open there is nothing the
-          // screen can do about it, and it must stay blocking either way.
-          onPressed: () => unawaited(
-            launchUrl(
-              Uri.parse(storeUrl),
-              mode: LaunchMode.externalApplication,
-            ),
-          ),
-          child: const Text('Update'),
-        ),
-      ],
-    ),
-  );
 }
 
 class const _Failure({required final String message}) extends StatelessWidget {

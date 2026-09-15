@@ -55,6 +55,24 @@ magnitude above legitimate use. Counters are per Vercel region, so the effective
 global limit for a distributed attacker is higher — acceptable, because the
 budget backstop above catches what the rule lets through.
 
+A second rule covers the startup config endpoint, added with
+[#49](https://github.com/peter-trost/emotely/issues/49) now that Pro allows
+more than one:
+
+| Rule | Value |
+| --- | --- |
+| Project | `emotely-agent` → Firewall → Rules |
+| Match | Request Path equals `/api/config` |
+| Limit | 60 requests / 60 s, fixed window, keyed by IP |
+| Action | 429 Too Many Requests |
+
+The limit is looser because the endpoint is cheaper — no signature, no model
+call, no user lookup, and cached at the edge (`s-maxage=300`), so the
+overwhelming majority of reads never reach a function at all. It is still
+rate-limited rather than left open: an uncached path is still a function
+invocation, and an unauthenticated GET is the easiest thing in the system to
+point a script at. A real app reads it once per launch.
+
 We chose the WAF over an in-function limiter because the rule rejects at the
 edge, before a function invocation is billed, and because a Hobby project gets
 one rate-limit rule at no cost. The cost of that choice is that the rule is
@@ -71,6 +89,16 @@ request inside a minute from one IP gets a 429.
 - **User auth (#7) replaces none of this.** It adds a per-user key for the rate
   limit and the ability to refuse anonymous sessions; signing, caps, and budget
   stay as they are.
-- **The Hobby plan allows one rate-limit rule per project.** Adding a second
-  (e.g. a tighter cap on empty-transcript session starts) needs Pro, which is on
-  the release path anyway (see `CLAUDE.md` § Billing).
+- **A second rate-limit rule needed Pro**, which the project has been on since
+  2026-09-13. `/api/config` uses that allowance
+  ([#49](https://github.com/peter-trost/emotely/issues/49)). A further rule
+  (e.g. a tighter cap on empty-transcript session starts) is now possible too.
+- **`/api/config` is public on purpose.** It answers without a token, unlike
+  every other endpoint here (ADR 0010), because the users it exists to block
+  are on a build the server no longer serves and must be told so before the
+  sign-in screen. What that costs is bounded by what the endpoint holds: a
+  version number and a public store link, both already visible in this
+  repository. It signs nothing, reads no database, and calls no model, so the
+  abuse it can support is bandwidth against a cached static body — the rule
+  above and the edge cache are the whole defence, and they are proportionate
+  to it.

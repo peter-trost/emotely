@@ -15,12 +15,16 @@ const posthogKey = String.fromEnvironment('POSTHOG_KEY');
 /// EU cloud, like the agent (ADR 0004).
 const posthogHost = 'https://eu.i.posthog.com';
 
-/// Where the force-update screen sends the user
-/// (`--dart-define=EMOTELY_STORE_URL=…`). Until the store listings exist
-/// (#9) it points at the releases page.
-const storeUrl = String.fromEnvironment(
-  'EMOTELY_STORE_URL',
-  defaultValue: 'https://github.com/peter-trost/emotely/releases',
+/// The startup config (`--dart-define=EMOTELY_CONFIG_URL=…`), read once
+/// before anything else: it says whether this build may still run and where
+/// to send the user if not (#49).
+///
+/// The store link used to be a `--dart-define` here. It moved to the server,
+/// because the only people who ever see it are the ones who cannot install a
+/// build carrying a corrected one.
+const configUrl = String.fromEnvironment(
+  'EMOTELY_CONFIG_URL',
+  defaultValue: 'https://api.getemotely.com/api/config',
 );
 
 /// The Supabase project (`--dart-define=EMOTELY_SUPABASE_URL=…`). Public by

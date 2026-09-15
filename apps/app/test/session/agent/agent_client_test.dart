@@ -67,30 +67,6 @@ void main() {
       );
     });
 
-    test('decodes the minimum app version the server still serves', () async {
-      final stub = AgentStub()
-        ..script([
-          awaiting(
-            toolCallId: toolCallId,
-            question: question,
-            minAppVersion: '2.0.0',
-          ),
-        ]);
-
-      final response = await stub.agentClient.advance();
-
-      expect(response.minAppVersion, '2.0.0');
-    });
-
-    test('a response without a minimum app version imposes none', () async {
-      final stub = AgentStub()
-        ..script([awaiting(toolCallId: toolCallId, question: question)]);
-
-      final response = await stub.agentClient.advance();
-
-      expect(response.minAppVersion, isNull);
-    });
-
     test('posts JSON to the endpoint', () async {
       final stub = AgentStub()
         ..script([awaiting(toolCallId: toolCallId, question: question)]);
