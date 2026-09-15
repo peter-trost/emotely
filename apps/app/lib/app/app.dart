@@ -1,10 +1,12 @@
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/consent_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/theme.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
+import 'package:emotely/consent/consent_store.dart';
 import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/agent/agent_client.dart';
@@ -20,6 +22,7 @@ class const EmotelyApp({
   required final SupabaseClient supabase,
   required final AuthAnalytics authAnalytics,
   required final JournalAnalytics journalAnalytics,
+  required final ConsentAnalytics consentAnalytics,
   required final ErrorReporter errorReporter,
   super.key,
 }) extends StatelessWidget {
@@ -31,7 +34,9 @@ class const EmotelyApp({
       RepositoryProvider.value(value: supabase),
       RepositoryProvider.value(value: authAnalytics),
       RepositoryProvider(create: (_) => JournalStore(supabase: supabase)),
+      RepositoryProvider(create: (_) => ConsentStore(supabase: supabase)),
       RepositoryProvider.value(value: journalAnalytics),
+      RepositoryProvider.value(value: consentAnalytics),
       RepositoryProvider.value(value: errorReporter),
     ],
     child: BlocProvider(

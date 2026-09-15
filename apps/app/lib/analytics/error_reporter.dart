@@ -74,6 +74,17 @@ class const ErrorReporter({required final Posthog posthog}) {
   Future<void> accountDeletionFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'account_deletion');
 
+  /// Whether consent stands could not be read. The gate stays shut on this,
+  /// so it is worth knowing how often it happens.
+  Future<void> consentLoadFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'consent_load');
+
+  /// A consent or a withdrawal could not be written. The more serious of the
+  /// two: a session must not start on a consent the server never recorded,
+  /// and a withdrawal that did not land leaves consent standing.
+  Future<void> consentWriteFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'consent_write');
+
   Future<void> _report(
     Exception error,
     StackTrace stackTrace, {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:emotely/analytics/consent_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
@@ -92,6 +93,9 @@ class AnalyticsSpy() {
 
   /// The [JournalAnalytics] the app is given.
   JournalAnalytics get journalAnalytics => JournalAnalytics(posthog: posthog);
+
+  /// The [ConsentAnalytics] the app is given.
+  ConsentAnalytics get consentAnalytics => ConsentAnalytics(posthog: posthog);
 
   /// The [ErrorReporter] the app is given.
   ErrorReporter get errorReporter => ErrorReporter(posthog: posthog);

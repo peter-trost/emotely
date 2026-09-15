@@ -119,6 +119,10 @@ class SupabaseStub() {
 
   /// A journal that accepts everything: sessions are created as [sessionId],
   /// updated and closed without complaint. What most session tests want.
+  ///
+  /// Consent stands by default, so a test about sessions is about sessions;
+  /// the gate itself is scripted explicitly by the tests that are about it
+  /// (`test/consent/`), whose `always` call replaces this one.
   void journalWorks({String sessionId = SupabaseStub.sessionId}) {
     always('GET /rest/v1/entries', rows(const []));
     always('GET /rest/v1/sessions', rows(const []));
@@ -126,6 +130,14 @@ class SupabaseStub() {
     always('POST /rest/v1/sessions', rowCreated(sessionId));
     always('PATCH /rest/v1/sessions', rowsChanged());
     always('POST /rest/v1/rpc/complete_session', rpcReturned(entryId));
+    always(
+      'GET /rest/v1/consents',
+      rows(const [
+        {'withdrawn_at': null},
+      ]),
+    );
+    always('POST /rest/v1/rpc/record_consent', rpcReturned(null));
+    always('POST /rest/v1/rpc/withdraw_consent', rpcReturned(null));
   }
 
   /// Starts the client with a live session, as after a restored sign-in.
