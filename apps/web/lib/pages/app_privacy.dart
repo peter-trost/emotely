@@ -58,6 +58,9 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
           a(href: '#deletion', [.text('Deleting your account')]),
         ]),
         li([
+          a(href: '#breach', [.text('If something goes wrong')]),
+        ]),
+        li([
           a(href: '#rights', [.text('Your rights')]),
         ]),
         li([
@@ -295,6 +298,19 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         'session rather than after.',
       ),
     ]),
+    // EU AI Act Art. 50, in force since 2 August 2026: a person must be told
+    // they are interacting with an AI system. The exemption is for cases
+    // where it is obvious, and it arguably is here — but "arguably obvious"
+    // is not a thing to rest a disclosure obligation on.
+    p([
+      .text(
+        'Said plainly rather than left to be inferred: the questions you are '
+        'asked and the entry that gets written are produced by an AI system, '
+        'not by a person. Nobody reads along, there is no human on the other '
+        'end of a session, and the summary of your day was written by a '
+        'machine.',
+      ),
+    ]),
 
     h3([.text('Counting and crash reports')]),
     p([
@@ -449,6 +465,20 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         'kits in the app beyond the ones named here.',
       ),
     ]),
+    // Apple Guideline 5.1.1(i) asks the policy to confirm that third
+    // parties receiving user data provide equal protection of it — a
+    // separate statement from naming them, and one a reviewer looks for.
+    p([
+      .text(
+        'Every one of them except Apple and Google handles this data only on '
+        'our instructions, as a processor under a data processing agreement '
+        '(Art. 28 GDPR) that binds them to protect it to the same standard '
+        'described here and forbids them using it for their own purposes. '
+        'Apple and Google are not our processors: what they collect when '
+        'they distribute the app, they collect as controllers in their own '
+        'right, under their own policies and outside our reach.',
+      ),
+    ]),
 
     h2(id: 'deletion', [.text('Deleting your account')]),
     p([
@@ -497,6 +527,23 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         a(href: 'mailto:$contactEmail', [.text(contactEmail)]),
         .text(' and it is removed too.'),
       ]),
+    ]),
+
+    // Art. 33/34 GDPR. The legacy lawyer-drafted policy said this and the
+    // rewrite dropped it; for a journal that can carry Art. 9 data, what
+    // happens when the measures fail is not an optional paragraph.
+    h2(id: 'breach', [.text('If something goes wrong')]),
+    p([
+      .text(
+        'The measures above are meant to stop a breach, not to promise one '
+        'is impossible. If personal data here is ever exposed, lost or '
+        'reached by someone who should not have it, the supervisory '
+        'authority named below is told without undue delay and within 72 '
+        'hours of us becoming aware of it, as Art. 33 GDPR requires. Where '
+        'the breach is likely to put you at high risk — and for journal '
+        'entries it would be — you are told directly, in plain language, '
+        'without waiting to be asked (Art. 34 GDPR).',
+      ),
     ]),
 
     h2(id: 'rights', [.text('Your rights')]),
