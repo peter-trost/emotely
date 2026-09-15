@@ -17,6 +17,8 @@ export type ModelReport = {
   p95Ms: number;
   sessionCostUsd: number;
   cachedShare: number;
+  /** Qualifying / considered providers under ZDR + no-prompt-training. */
+  providerQualification: string;
   eligible: boolean;
   reason: string;
 };
