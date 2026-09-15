@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# Set up a fresh Linux machine (a cloud agent container, a new laptop, a CI
-# runner) so that every check in .github/workflows/ci.yml can be run locally:
-# the agent (TypeScript), the app (Flutter), the web landing page (Dart/Jaspr)
-# and the Supabase schema suite.
+# Set up a fresh Linux machine (a cloud agent container, a VM, a CI runner) so
+# that every job in .github/workflows/ci.yml can be run locally: the agent
+# (TypeScript), the app (Flutter), the web landing page (Dart/Jaspr) and the
+# Supabase schema suite.
+#
+# Runs as root on x86_64 and installs into a system prefix, which is what a
+# container is. It is not a dotfiles-friendly installer for a personal laptop:
+# under sudo it would leave root-owned build output in your checkout and put the
+# pub-cache in root's home.
 #
 #   scripts/setup-dev-environment.sh [--verify] [--help]
 #
@@ -22,7 +27,8 @@
 # if the two have drifted apart.
 set -Eeuo pipefail
 
-readonly REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly REPO_ROOT
 # Everything this script installs lives under one prefix, so uninstalling is
 # `rm -rf` of a single directory.
 readonly PREFIX="${EMOTELY_TOOLCHAIN_PREFIX:-/opt/emotely-toolchain}"
@@ -105,12 +111,30 @@ fetch_verified() {
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# `git config --add` appends every time; adding the same path on each run grows
+# the global config without bound.
+mark_git_safe() {
+  local directory=$1
+  git config --global --get-all safe.directory 2>/dev/null | grep -qxF "$directory" \
+    || git config --global --add safe.directory "$directory"
+}
+
 # --- 0. host packages --------------------------------------------------------
 
 step "Host packages"
 
 [ "$(uname -s)" = "Linux" ] || die "this script targets Linux; on macOS use Homebrew (see the skills in .claude/skills)"
-[ "$(id -u)" = "0" ] || die "run as root (or with sudo): the toolchain installs into $PREFIX"
+# Every archive below is an x86_64 build, and Flutter publishes no Linux arm64
+# release at all. Say so here rather than let a checksum pass and the binary
+# fail later with "cannot execute binary file".
+[ "$(uname -m)" = "x86_64" ] || die "only x86_64 is supported; this machine is $(uname -m)"
+[ "$(id -u)" = "0" ] || die "run as root: the toolchain installs into $PREFIX"
+
+# Flutter, its artifacts, Dart, Node and the Supabase images together want
+# roughly 10 GB. Half an install is worse than none.
+available_kb=$(df -Pk "$(dirname "$PREFIX")" | awk 'NR == 2 { print $4 }')
+[ "${available_kb:-0}" -ge 10485760 ] \
+  || die "need ~10 GB free on $(dirname "$PREFIX"), have $((available_kb / 1024)) MB"
 
 missing=()
 for command_name in curl git tar unzip xz sha256sum; do
@@ -126,7 +150,8 @@ else
 fi
 
 mkdir -p "$PREFIX"
-readonly WORK_DIR="$(mktemp -d)"
+WORK_DIR="$(mktemp -d)"
+readonly WORK_DIR
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 # --- 1. Node -----------------------------------------------------------------
@@ -217,7 +242,10 @@ readonly FLUTTER_DIR="$PREFIX/flutter"
 # Flutter runs `git` against its own checkout — for `flutter --version`, and
 # here to tell which release is unpacked. Git refuses on a tree it considers
 # foreign unless it is marked safe, so do that before asking.
-git config --global --add safe.directory "$FLUTTER_DIR"
+mark_git_safe "$FLUTTER_DIR"
+# Same for the checkout itself: two --verify steps below are `git diff`, and as
+# root over a checkout owned by someone else git would refuse them.
+mark_git_safe "$REPO_ROOT"
 
 if [ -x "$FLUTTER_DIR/bin/flutter" ] \
    && [ "$(git -C "$FLUTTER_DIR" describe --tags 2>/dev/null || true)" = "$FLUTTER_VERSION" ]; then
@@ -279,8 +307,12 @@ export PATH="$PREFIX/bin:$PATH"
 
 step "Supabase CLI"
 
-SUPABASE_VERSION=$(pin "Supabase CLI" "$CI_WORKFLOW" \
-  < <(sed -n '/supabase\/setup-cli/,/^$/ s/^ *version: *\([0-9][0-9.]*\).*/\1/p' "$CI_WORKFLOW" | head -1))
+# The workflow pins the CLI in more than one job. Take the pin only if they all
+# agree — picking the first of two different versions would be a silent choice.
+supabase_pins=$(sed -n '/supabase\/setup-cli/,/^$/ s/^ *version: *\([0-9][0-9.]*\).*/\1/p' "$CI_WORKFLOW" | sort -u)
+[ "$(printf '%s\n' "$supabase_pins" | wc -l)" -eq 1 ] \
+  || die "$CI_WORKFLOW pins more than one Supabase CLI version: $(printf '%s' "$supabase_pins" | tr '\n' ' ')"
+SUPABASE_VERSION=$(pin "Supabase CLI" "$CI_WORKFLOW" < <(printf '%s' "$supabase_pins"))
 readonly SUPABASE_VERSION
 
 if [ -x "$PREFIX/bin/supabase" ] && [ "$("$PREFIX/bin/supabase" --version 2>/dev/null)" = "$SUPABASE_VERSION" ]; then
@@ -304,9 +336,13 @@ ok "Supabase CLI $(supabase --version)"
 step "Chromium"
 
 chrome_binary=""
+# `-x` alone is true for a directory, and the Playwright layout has both a
+# `chromium` directory and a `chromium` symlink to the binary depending on the
+# image — so require a file.
 for candidate in "${PLAYWRIGHT_BROWSERS_PATH:-/opt/pw-browsers}/chromium" \
+                 "${PLAYWRIGHT_BROWSERS_PATH:-/opt/pw-browsers}"/chromium-*/chrome-linux/chrome \
                  /usr/bin/chromium /usr/bin/chromium-browser /usr/bin/google-chrome; do
-  if [ -x "$candidate" ]; then chrome_binary="$candidate"; break; fi
+  if [ -f "$candidate" ] && [ -x "$candidate" ]; then chrome_binary="$candidate"; break; fi
 done
 
 if [ -z "$chrome_binary" ]; then
@@ -315,7 +351,7 @@ if [ -z "$chrome_binary" ]; then
   apt-get update -qq
   apt-get install -y -qq chromium || apt-get install -y -qq chromium-browser
   for candidate in /usr/bin/chromium /usr/bin/chromium-browser; do
-    if [ -x "$candidate" ]; then chrome_binary="$candidate"; break; fi
+    if [ -f "$candidate" ] && [ -x "$candidate" ]; then chrome_binary="$candidate"; break; fi
   done
   [ -n "$chrome_binary" ] || die "could not install a Chromium for the apps/web browser tests"
 fi
@@ -331,6 +367,12 @@ exec "$chrome_binary" --no-sandbox --disable-dev-shm-usage "\$@"
 WRAPPER
 chmod +x "$PREFIX/bin/emotely-chrome"
 export CHROME_EXECUTABLE="$PREFIX/bin/emotely-chrome"
+
+# Being on disk is not the same as being able to start — a snap shim, or a
+# Chromium missing a shared library, passes every check above and then fails
+# inside `dart test -p chrome`, long after setup said it was fine.
+"$PREFIX/bin/emotely-chrome" --headless=new --dump-dom about:blank >/dev/null 2>&1 \
+  || die "$chrome_binary is installed but will not start; apps/web's browser tests need a working Chromium"
 ok "$chrome_binary"
 
 # --- 7. The shell environment ------------------------------------------------
@@ -400,6 +442,26 @@ info "apps/app: flutter pub get"
 info "apps/web: dart pub get"
 (cd "$REPO_ROOT/apps/web" && dart pub get)
 
+# apps/agent/src/cli.ts and apps/agent/evals/harness.ts both read this file at
+# startup. Leave a commented, value-free template so the names are discoverable;
+# it is gitignored, and filling it in is a human's job.
+readonly AGENT_ENV_FILE="$REPO_ROOT/apps/agent/.env.local"
+if [ -e "$AGENT_ENV_FILE" ]; then
+  skip "apps/agent/.env.local already exists — left untouched"
+else
+  info "writing an empty apps/agent/.env.local template"
+  cat > "$AGENT_ENV_FILE" <<'AGENT_ENV'
+# Read by `pnpm --filter @emotely/agent session` and by the evals. Gitignored.
+# Values are secrets: fill them in yourself, never through an agent transcript.
+AI_GATEWAY_API_KEY=
+# Only for scripts/live-smoke.ts and the on-device acceptance session:
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+SMOKE_EMAIL=
+SMOKE_PASSWORD=
+AGENT_ENV
+fi
+
 JASPR_CLI_VERSION=$(pin "jaspr_cli" "$CI_WORKFLOW" \
   < <(sed -n 's/.*dart pub global activate jaspr_cli \([0-9][0-9.]*\).*/\1/p' "$CI_WORKFLOW" | head -1))
 readonly JASPR_CLI_VERSION
@@ -460,22 +522,49 @@ if [ "$VERIFY" -eq 1 ]; then
 
   if docker info >/dev/null 2>&1; then
     info "supabase: migrations + pgTAP row-level-security suite"
-    (cd "$REPO_ROOT" && supabase start && supabase test db --local \
+    # `db start` is what the CI job runs: only the database container, which is
+    # all the SQL tests need. The full `supabase start` (auth, PostgREST,
+    # Inbucket) is a separate thing you ask for when developing against it.
+    (cd "$REPO_ROOT" && supabase db start && supabase test db --local \
       && supabase db lint --local --fail-on warning)
-    info "the local Supabase stack is left running; 'supabase stop' shuts it down"
+    info "the database container is left running; 'supabase stop' shuts it down"
+    ok "every check passed"
   else
-    info "supabase: skipped, no Docker daemon"
+    skipped_supabase=1
+    info "supabase: SKIPPED — no Docker daemon, so the schema suite did not run"
+    ok "every check that could run passed; the Supabase job did not run"
   fi
-
-  ok "every check passed"
 fi
 
 printf '\n%s%sEnvironment ready.%s Open a new shell, or: . %s\n' \
   "$C_BOLD" "$C_GREEN" "$C_OFF" "$ENV_FILE"
-printf '\nTwo things this script deliberately leaves alone:\n'
-printf '  · AI_GATEWAY_API_KEY — the agent eval and the live smoke test need it;\n'
-printf '    it is a secret, so a human sets it (see apps/agent/README.md).\n'
-printf '  · Entire — session capture. The hooks in .claude/settings.json no-op\n'
-printf '    without it, and installing it means running `entire enable`, which\n'
-printf '    writes git hooks and pushes to a private checkpoint repo. That is\n'
-printf "    the maintainer's call; see docs/tooling/entire.md.\n"
+
+if [ "${skipped_supabase:-0}" -eq 1 ]; then
+  printf '\n%sDocker is missing, so the Supabase job cannot run here.%s Install Docker\n' \
+    "$C_RED" "$C_OFF"
+  printf 'Engine (https://docs.docker.com/engine/install/) and re-run to cover it.\n'
+fi
+
+cat <<'NOTES'
+
+What this does NOT set up, on purpose:
+
+  · Secrets. apps/agent/.env.local is where AI_GATEWAY_API_KEY goes, for
+    `pnpm --filter @emotely/agent session` and for the evals; a template is
+    written for you, empty. A human fills it in. Note that every model round
+    asks the gateway for Zero Data Retention, which is Pro-only -- a key on a
+    Hobby team fails every round, and that is billing, not a broken machine.
+  · Entire. Its hooks in .claude/settings.json no-op while the CLI is absent,
+    so commits made here carry no Entire-Checkpoint trailer. Installing it
+    means running `entire enable`, which writes git hooks and pushes to a
+    private checkpoint repo: the maintainer's call, see docs/tooling/entire.md.
+  · fvm. The run-app skill drives apps/app through `fvm flutter` / `fvm dart`;
+    here the pinned SDK is on PATH directly, as `flutter` and `flutter-dart`.
+  · The GitHub CLI. `main` is protected and merges go through PRs; the release
+    and supabase skills shell out to `gh`. Install and authenticate it yourself
+    if you need those.
+  · Anything that runs the app on a device. No Android SDK, no JDK, no
+    emulator, no Xcode: `flutter run`, `flutter build`, integration_test and
+    the android half of app-release.yml are all out of reach on this machine.
+    apps/app's unit and widget tests do run.
+NOTES
