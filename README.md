@@ -171,6 +171,34 @@ the wild*.
    entry persistence, `posthog_flutter`.
 6. **Subscription + polish** — RevenueCat, paywall, ship to TestFlight.
 
+## Setting up a machine
+
+One script installs everything the four CI jobs need on a fresh Linux box (a
+cloud agent container, a new VM, a CI runner) and leaves it able to run every
+check locally:
+
+```bash
+sudo scripts/setup-dev-environment.sh            # install
+sudo scripts/setup-dev-environment.sh --verify   # install, then run every CI check
+```
+
+It is idempotent, it aborts on the first failed step, and it takes **every
+version from the repository** — Node from `.nvmrc`, pnpm from `packageManager`,
+Flutter from `apps/app/.fvmrc`, Dart from the checksum-pinned
+`apps/web/scripts/vercel-install.sh`, the Supabase CLI and `jaspr_cli` from
+`.github/workflows/ci.yml`. Bumping a pin means editing the file that owns it;
+the script follows and refuses to run if the two Dart pins have drifted apart.
+
+The toolchain lands in `/opt/emotely-toolchain` (uninstall is `rm -rf` of that
+one directory) and `/opt/emotely-toolchain/env.sh` puts it on `PATH`. Two Dart
+SDKs live there on purpose: `dart` is the standalone SDK `apps/web` is pinned
+to, and `flutter-dart` is Flutter's bundled one — the only one that can resolve
+`sdk: flutter` packages, so it is what `apps/app` uses wherever CI says `dart`.
+
+It sets up no secrets: `AI_GATEWAY_API_KEY` (the agent eval, the live smoke
+test) stays a human's job, and so does Entire, whose hooks no-op while it is
+not installed.
+
 ## Running the app
 
 Build-time configuration is `--dart-define`s read in `apps/app/lib/app/environment.dart`

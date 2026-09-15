@@ -54,6 +54,12 @@ handling. If a step is only documented for humans, move it into a skill.
 
 ## Tooling
 
+- [`scripts/setup-dev-environment.sh`](scripts/setup-dev-environment.sh) — brings
+  a fresh Linux machine to where every CI job runs locally (Node, pnpm, Flutter,
+  Dart, the Supabase CLI, a headless Chromium). Idempotent, fails loudly, and
+  reads every version pin out of the repo rather than carrying its own. `dart`
+  is the standalone SDK `apps/web` is pinned to; `flutter-dart` is Flutter's
+  bundled one and is what `apps/app` uses wherever CI says `dart`.
 - [Entire](docs/tooling/entire.md) — captures agent sessions and links them to
   commits. Active in this repo; capture is automatic. Use `entire why <file>:<line>`
   / `entire checkpoint explain <sha>` to recover the intent behind a change, and
