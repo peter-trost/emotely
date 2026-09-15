@@ -141,6 +141,40 @@ const SESSION_TELEMETRY = {
   includeRuntimeContext: { distinctId: true, sessionId: true, promptId: true },
 } as const;
 
+/**
+ * A journal transcript is special-category data (GDPR Art. 9: health, emotions,
+ * relationships), so it must never become training data. The gateway does not
+ * train on prompts itself, but it does not route on the providers' training
+ * policies by default, and a provider whose stance is unknown is assumed to
+ * train. `disallowPromptTraining` restricts routing to providers that have
+ * agreed with Vercel not to train on prompts; without it the privacy notice
+ * cannot name a safeguard for the transfer under Art. 13(1)(f).
+ *
+ * `zeroDataRetention` rides along because it costs us nothing here: measured
+ * against the live gateway on 2026-09-15, all eight providers that serve
+ * `openai/gpt-oss-120b` (baseten, fireworks, bedrock, togetherai, nebius,
+ * parasail, groq, cerebras) satisfy both filters, so neither one narrows the
+ * fallback set. It is a real added guarantee — no provider-side retention of
+ * the transcript, not merely no training on it.
+ *
+ * Both filters fail *closed*: the gateway rejects the request outright when no
+ * eligible provider exists for the model. So re-measure before changing the
+ * default model — a model whose providers do not all qualify would break every
+ * session rather than degrade quietly.
+ *
+ * The keys are typed here rather than imported: `@ai-sdk/gateway` is a
+ * transitive dependency of `ai`, not one this package declares.
+ */
+const GATEWAY_PRIVACY_OPTIONS = {
+  disallowPromptTraining: true,
+  zeroDataRetention: true,
+} as const;
+
+/** Exported so a test can assert the opt-out is never silently dropped. */
+export const SESSION_PROVIDER_OPTIONS = {
+  gateway: GATEWAY_PRIVACY_OPTIONS,
+} as const;
+
 export type SessionAnswer = { toolCallId: string; value: JSONValue };
 
 export type { PendingQuestion } from "./transcript-replay.ts";
@@ -172,6 +206,7 @@ function roundSettings(
     instructions: prompt.build(opts.questionSet),
     stopWhen: isStepCount(1),
     maxOutputTokens: MAX_OUTPUT_TOKENS_PER_ROUND,
+    providerOptions: SESSION_PROVIDER_OPTIONS,
     ...(opts.temperature === undefined
       ? {}
       : { temperature: opts.temperature }),
