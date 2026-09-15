@@ -164,6 +164,13 @@ created on the hosted project through the Auth admin API on 2026-09-13.
 - The accounts are ordinary users under row-level security: whatever a
   reviewer journals is theirs; the script never wipes an existing account's
   data, only resets the password.
+- **The consent gate applies to reviewers too** (ADR 0014): the first
+  session asks for explicit consent, which both console blurbs above tell
+  them to give. It is asked once per account per notice version. If the
+  script has to *recreate* an account (rather than reset its password), the
+  consent history goes with the old auth user by cascade and the gate
+  reappears on the next sign-in — expected, and the reason the instructions
+  mention the box rather than assuming a clean run to the first question.
 
 ### What the consoles say (saved 2026-09-13)
 
@@ -174,10 +181,12 @@ password above, and these instructions (the field allows 500 characters):
 > Open the app, enter the user name above as the email address and tap
 > Send code. This is a designated reviewer account, so the app asks for a
 > password instead of emailing a one-time code; enter the password above.
-> Regular users sign in with a one-time code sent by email. Account
-> deletion: Your journal -> account icon (top right) -> Delete account ->
-> confirm. Deleting the demo account really deletes it; if it no longer
-> signs in, email peter@petertrost.com and we recreate it.
+> Regular users sign in with a one-time code sent by email. The first
+> session asks for consent to send the conversation to an AI provider:
+> tick the box and tap Start journaling. Account deletion: Your journal ->
+> account icon (top right) -> Delete account -> confirm. Deleting the demo
+> account really deletes it; if it no longer signs in, email
+> peter@petertrost.com and we recreate it.
 
 **App Store Connect → version → App Review Information → Sign-in
 required.** User name `app-store-review@getemotely.com`, the password above,
@@ -187,10 +196,13 @@ Notes:
 > email address and tap Send code. Because this address is a designated
 > reviewer account, the app asks for a password instead of sending a
 > one-time code; enter the password above. Regular users sign in with a
-> one-time code sent by email. Account deletion: Your journal -> account
-> icon (top right) -> Delete account -> confirm. Deleting the demo account
-> really deletes it; if it no longer signs in, contact peter@petertrost.com
-> and we recreate it within the hour.
+> one-time code sent by email. Before the first session the app asks for
+> explicit consent to send the conversation to an AI provider (GDPR
+> Art. 9): tick the box and tap Start journaling. It is not asked again.
+> Account deletion: Your journal -> account icon (top right) -> Delete
+> account -> confirm. Deleting the demo account really deletes it; if it no
+> longer signs in, contact peter@petertrost.com and we recreate it within
+> the hour.
 
 ## App Store Connect prep for a new version
 

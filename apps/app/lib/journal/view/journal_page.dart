@@ -186,6 +186,10 @@ class const _SessionCard({required final OpenSession? openSession})
     final journal = context.read<JournalBloc>();
     final consent = context.read<ConsentBloc>();
     final navigator = Navigator.of(context);
+    // Ask the server before every session, never the answer this device
+    // happened to read at launch: a withdrawal made on another device must
+    // stop this one, which is what the consent screen promises.
+    await consent.refresh();
     if (!consent.state.allowsSession) {
       await navigator.push<bool>(
         MaterialPageRoute<bool>(
@@ -196,9 +200,11 @@ class const _SessionCard({required final OpenSession? openSession})
       // The bloc's state is the authority, not the route's result: it says
       // `granted` only after the server recorded it. A decline, a failed
       // write, a dismissed route and a bloc closed mid-request all leave it
-      // shut, and the journal is where the user lands in every one of them.
+      // shut, and the journal is where the user lands in every one of them —
+      // but they are not the same thing to say, so the message is chosen by
+      // what actually happened rather than always reading as a refusal.
       if (!consent.state.allowsSession) {
-        _sayDeclined(navigator);
+        _saySoFar(navigator, consent.state);
         return;
       }
     }
@@ -208,12 +214,28 @@ class const _SessionCard({required final OpenSession? openSession})
     journal.add(const JournalEvent.loaded());
   }
 
-  /// Tells the user, back on the journal, that nothing was sent.
-  static void _sayDeclined(NavigatorState navigator) {
-    final messenger = ScaffoldMessenger.maybeOf(navigator.context);
-    messenger?.showSnackBar(
-      const SnackBar(content: Text(consentDeclinedMessage)),
-    );
+  /// Tells the user, back on the journal, why no session started.
+  ///
+  /// A refusal and a failed write both leave the gate shut, but they are not
+  /// the same news: telling someone who ticked the box and hit a network
+  /// error that they chose "Not now" is untrue, and it is the app's own
+  /// account of what just happened. Dismissing the screen says nothing at
+  /// all — the user left, and knows it.
+  static void _saySoFar(NavigatorState navigator, ConsentState state) {
+    final message = switch (state) {
+      ConsentWriteFailure() => consentFailureMessage,
+      ConsentKnown(justDeclined: true) => consentDeclinedMessage,
+      // Everything else: a dismissed screen, a failed read, a withdrawal
+      // that did not land. The user left, or the screen they left already
+      // said its piece; inventing a refusal they did not make would be the
+      // app misreporting its own history.
+      _ => null,
+    };
+    if (message == null) {
+      return;
+    }
+    ScaffoldMessenger.maybeOf(navigator.context)
+        ?.showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

@@ -18,6 +18,26 @@ part 'consent_state.dart';
 /// Every screen that can start a session asks this bloc first, and a session
 /// never starts on a consent that was not written down — if the write fails,
 /// the state says so and the gate stays shut.
+///
+/// **Consent is checked before a session, not during one.** On one device
+/// that is watertight by construction: the account screen is reachable only
+/// from the journal, and a running session is pushed on top of it, so there
+/// is no route to the withdraw button without leaving the session first.
+/// Across devices it is the re-read in the gate (`refresh`) that closes the
+/// window, which is why the gate asks the server every time rather than
+/// trusting the answer it read at launch. A session already in flight when
+/// consent is withdrawn elsewhere finishes its round; the next one does not
+/// start.
+///
+/// **The gate is in the app, not in the agent.** The agent verifies the JWT
+/// and holds no database connection at all — that is ADR 0010 decision 2,
+/// and it is why no service-role key exists in this repository or in
+/// Vercel. Checking consent there would mean either introducing that key or
+/// forwarding the user's token to PostgREST on every round, which the same
+/// ADR rejected. So what is true is: **this app does not start a session
+/// without a recorded consent**, and a bearer token driven directly against
+/// the API would not be stopped by anything here. The trade is recorded in
+/// ADR 0014 rather than papered over.
 class ConsentBloc({
   required final ConsentStore _store,
   required final ConsentAnalytics _analytics,
@@ -94,6 +114,19 @@ class ConsentBloc({
   /// storing a decision the user did not ask us to keep.
   void _onDeclined(ConsentDeclined event, Emitter<ConsentState> emit) {
     unawaited(_analytics.consentDeclined());
-    emit(const ConsentState.known(granted: false));
+    emit(const ConsentState.known(granted: false, justDeclined: true));
+  }
+
+  /// Reads the record again and waits for the answer, for the callers that
+  /// must not act on a stale one — the gate, above all.
+  ///
+  /// The state at hand can be minutes old and was read on this device: a
+  /// withdrawal made on another device (or on the web) would not be in it,
+  /// and starting a session on that stale yes is exactly what withdrawal is
+  /// supposed to prevent. Cheap enough to do on the way into every session.
+  Future<void> refresh() {
+    final settled = stream.firstWhere((state) => state is! ConsentUnknown);
+    add(const ConsentEvent.loaded());
+    return settled;
   }
 }

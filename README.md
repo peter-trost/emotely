@@ -28,6 +28,9 @@ The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
 9. [Wire compatibility](docs/adr/0009-wire-compatibility.md) — additive changes, version gating, force-update, revert through the pipeline
 10. [Supabase data layer](docs/adr/0010-supabase-data-layer.md) — app writes under RLS, agent only verifies the JWT, schema as code
 11. [Public waitlist writes to Postgres](docs/adr/0011-public-waitlist-writes-to-postgres.md) — insert-only for the world, rate limits and the double-opt-in mail in triggers, no server in between
+12. [Reuse the original store listings](docs/adr/0012-reuse-the-original-store-listings.md) — keep the existing Play record and its install base
+13. [Fastlane release pipeline](docs/adr/0013-fastlane-release-pipeline.md) — match signing, ASC API key, TestFlight and the Play internal track from CI
+14. [Explicit consent, append-only](docs/adr/0014-explicit-consent-as-an-append-only-record.md) — Art. 9 (2) (a) consent before the first session, every grant and withdrawal its own immutable row, wording versioned and CI-enforced
 
 The project's language is defined in [`CONTEXT.md`](CONTEXT.md).
 

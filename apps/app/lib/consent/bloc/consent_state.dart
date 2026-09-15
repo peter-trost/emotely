@@ -11,7 +11,15 @@ sealed class ConsentState with _$ConsentState {
   /// The server answered: consent to the current wording either stands
   /// ([granted]) or does not. Withdrawn, never asked, and consented to an
   /// older wording are all `granted: false` — all three mean "ask first".
-  const factory known({required bool granted}) = ConsentKnown;
+  ///
+  /// [justDeclined] marks the one case where the user said no *here*, a
+  /// moment ago, rather than simply not having a record. The gate is shut
+  /// either way; the difference is only what the journal may truthfully say
+  /// about why, so nothing but a message depends on it.
+  const factory known({
+    required bool granted,
+    @Default(false) bool justDeclined,
+  }) = ConsentKnown;
 
   /// A grant or a withdrawal is being written.
   const factory busy() = ConsentBusy;

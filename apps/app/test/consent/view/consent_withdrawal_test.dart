@@ -1,6 +1,7 @@
 import 'package:emotely/account/view/account_page.dart';
 import 'package:emotely/consent/consent_text.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../helpers/helpers.dart';
 import '../../session/session_robot.dart';
@@ -17,20 +18,14 @@ void main() {
 
     ConsentRobot robotWith(
       WidgetTester tester, {
-      List<Map<String, Object?>>? consents,
+      bool granted = true,
       List<AuthRound> withdrawals = const [],
       List<AuthRound> grants = const [],
       List<AuthRound> reads = const [],
     }) {
       final supabase = SupabaseStub()
-        ..rest(
-          consentRead,
-          reads.isEmpty
-              ? [
-                  rows(consents ?? [consentRow()]),
-                ]
-              : reads,
-        )
+        ..rest(consentRead, reads)
+        ..always(consentRead, consentStands(granted: granted))
         ..rest(consentWithdraw, withdrawals)
         ..rest(consentGrant, grants);
       final agent = AgentStub()
@@ -72,7 +67,9 @@ void main() {
     testWidgets('stops the next session without deleting anything', (
       tester,
     ) async {
-      final robot = robotWith(tester);
+      // The server answers "stands" at launch and "does not" from the
+      // withdrawal on, which is what it would really do.
+      final robot = robotWith(tester, granted: false, reads: [consentStands()]);
       await openAccount(robot);
       await robot.tap(robot.withdraw);
 
@@ -86,14 +83,25 @@ void main() {
       expect(robot.session, findsNothing);
     });
 
-    testWidgets('can be given again from the same screen', (tester) async {
-      final robot = robotWith(tester);
+    testWidgets('can be given again, through the same question', (
+      tester,
+    ) async {
+      final robot = robotWith(tester, granted: false, reads: [consentStands()]);
       await openAccount(robot);
       await robot.tap(robot.withdraw);
 
       expect(robot.restore, findsOneWidget);
 
       await robot.tap(robot.restore);
+
+      // Not a one-tap re-grant: the second consent is the same four
+      // paragraphs and the same unticked box as the first. Art. 7 (3) makes
+      // withdrawal as easy as giving, not giving easier the second time.
+      expect(robot.consent, findsOneWidget);
+      expect(robot.supabase.to(consentGrant), isEmpty);
+      expect(tester.widget<CheckboxListTile>(robot.checkbox).value, isFalse);
+
+      await robot.consentAndContinue();
 
       expect(robot.supabase.to(consentGrant), hasLength(1));
       expect(find.text(withdrawConsentExplanation), findsOneWidget);
@@ -102,13 +110,6 @@ void main() {
         event('consent_withdrawn', version),
         event('consent_granted', version),
       ]);
-
-      await robot.back();
-      await robot.startSession();
-
-      // Consent stands again, so the session runs without another question.
-      expect(robot.consent, findsNothing);
-      expect(robot.session, findsOneWidget);
     });
 
     testWidgets(
@@ -134,19 +135,44 @@ void main() {
       },
     );
 
-    testWidgets('offers no consent control while the answer is unknown', (
+    testWidgets('says so, and retries, when the answer cannot be read', (
       tester,
     ) async {
       final robot = robotWith(tester, reads: [restRefused()]);
       await openAccount(robot);
 
       // A read that failed says nothing about whether consent stands, so
-      // the screen offers neither button rather than one that might do
-      // nothing. Deleting the account is still available.
+      // neither button is offered — but the section must not simply be
+      // empty: someone who came here to withdraw would find nothing and no
+      // reason why, which is the one thing Art. 7 (3) cannot tolerate.
       expect(robot.withdraw, findsNothing);
       expect(robot.restore, findsNothing);
+      expect(find.text(consentUnknownMessage), findsOneWidget);
+      // The rest of the screen still works.
       expect(find.byKey(AccountView.deleteKey), findsOneWidget);
       expect(robot.accountNotice, findsOneWidget);
+
+      await robot.tap(find.byKey(AccountView.consentRetryKey));
+
+      // Looking again brings the control back.
+      expect(robot.withdraw, findsOneWidget);
+      expect(find.text(consentUnknownMessage), findsNothing);
+    });
+
+    testWidgets('the notice is reachable before an account exists', (
+      tester,
+    ) async {
+      // Play expects the policy to be findable without signing in; this is
+      // the first screen anyone sees, so the link lives here too.
+      final launcher = UrlLauncherSpy.setup();
+      final robot = robotWith(tester);
+      await tester.pumpWidget(robot.app);
+      await robot.settle();
+
+      expect(robot.signIn, findsOneWidget);
+      await robot.tap(robot.signInNotice);
+
+      expect(launcher.launched, [privacyNoticeUrl]);
     });
 
     testWidgets('the account screen links the notice and the imprint', (

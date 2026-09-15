@@ -12,22 +12,26 @@ void main() {
     const journalViewed = {'entries': 0, 'open_session': false};
     const version = {'version': consentVersion};
 
-    /// A Supabase that answers the consent read with [consents], and accepts
-    /// whatever the screen writes unless a test scripts otherwise. The agent
-    /// has one question ready, so a session that does start is visibly a
-    /// session rather than a spinner.
+    /// A Supabase that answers every `consent_stands` with [granted], and
+    /// accepts whatever the screen writes unless a test scripts otherwise.
+    /// The agent has one question ready, so a session that does start is
+    /// visibly a session rather than a spinner.
+    ///
+    /// `always` rather than a queue, because the gate asks again before
+    /// every session (a withdrawal elsewhere has to stop this device), so a
+    /// test cannot know how many reads it will need. [reads] queues rounds
+    /// ahead of that fallback for the tests that want a read to fail or the
+    /// answer to change mid-test.
     ConsentRobot robotWith(
       WidgetTester tester, {
-      List<Map<String, Object?>> consents = const [],
+      bool granted = false,
       List<AuthRound> grants = const [],
       List<AuthRound> withdrawals = const [],
       List<AuthRound> reads = const [],
     }) {
-      // Scripted rounds beat the harness's defaults, which grant consent so
-      // that tests about other things are not about this one. [reads]
-      // replaces the read entirely, for the tests about a read that fails.
       final supabase = SupabaseStub()
-        ..rest(consentRead, reads.isEmpty ? [rows(consents)] : reads)
+        ..rest(consentRead, reads)
+        ..always(consentRead, consentStands(granted: granted))
         ..rest(consentGrant, grants)
         ..rest(consentWithdraw, withdrawals);
       final agent = AgentStub()
@@ -77,42 +81,57 @@ void main() {
     });
 
     testWidgets('does not ask again once consent stands', (tester) async {
-      final robot = robotWith(tester, consents: [consentRow()]);
+      final robot = robotWith(tester, granted: true);
       await robot.launch();
 
       await robot.startSession();
 
       // Straight into the session: the record is what decides, and it was
-      // read from the server at launch.
+      // read from the server.
       expect(robot.consent, findsNothing);
       expect(robot.session, findsOneWidget);
       expect(robot.supabase.to(consentGrant), isEmpty);
     });
 
     testWidgets(
-      'a consent read at launch survives a restart, not a local flag',
+      'the answer comes from the server every time, not a local flag',
       (tester) async {
-        final robot = robotWith(tester, consents: [consentRow()]);
+        final robot = robotWith(tester, granted: true);
         await robot.launch();
 
-        // The gate is answered from the server on every launch, so a fresh
-        // install of the app asks the same question of the same record.
+        // Read once at launch, and asked again on the way into the session:
+        // a reinstall cannot lose the answer and cannot invent one, and a
+        // withdrawal made elsewhere is seen before anything is sent.
         expect(robot.supabase.to(consentRead), hasLength(1));
-        final read = robot.supabase.to(consentRead).single;
-        expect(read.query['version'], 'eq.$consentVersion');
-        expect(read.query['select'], 'withdrawn_at');
 
         await robot.startSession();
 
+        expect(robot.supabase.to(consentRead), hasLength(2));
+        expect(robot.supabase.bodies('/rest/v1/rpc/consent_stands'), [
+          {'version': consentVersion},
+          {'version': consentVersion},
+        ]);
         expect(robot.session, findsOneWidget);
       },
     );
 
+    testWidgets('a withdrawal made on another device stops this one', (
+      tester,
+    ) async {
+      // Consent stood when this device launched; by the time Start is
+      // tapped the server says otherwise, because the user withdrew it on
+      // their phone. The stale yes must not be what decides.
+      final robot = robotWith(tester, reads: [consentStands()]);
+      await robot.launch();
+
+      await robot.startSession();
+
+      expect(robot.consent, findsOneWidget);
+      expect(robot.session, findsNothing);
+    });
+
     testWidgets('a withdrawn consent is asked for again', (tester) async {
-      final robot = robotWith(
-        tester,
-        consents: [consentRow(withdrawnAt: '2026-09-15T10:00:00+00:00')],
-      );
+      final robot = robotWith(tester);
       await robot.launch();
 
       await robot.startSession();
@@ -248,20 +267,47 @@ void main() {
     testWidgets('a consent that cannot be read starts no session', (
       tester,
     ) async {
-      final robot = robotWith(tester, reads: [restRefused()]);
+      // Both reads fail — the one at launch and the one the gate makes on
+      // the way in — so the screen is reached without an answer.
+      final robot = robotWith(tester, reads: [restRefused(), restRefused()]);
       await robot.launch();
 
       await robot.startSession();
 
       // Not knowing is not the same as knowing the user consented: the gate
-      // asks rather than assuming either way.
+      // stays shut and no session starts.
       expect(robot.session, findsNothing);
       expect(robot.consent, findsOneWidget);
-      // The failure is reported, content-free, as its own step.
-      expect(robot.analytics.exceptions, hasLength(1));
-      expect(robot.analytics.exceptions.single.properties, {
-        'step': 'consent_load',
-      });
+      // But it does not ask the question either — re-prompting someone who
+      // already consented, every time the network hiccups, is what trains
+      // people to tick boxes without reading them.
+      expect(robot.checkbox, findsNothing);
+      expect(find.text(consentUnknownMessage), findsOneWidget);
+      // Both failed reads are reported, content-free, as their own step.
+      expect(robot.analytics.exceptions, hasLength(2));
+      for (final reported in robot.analytics.exceptions) {
+        expect(reported.properties, {'step': 'consent_load'});
+      }
+
+      // Looking again is offered, and works.
+      await robot.tap(robot.retry);
+
+      expect(robot.checkbox, findsOneWidget);
+      expect(find.text(consentUnknownMessage), findsNothing);
+    });
+
+    testWidgets('a failed read can be backed out of', (tester) async {
+      final robot = robotWith(tester, reads: [restRefused(), restRefused()]);
+      await robot.launch();
+      await robot.startSession();
+
+      await robot.tap(robot.decline);
+
+      // Leaving a screen that could not ask the question is not a refusal,
+      // so nothing is recorded and nothing is claimed about it.
+      expect(robot.home, findsOneWidget);
+      expect(robot.supabase.to(consentGrant), isEmpty);
+      expect(robot.declined, findsNothing);
     });
 
     testWidgets('declining after a failed write still starts nothing', (
@@ -279,7 +325,11 @@ void main() {
       // Out of the gate without a session and without a record.
       expect(robot.home, findsOneWidget);
       expect(robot.session, findsNothing);
-      expect(robot.declined, findsOneWidget);
+      // And told what actually happened: the user ticked the box and the
+      // write failed, so calling that a refusal would be the app
+      // misreporting its own history.
+      expect(robot.declined, findsNothing);
+      expect(find.text(consentFailureMessage), findsOneWidget);
     });
 
     testWidgets('the notice is a link the screen can open', (tester) async {
@@ -303,12 +353,48 @@ void main() {
       await robot.launch();
       await robot.startSession();
 
-      // The three things Art. 9 (2) (a) needs an explicit consent to be
-      // informed about, in the app's own words.
+      // Everything an explicit consent has to be informed about, in the
+      // app's own words: what is sent, to whom and where they sit, what may
+      // not be done with it, why it is sensitive, what cannot be undone,
+      // and the basis itself.
+      expect(find.text(consentWhatIsSent), findsOneWidget);
       expect(find.text(consentRecipients), findsOneWidget);
+      expect(find.text(consentNoTraining), findsOneWidget);
       expect(find.text(consentSensitivity), findsOneWidget);
+      expect(find.text(consentIrreversible), findsOneWidget);
       expect(find.text(consentLegalBasis), findsOneWidget);
       expect(find.text(consentCheckboxLabel), findsOneWidget);
+
+      // EDPB 05/2020 para 64 (vi): a third-country transfer and its
+      // safeguard are minimum elements, so they are named rather than
+      // implied.
+      expect(find.textContaining('outside the EU'), findsOneWidget);
+      expect(
+        find.textContaining('standard contractual clauses'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('stays usable and complete at double text size', (
+      tester,
+    ) async {
+      // The screen is already longer than a viewport; at 2.0 it is much
+      // longer, and a consent nobody can scroll to the end of is not an
+      // informed one.
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      final robot = robotWith(tester);
+      await robot.launch();
+      await robot.startSession();
+
+      expect(robot.consent, findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await robot.consentAndContinue();
+
+      expect(robot.supabase.to(consentGrant), hasLength(1));
+      expect(robot.session, findsOneWidget);
     });
 
     testWidgets('never lets journal content leave the device (ADR 0005)', (

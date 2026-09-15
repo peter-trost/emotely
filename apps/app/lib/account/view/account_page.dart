@@ -37,6 +37,7 @@ class const AccountView({super.key}) extends StatelessWidget {
   static const imprintKey = Key('account_view.imprint');
   static const withdrawConsentKey = Key('account_view.withdraw_consent');
   static const restoreConsentKey = Key('account_view.restore_consent');
+  static const consentRetryKey = Key('account_view.consent_retry');
 
   /// What deleting means; the screen says it once, the dialog only asks.
   static const consequenceMessage =
@@ -120,10 +121,36 @@ class const _Consent() extends StatelessWidget {
       ),
       ConsentKnown(granted: true) => const _ConsentStanding(),
       ConsentKnown(granted: false) => const _ConsentGone(),
-      // Still reading, or the read failed: offering to withdraw a consent
-      // whose state is unknown would be a button that might do nothing.
-      ConsentUnknown() || ConsentFailure() => const SizedBox.shrink(),
+      // The answer is not in hand: the read failed, or (only if this screen
+      // is somehow reached before the journal's eager load finished) has
+      // not arrived. Rendering nothing would leave a user who came here to
+      // withdraw with no control and no explanation — the one thing Art. 7
+      // (3) cannot tolerate — so say so and offer to look again.
+      ConsentFailure() || ConsentUnknown() => const _ConsentUnknown(),
     },
+  );
+}
+
+/// Whether consent stands could not be read. Says so and offers to look
+/// again, rather than leaving the section silently empty: a user who came
+/// here to withdraw must never find nothing and no reason why.
+class const _ConsentUnknown() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: 16,
+    children: [
+      Text(
+        consentUnknownMessage,
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+      ),
+      OutlinedButton(
+        key: AccountView.consentRetryKey,
+        onPressed: () =>
+            context.read<ConsentBloc>().add(const ConsentEvent.loaded()),
+        child: const Text('Try again'),
+      ),
+    ],
   );
 }
 
@@ -148,9 +175,14 @@ class const _ConsentStanding() extends StatelessWidget {
   );
 }
 
-/// Consent is gone: say what that means, and offer the way back. Giving it
-/// again from here is a second affirmative act, so no box is needed — the
-/// user is choosing this button with the explanation in front of them.
+/// Consent is gone: say what that means, and offer the way back.
+///
+/// The way back is the consent screen itself, not a button that grants on
+/// the spot. Art. 7 (3) requires withdrawal to be as easy as giving; it does
+/// not license making *giving* easier the second time, and a one-tap
+/// re-grant would be a weaker act than the first while writing a record that
+/// claims the same thing. So the second consent is the same four paragraphs
+/// and the same unticked box as the first.
 class const _ConsentGone() extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
@@ -163,12 +195,23 @@ class const _ConsentGone() extends StatelessWidget {
       ),
       OutlinedButton(
         key: AccountView.restoreConsentKey,
-        onPressed: () =>
-            context.read<ConsentBloc>().add(const ConsentEvent.granted()),
+        onPressed: () => unawaited(_askAgain(context)),
         child: const Text(restoreConsentLabel),
       ),
     ],
   );
+
+  /// The consent screen on its own route, carrying the bloc this screen
+  /// already has, so what it records is what this screen then shows.
+  static Future<void> _askAgain(BuildContext context) {
+    final consent = context.read<ConsentBloc>();
+    return Navigator.of(context).push(
+      MaterialPageRoute<bool>(
+        builder: (_) =>
+            BlocProvider.value(value: consent, child: const ConsentPage()),
+      ),
+    );
+  }
 }
 
 /// A consent write did not land. Says so and offers the same act again,

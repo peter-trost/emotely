@@ -48,11 +48,23 @@ class const ConsentView({super.key}) extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: switch (state) {
+              // Still reading. Showing the question here would flash it for
+              // a moment and then answer it, which is not how a decision
+              // this size should arrive.
+              ConsentUnknown() ||
               ConsentBusy() => const Center(child: CircularProgressIndicator()),
               ConsentWriteFailure() => const _WriteFailed(),
+              // The read failed: the app does not know whether consent
+              // already stands, and asking again would re-prompt someone
+              // who has consented — consent fatigue, on a flaky network.
+              // Say what happened and offer to look again.
+              ConsentFailure() => const _ReadFailed(),
               // `known(granted: true)` is handled by the listener above;
-              // everything else asks the question.
-              _ => const _Ask(),
+              // a known `false` asks the question. A failed *withdrawal*
+              // can only be reached from the account screen, which owns
+              // that act, so it asks here too rather than being a state of
+              // its own.
+              ConsentKnown() || ConsentWithdrawFailure() => const _Ask(),
             },
           ),
         ),
@@ -84,7 +96,9 @@ class _AskState() extends State<_Ask> {
         children: [
           Text(consentWhatIsSent, style: theme.textTheme.bodyLarge),
           Text(consentRecipients, style: theme.textTheme.bodyLarge),
+          Text(consentNoTraining, style: theme.textTheme.bodyLarge),
           Text(consentSensitivity, style: theme.textTheme.bodyLarge),
+          Text(consentIrreversible, style: theme.textTheme.bodyLarge),
           Text(consentLegalBasis, style: theme.textTheme.bodyLarge),
           TextButton(
             key: ConsentView.noticeKey,
@@ -100,16 +114,23 @@ class _AskState() extends State<_Ask> {
             controlAffinity: ListTileControlAffinity.leading,
             onChanged: (ticked) => setState(() => _ticked = ticked ?? false),
           ),
-          FilledButton(
-            key: ConsentView.agreeKey,
-            // Disabled until the box is ticked: the button alone is not the
-            // affirmative act, the pair is.
-            onPressed: _ticked
-                ? () => context.read<ConsentBloc>().add(
-                    const ConsentEvent.granted(),
-                  )
-                : null,
-            child: const Text(consentAgreeLabel),
+          // A disabled button reads as just "dimmed" to a screen reader,
+          // which leaves someone who cannot see the checkbox with no way to
+          // know why the button does nothing. The hint says what to do.
+          Semantics(
+            enabled: _ticked,
+            hint: _ticked ? null : consentAgreeBlockedHint,
+            child: FilledButton(
+              key: ConsentView.agreeKey,
+              // Disabled until the box is ticked: the button alone is not
+              // the affirmative act, the pair is.
+              onPressed: _ticked
+                  ? () => context.read<ConsentBloc>().add(
+                      const ConsentEvent.granted(),
+                    )
+                  : null,
+              child: const Text(consentAgreeLabel),
+            ),
           ),
           TextButton(
             key: ConsentView.declineKey,
@@ -125,6 +146,37 @@ class _AskState() extends State<_Ask> {
       ),
     );
   }
+}
+
+/// Whether consent already stands could not be read. Distinct from the
+/// question itself: re-asking someone who has already consented, every time
+/// the network hiccups, trains them to tick the box without reading it —
+/// and a consent given that way is not much of a consent.
+class const _ReadFailed() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: 16,
+    children: [
+      Text(
+        consentUnknownMessage,
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+        textAlign: TextAlign.center,
+      ),
+      FilledButton(
+        key: ConsentView.retryKey,
+        onPressed: () =>
+            context.read<ConsentBloc>().add(const ConsentEvent.loaded()),
+        child: const Text('Try again'),
+      ),
+      TextButton(
+        key: ConsentView.declineKey,
+        onPressed: () => Navigator.of(context).pop(false),
+        child: const Text('Back'),
+      ),
+    ],
+  );
 }
 
 /// The consent could not be written down. The session does not start on

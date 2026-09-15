@@ -432,11 +432,11 @@ return withdrawFailure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  unknown,TResult Function( bool granted)?  known,TResult Function()?  busy,TResult Function()?  failure,TResult Function()?  writeFailure,TResult Function()?  withdrawFailure,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  unknown,TResult Function( bool granted,  bool justDeclined)?  known,TResult Function()?  busy,TResult Function()?  failure,TResult Function()?  writeFailure,TResult Function()?  withdrawFailure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ConsentUnknown() when unknown != null:
 return unknown();case ConsentKnown() when known != null:
-return known(_that.granted);case ConsentBusy() when busy != null:
+return known(_that.granted,_that.justDeclined);case ConsentBusy() when busy != null:
 return busy();case ConsentFailure() when failure != null:
 return failure();case ConsentWriteFailure() when writeFailure != null:
 return writeFailure();case ConsentWithdrawFailure() when withdrawFailure != null:
@@ -458,11 +458,11 @@ return withdrawFailure();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  unknown,required TResult Function( bool granted)  known,required TResult Function()  busy,required TResult Function()  failure,required TResult Function()  writeFailure,required TResult Function()  withdrawFailure,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  unknown,required TResult Function( bool granted,  bool justDeclined)  known,required TResult Function()  busy,required TResult Function()  failure,required TResult Function()  writeFailure,required TResult Function()  withdrawFailure,}) {final _that = this;
 switch (_that) {
 case ConsentUnknown():
 return unknown();case ConsentKnown():
-return known(_that.granted);case ConsentBusy():
+return known(_that.granted,_that.justDeclined);case ConsentBusy():
 return busy();case ConsentFailure():
 return failure();case ConsentWriteFailure():
 return writeFailure();case ConsentWithdrawFailure():
@@ -480,11 +480,11 @@ return withdrawFailure();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  unknown,TResult? Function( bool granted)?  known,TResult? Function()?  busy,TResult? Function()?  failure,TResult? Function()?  writeFailure,TResult? Function()?  withdrawFailure,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  unknown,TResult? Function( bool granted,  bool justDeclined)?  known,TResult? Function()?  busy,TResult? Function()?  failure,TResult? Function()?  writeFailure,TResult? Function()?  withdrawFailure,}) {final _that = this;
 switch (_that) {
 case ConsentUnknown() when unknown != null:
 return unknown();case ConsentKnown() when known != null:
-return known(_that.granted);case ConsentBusy() when busy != null:
+return known(_that.granted,_that.justDeclined);case ConsentBusy() when busy != null:
 return busy();case ConsentFailure() when failure != null:
 return failure();case ConsentWriteFailure() when writeFailure != null:
 return writeFailure();case ConsentWithdrawFailure() when withdrawFailure != null:
@@ -532,10 +532,11 @@ String toString() {
 
 
 class ConsentKnown implements ConsentState {
-  const ConsentKnown({required this.granted});
+  const ConsentKnown({required this.granted, this.justDeclined = false});
   
 
  final  bool granted;
+@JsonKey() final  bool justDeclined;
 
 /// Create a copy of ConsentState
 /// with the given fields replaced by the non-null parameter values.
@@ -547,18 +548,18 @@ $ConsentKnownCopyWith<ConsentKnown> get copyWith => _$ConsentKnownCopyWithImpl<C
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is ConsentKnown&&(identical(other.granted, granted) || other.granted == granted));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is ConsentKnown&&(identical(other.granted, granted) || other.granted == granted)&&(identical(other.justDeclined, justDeclined) || other.justDeclined == justDeclined));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,granted);
+    return Object.hash(runtimeType,granted,justDeclined);
 }
 
 @override
 String toString() {
-    return 'ConsentState.known(granted: $granted)';
+    return 'ConsentState.known(granted: $granted, justDeclined: $justDeclined)';
 }
 
 
@@ -569,7 +570,7 @@ abstract mixin class $ConsentKnownCopyWith<$Res> implements $ConsentStateCopyWit
   factory $ConsentKnownCopyWith(ConsentKnown value, $Res Function(ConsentKnown) _then) = _$ConsentKnownCopyWithImpl;
 @useResult
 $Res call({
- bool granted
+ bool granted, bool justDeclined
 });
 
 
@@ -586,9 +587,10 @@ class _$ConsentKnownCopyWithImpl<$Res>
 
 /// Create a copy of ConsentState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? granted = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? granted = null,Object? justDeclined = null,}) {
   return _then(ConsentKnown(
 granted: null == granted ? _self.granted : granted // ignore: cast_nullable_to_non_nullable
+as bool,justDeclined: null == justDeclined ? _self.justDeclined : justDeclined // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

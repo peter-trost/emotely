@@ -1,4 +1,5 @@
 import 'package:emotely/account/view/account_page.dart';
+import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:emotely/consent/consent_text.dart';
 import 'package:emotely/consent/view/consent_page.dart';
 import 'package:emotely/journal/view/journal_page.dart';
@@ -19,6 +20,8 @@ class ConsentRobot(
   final analytics = AnalyticsSpy();
 
   Finder get home => find.byType(JournalPage);
+  Finder get signIn => find.byType(SignInPage);
+  Finder get signInNotice => find.byKey(SignInPage.privacyNoticeKey);
   Finder get consent => find.byType(ConsentPage);
   Finder get session => find.byType(SessionPage);
   Finder get account => find.byType(AccountPage);
@@ -78,12 +81,12 @@ class ConsentRobot(
   }
 }
 
-/// A `consents` row as Supabase returns it for the current version.
-Map<String, Object?> consentRow({String? withdrawnAt}) => {
-  'withdrawn_at': withdrawnAt,
-};
-
-/// The endpoints the consent gate uses, named once.
-const consentRead = 'GET /rest/v1/consents';
+/// The endpoints the consent gate uses, named once. The state is derived on
+/// the server from the append-only history, so the app asks one question
+/// (`consent_stands`) and never walks the events itself.
+const consentRead = 'POST /rest/v1/rpc/consent_stands';
 const consentGrant = 'POST /rest/v1/rpc/record_consent';
 const consentWithdraw = 'POST /rest/v1/rpc/withdraw_consent';
+
+/// What the server answers when consent stands, or does not.
+AuthRound consentStands({bool granted = true}) => rpcReturned(granted);
