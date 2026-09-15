@@ -1,3 +1,4 @@
+import 'package:emotely_web/app.dart';
 import 'package:emotely_web/components/confirm_waitlist.dart';
 import 'package:emotely_web/components/delete_account_form.dart';
 import 'package:emotely_web/components/waitlist_form.dart';
@@ -227,11 +228,13 @@ void main() {
         findsOneComponent,
       );
       expect(find.text('Counting and crash reports'), findsOneComponent);
-      expect(find.text('Who else sees any of it'), findsOneComponent);
-      expect(find.text('Deleting your account'), findsOneComponent);
-      expect(find.text('Your rights'), findsOneComponent);
-      expect(find.text('Children'), findsOneComponent);
-      expect(find.text('Changes to this notice'), findsOneComponent);
+      // The h3 subsections appear once; the h2 ones appear twice, because
+      // the table of contents names each of them as well.
+      expect(find.text('Who else sees any of it'), findsNComponents(2));
+      expect(find.text('Deleting your account'), findsNComponents(2));
+      expect(find.text('Your rights'), findsNComponents(2));
+      expect(find.text('Children'), findsNComponents(2));
+      expect(find.text('Changes to this notice'), findsNComponents(2));
     });
 
     testComponents('gives a legal basis, including Art. 9 for entries', (
@@ -255,16 +258,20 @@ void main() {
       expect(find.textContaining('Frankfurt'), findsComponents);
     });
 
-    testComponents('claims no training guarantee it cannot back', (tester) {
+    testComponents('states the training and retention opt-out as settled', (
+      tester,
+    ) {
       tester.pumpComponent(const AppPrivacy());
 
-      // The gateway's no-prompt-training routing is opt-in and is not
-      // enabled for emotely, so the page says exactly that instead of
-      // promising what the code does not do.
-      expect(
-        find.textContaining('not currently switched on'),
-        findsOneComponent,
-      );
+      // Since #96 every round sends disallowPromptTraining and
+      // zeroDataRetention, so the page states it rather than hedging.
+      expect(find.textContaining('not to train on prompts'), findsComponents);
+      expect(find.textContaining('zero-retention'), findsComponents);
+      // Both filters fail closed, and the page says so rather than
+      // implying a silent fallback.
+      expect(find.textContaining('fail closed'), findsComponents);
+      // The old hedge, from before the flags were set.
+      expect(find.textContaining('not currently switched on'), findsNothing);
     });
 
     testComponents('describes analytics by their real event names', (tester) {
@@ -297,6 +304,160 @@ void main() {
       tester.pumpComponent(const AppPrivacy());
 
       expect(find.textContaining('site privacy notice'), findsOneComponent);
+    });
+
+    testComponents('describes the consent gate and the way to take it back', (
+      tester,
+    ) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // Apple 5.1.1(i) wants the revocation path described, and it must be
+      // the one the app actually offers (#97), not "delete your account".
+      expect(find.textContaining('account screen'), findsComponents);
+      expect(find.textContaining('does not require deleting'), findsComponents);
+      expect(find.textContaining('Art. 7 (3)'), findsComponents);
+      expect(find.textContaining('consent_granted'), findsComponents);
+    });
+
+    testComponents('carries the Art. 13 disclosures that are easy to forget', (
+      tester,
+    ) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // Art. 22 (1): a negative statement satisfies it, silence does not.
+      // Twice: the heading, and its entry in the table of contents.
+      expect(find.text('Automated decisions'), findsNComponents(2));
+      expect(find.textContaining('Art. 22 (1)'), findsComponents);
+      // Art. 12 (3) response time, and a privacy contact.
+      expect(find.textContaining('within one month'), findsComponents);
+      // Art. 13 (2) (e): consequence of not providing the address.
+      expect(find.textContaining('not a statutory duty'), findsComponents);
+      // Play's secure-handling disclosure.
+      expect(find.textContaining('encrypted HTTPS'), findsComponents);
+      // ADR 0008's IP-keyed rate limit.
+      expect(find.textContaining('thirty a minute'), findsComponents);
+    });
+
+    testComponents('discloses what the SDK collects on its own', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // The event list is not exhaustive without these, and the ASC
+      // declarations name a Device ID that the page has to account for.
+      expect(find.textContaining('device identifier'), findsComponents);
+      expect(find.textContaining('sent to the background'), findsComponents);
+    });
+
+    testComponents('gives analytics a retention criterion like every other '
+        'category', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(
+        find.textContaining('retention window for the project'),
+        findsComponents,
+      );
+    });
+
+    // The suite above asserts that hedges are PRESENT. These assert that
+    // overclaims are ABSENT — the needle pattern from apps/app. Findings 1,
+    // 2 and 4 of the red-team review all survived a presence-only suite.
+    group('claims nothing the code does not do', () {
+      testComponents('does not deny sending the address to our own server', (
+        tester,
+      ) {
+        tester.pumpComponent(const AppPrivacy());
+
+        // Every round carries the sign-in token, whose JWT holds the
+        // address (agent_client.dart, request-auth.ts). The narrowed claim
+        // is about the gateway payload only, and must stay narrowed.
+        expect(
+          find.textContaining('the transcript carries no name and no email'),
+          findsNothing,
+        );
+        expect(find.textContaining('sign-in token'), findsComponents);
+      });
+
+      testComponents('does not claim the server sends PostHog nothing', (
+        tester,
+      ) {
+        tester.pumpComponent(const AppPrivacy());
+
+        // telemetry.ts ships a PostHogSpanProcessor: tokens, latency, cost
+        // and promptId per round, content suppressed at source.
+        expect(
+          find.textContaining('technical record of each round'),
+          findsComponents,
+        );
+        expect(
+          find.textContaining('suppressed at the source'),
+          findsComponents,
+        );
+      });
+
+      testComponents('does not enumerate session columns without the '
+          'transcript', (tester) {
+        tester.pumpComponent(const AppPrivacy());
+
+        // The migration stores `transcript jsonb not null`; leaving it out
+        // of an otherwise exhaustive list understates what is kept.
+        expect(
+          find.textContaining('full transcript of the conversation'),
+          findsComponents,
+        );
+      });
+
+      testComponents('does not promise deletion leaves only two survivors', (
+        tester,
+      ) {
+        tester.pumpComponent(const AppPrivacy());
+
+        // /delete-account names three, the waitlist among them.
+        expect(find.textContaining('waitlist'), findsComponents);
+        expect(find.textContaining('Two things outlive'), findsNothing);
+      });
+
+      testComponents('does not count the forwarded exception types', (tester) {
+        tester.pumpComponent(const AppPrivacy());
+
+        // forwardedTypes has four entries, not three; the page avoids the
+        // count rather than restating a number that drifts.
+        expect(find.textContaining('Only three kinds'), findsNothing);
+      });
+
+      testComponents('does not overstate where the model is recorded', (
+        tester,
+      ) {
+        tester.pumpComponent(const AppPrivacy());
+
+        // EMOTELY_MODEL can override the default at runtime, so the repo
+        // records the default, not necessarily the model in use.
+        expect(
+          find.textContaining('model in use is recorded in the public'),
+          findsNothing,
+        );
+      });
+
+      testComponents('does not call the counting anonymous', (tester) {
+        tester.pumpComponent(const AppPrivacy());
+
+        expect(find.textContaining('pseudonymous'), findsComponents);
+        expect(find.textContaining('anonymous counting'), findsNothing);
+      });
+    });
+  });
+
+  group('Routing', () {
+    // jaspr build generates sitemap.xml from the router's routes, so a page
+    // that is not registered is a page the stores cannot fetch — which is
+    // how the URL Google rejected came to be dead in the first place. The
+    // route itself is proved end to end by the build (the page renders and
+    // /app-privacy appears in sitemap.xml); what a component test can add
+    // is that the link the stores and readers follow is really emitted.
+    testComponents('the footer links to the app notice on every page', (
+      tester,
+    ) {
+      tester.pumpComponent(const App());
+
+      expect(find.text('App privacy'), findsOneComponent);
     });
   });
 }

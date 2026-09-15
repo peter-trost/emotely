@@ -65,6 +65,41 @@ Set blind, never echoed: `gh secret set NAME -R peter-trost/emotely --env releas
 The list is in ADR 0013. `PLAY_SERVICE_ACCOUNT_JSON` is the JSON key of
 `google-play-upload-konto@pc-api-5174249003608815741-70.iam.gserviceaccount.com`.
 
+## Privacy policy URL (store requirements)
+
+Both stores have a field for it, and both are **human steps in the console**.
+The value is the same in every place:
+
+```
+https://getemotely.com/app-privacy
+```
+
+That is the **app's** notice (`apps/web/lib/pages/app_privacy.dart`), not
+`/privacy`, which covers the web site and the waitlist and says so in its
+first sentence. Pointing a store at `/privacy` is what got the 2026-09-13
+Play update rejected — *"Invalid Privacy policy — URL provided
+https://emotely.de/app-privacy/ does not link to a valid privacy policy
+page"* — first because the legacy domain was dead, and then because the
+replacement disclaimed the app it was supposed to cover.
+
+- **Play Console → Policy → App content → Privacy policy.** Paste the URL,
+  save, and submit. Google fetches it, so it must be reachable without
+  signing in and must not redirect through anything that asks for consent.
+- **App Store Connect → App Privacy → Privacy Policy URL.** Set it **per
+  locale** — English and German both, since the listing carries both; ASC
+  keeps one URL per localisation and an empty one blocks submission. The
+  page itself is English-only for now, which is allowed, but if a German
+  translation is ever added the German locale must point at it.
+
+**The ASC data declarations must keep agreeing with the page.** App Store
+Connect asks separately *which* data types are collected, and a reviewer
+compares those answers with the notice. As corrected on 2026-09-15 the
+declarations are seven types, everything **Linked** to the user, and **no
+tracking**: contact info (email), user content (the journal), identifiers
+(user id and the analytics library's device id), usage data, diagnostics.
+If the page gains or loses a category — a new event, a new provider, a
+dropped identifier — change the declarations in the same release, not later.
+
 ## Account deletion (store requirements)
 
 - **App Store** (guideline 5.1.1(v)): deletion is in the app. Put the path
