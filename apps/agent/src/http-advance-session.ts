@@ -3,6 +3,7 @@ import {
   type AdvanceSessionResponse,
   advanceSessionRequest,
 } from "@emotely/contract";
+import { classifyModelFailure } from "./error-tracking.ts";
 import type { VerifyCaller } from "./request-auth.ts";
 import type { AdvanceResult, SessionAnswer } from "./session-core.ts";
 import { signTranscript, verifyTranscript } from "./transcript-auth.ts";
@@ -60,16 +61,18 @@ function validate(
   return { transcript };
 }
 
-async function runAdvance(
-  advance: Advance,
-  transcript: unknown[],
-  parsed: AdvanceSessionRequest,
-  userId: string,
-): Promise<AdvanceResult | Response> {
+async function runAdvance(opts: {
+  advance: Advance;
+  transcript: unknown[];
+  parsed: AdvanceSessionRequest;
+  userId: string;
+  onFailure: ((error: unknown) => void) | undefined;
+}): Promise<AdvanceResult | Response> {
+  const { parsed } = opts;
   try {
-    return await advance({
-      messages: transcript,
-      userId,
+    return await opts.advance({
+      messages: opts.transcript,
+      userId: opts.userId,
       ...(parsed.answer === undefined
         ? {}
         : {
@@ -86,7 +89,20 @@ async function runAdvance(
     ) {
       return json(HTTP_BAD_REQUEST, { error: "answer mismatch" });
     }
-    throw error;
+    // The gateway refused the round — most sharply when no provider satisfies
+    // the fail-closed privacy filters, which breaks *every* session rather
+    // than this one (ADR 0003 amendment). That must not look like a generic
+    // 500: it gets its own status and its own reported signal, so the alarm
+    // is the report rather than the nightly smoke a day later.
+    const failure = classifyModelFailure(error);
+    if (failure === undefined) {
+      throw error;
+    }
+    opts.onFailure?.(error);
+    // The gateway's message stays server-side: it names models and providers
+    // the client has no business seeing, and the client only ever needed to
+    // know the round is not retryable by resending.
+    return json(failure.status, { error: "model unavailable" });
   }
 }
 
@@ -110,6 +126,13 @@ export function createAdvanceSessionHandler(deps: {
   minAppVersion: string;
   /** Who is calling; `undefined` is a 401 (ADR 0010). */
   verifyCaller: VerifyCaller;
+  /**
+   * Called with the raw error when the gateway refuses a round, before the
+   * 502 goes out. Wired to PostHog error tracking in `api/advance-session.ts`;
+   * left unset in tests and the CLI. It must not throw — the reporter it is
+   * given swallows its own failures (ADR 0004).
+   */
+  onFailure?: (error: unknown) => void;
 }) {
   return async (request: Request): Promise<Response> => {
     if (request.method !== "POST") {
@@ -137,12 +160,13 @@ export function createAdvanceSessionHandler(deps: {
       return checked.error;
     }
 
-    const outcome = await runAdvance(
-      deps.advance,
-      checked.transcript,
+    const outcome = await runAdvance({
+      advance: deps.advance,
+      transcript: checked.transcript,
       parsed,
-      caller.userId,
-    );
+      userId: caller.userId,
+      onFailure: deps.onFailure,
+    });
     if (outcome instanceof Response) {
       return outcome;
     }
