@@ -13,7 +13,7 @@ class const Privacy({super.key}) extends StatelessComponent {
     p([
       .text('This page covers getemotely.com, the web site. The app has its '),
       a(href: '/app-privacy', [.text('own privacy notice')]),
-      .text('. Last updated 12 September 2026.'),
+      .text('. Last updated 15 September 2026.'),
     ]),
 
     h2([.text('What the site stores')]),
@@ -37,9 +37,12 @@ class const Privacy({super.key}) extends StatelessComponent {
         .text(
           ' is kept so we can tell you when early access opens for you. '
           'Basis: your consent (Art. 6 (1) (a) GDPR), given by submitting '
-          'the form. Giving the address is voluntary; without it there is '
-          'simply no spot to hold. You can withdraw the consent at any '
-          'time, which does not affect what happened before.',
+          'the form. Giving the address is neither a legal nor a '
+          'contractual requirement and you are under no obligation to give '
+          'it; the only consequence of not doing so is that there is no '
+          'spot to hold, and the rest of the site works either way. You '
+          'can withdraw the consent at any time, which does not affect '
+          'what happened before.',
         ),
       ]),
       li([
@@ -150,6 +153,19 @@ class const Privacy({super.key}) extends StatelessComponent {
       ),
     ]),
 
+    h2([.text('Keeping it safe')]),
+    p([
+      .text(
+        'The site is served over an encrypted HTTPS connection and makes no '
+        'unencrypted one. The waitlist sits in a Postgres database that only '
+        'the site’s own server can reach, never the browser. If a breach '
+        'ever did put your address at risk, the supervisory authority named '
+        'below is told within 72 hours of us becoming aware of it '
+        '(Art. 33 GDPR), and you are told directly where the risk to you is '
+        'high (Art. 34 GDPR).',
+      ),
+    ]),
+
     h2([.text('Your rights')]),
     p([
       .text(
@@ -167,11 +183,27 @@ class const Privacy({super.key}) extends StatelessComponent {
       ),
     ]),
 
+    h2([.text('Changes to this notice')]),
+    p([
+      .text(
+        'Changes are published here with a new date at the top, and every '
+        'version of this page is in the public repository, so what changed '
+        'and when is a matter of record. If something material changes about '
+        'what happens to your address, you are told by email before it takes '
+        'effect rather than being left to notice it here.',
+      ),
+    ]),
+
     h2([.text('Responsible')]),
     p([
       .text('Peter Trost, Yalovastr. 5, 72108 Rottenburg am Neckar, Germany, '),
       a(href: 'mailto:$contactEmail', [.text(contactEmail)]),
-      .text('. See the imprint.'),
+      .text(
+        '. Sole controller, answering privacy questions personally; there is '
+        'no company, no co-controller and no data protection officer, since '
+        'none of the Art. 37 GDPR triggers applies to a waitlist this size. '
+        'See the imprint.',
+      ),
     ]),
   ]);
 }

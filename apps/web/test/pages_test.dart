@@ -177,6 +177,28 @@ void main() {
       },
     );
 
+    testComponents(
+      'the privacy page answers the Art. 13 questions a reader cannot infer',
+      (tester) {
+        tester.pumpComponent(const Privacy());
+
+        // Art. 13 (2) (e): whether giving the address is obligatory, and
+        // what happens if you do not. Voluntariness alone does not say it.
+        expect(find.textContaining('under no obligation'), findsOneComponent);
+        // Art. 33/34: a breach has a named timeline, not just a promise of
+        // "appropriate measures".
+        expect(find.textContaining('within 72 hours'), findsOneComponent);
+        // WP260: a dated change log plus an active notice, never "check
+        // this page periodically" on its own.
+        expect(find.textContaining('told by email before'), findsOneComponent);
+        // Art. 13 (1) (b): the absence of a DPO is itself the disclosure.
+        expect(
+          find.textContaining('no data protection officer'),
+          findsOneComponent,
+        );
+      },
+    );
+
     testComponents('the privacy page points at the deletion page', (tester) {
       tester.pumpComponent(const Privacy());
 
@@ -336,6 +358,42 @@ void main() {
       expect(find.textContaining('encrypted HTTPS'), findsComponents);
       // ADR 0008's IP-keyed rate limit.
       expect(find.textContaining('thirty a minute'), findsComponents);
+    });
+
+    testComponents('says an AI is doing this, rather than leaving it obvious', (
+      tester,
+    ) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // EU AI Act Art. 50, in force since 2 August 2026. The exemption is
+      // for cases where it is obvious; this states it instead of relying
+      // on that.
+      expect(find.textContaining('produced by an AI system'), findsComponents);
+      expect(find.textContaining('not by a person'), findsComponents);
+    });
+
+    testComponents('says what happens when the measures fail', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // Art. 33/34. The legacy lawyer-drafted policy carried this and the
+      // rewrite dropped it; a journal that can hold Art. 9 data is the
+      // last place to leave it out. Twice: heading and table of contents.
+      expect(find.text('If something goes wrong'), findsNComponents(2));
+      expect(find.textContaining('within 72 '), findsComponents);
+      expect(find.textContaining('Art. 34 GDPR'), findsComponents);
+    });
+
+    testComponents('confirms the recipients protect the data equally', (
+      tester,
+    ) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // Apple Guideline 5.1.1(i) asks for this confirmation specifically,
+      // separately from naming the recipients.
+      expect(find.textContaining('same standard'), findsComponents);
+      // And that the two who are not processors are named as such, rather
+      // than being swept into one reassuring sentence.
+      expect(find.textContaining('not our processors'), findsComponents);
     });
 
     testComponents('discloses what the SDK collects on its own', (tester) {
