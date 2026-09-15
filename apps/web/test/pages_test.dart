@@ -1,6 +1,7 @@
 import 'package:emotely_web/components/confirm_waitlist.dart';
 import 'package:emotely_web/components/delete_account_form.dart';
 import 'package:emotely_web/components/waitlist_form.dart';
+import 'package:emotely_web/pages/app_privacy.dart';
 import 'package:emotely_web/pages/confirm.dart';
 import 'package:emotely_web/pages/delete_account.dart';
 import 'package:emotely_web/pages/home.dart';
@@ -182,6 +183,120 @@ void main() {
       expect(find.textContaining('Delete account'), findsComponents);
       // Truthful about backups, rather than promising none exist.
       expect(find.textContaining('retention window'), findsComponents);
+    });
+
+    testComponents('the privacy page hands the app off to its own notice', (
+      tester,
+    ) {
+      tester.pumpComponent(const Privacy());
+
+      // What Google read and rejected: the site notice used to say the app
+      // carried its notice inside itself, which it never did.
+      expect(find.textContaining('notice inside it'), findsNothing);
+      expect(find.textContaining('own privacy notice'), findsOneComponent);
+    });
+  });
+
+  group('AppPrivacy', () {
+    testComponents('names the controller and how to reach them', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(find.textContaining('Peter Trost'), findsComponents);
+      expect(find.textContaining('Rottenburg am Neckar'), findsComponents);
+      expect(find.textContaining('hello@getemotely.com'), findsComponents);
+    });
+
+    testComponents('names the app as the Play listing still has it', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // The Play record keeps the legacy title until the first new version
+      // (ADR 0012); when it is renamed, this test says so.
+      expect(
+        find.textContaining('Reflect Therapy AI: emotely'),
+        findsOneComponent,
+      );
+    });
+
+    testComponents('covers every category the stores ask about', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(find.text('Your email address'), findsOneComponent);
+      expect(find.text('Your journal entries and sessions'), findsOneComponent);
+      expect(
+        find.text('The conversation with the assistant'),
+        findsOneComponent,
+      );
+      expect(find.text('Counting and crash reports'), findsOneComponent);
+      expect(find.text('Who else sees any of it'), findsOneComponent);
+      expect(find.text('Deleting your account'), findsOneComponent);
+      expect(find.text('Your rights'), findsOneComponent);
+      expect(find.text('Children'), findsOneComponent);
+      expect(find.text('Changes to this notice'), findsOneComponent);
+    });
+
+    testComponents('gives a legal basis, including Art. 9 for entries', (
+      tester,
+    ) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(find.textContaining('Art. 6 (1) (b)'), findsComponents);
+      expect(find.textContaining('Art. 6 (1) (f)'), findsComponents);
+      // Journal entries are special-category data, and the page says so.
+      expect(find.textContaining('Art. 9 (2) (a)'), findsComponents);
+      expect(find.textContaining('health'), findsComponents);
+    });
+
+    testComponents('names every processor and where the data sits', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(find.textContaining('Supabase'), findsComponents);
+      expect(find.textContaining('Vercel AI Gateway'), findsComponents);
+      expect(find.textContaining('PostHog'), findsComponents);
+      expect(find.textContaining('Frankfurt'), findsComponents);
+    });
+
+    testComponents('claims no training guarantee it cannot back', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // The gateway's no-prompt-training routing is opt-in and is not
+      // enabled for emotely, so the page says exactly that instead of
+      // promising what the code does not do.
+      expect(
+        find.textContaining('not currently switched on'),
+        findsOneComponent,
+      );
+    });
+
+    testComponents('describes analytics by their real event names', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(find.textContaining('session_started'), findsComponents);
+      expect(find.textContaining('sign_in_code_requested'), findsComponents);
+      expect(find.textContaining('journal_viewed'), findsComponents);
+    });
+
+    testComponents('gives both deletion paths and links the web one', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(find.textContaining('account icon'), findsComponents);
+      expect(find.textContaining('deletion page'), findsComponents);
+    });
+
+    testComponents('is honest about backups rather than claiming none', (
+      tester,
+    ) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(find.textContaining('retention window'), findsComponents);
+      expect(find.textContaining('no backup'), findsNothing);
+      // "anonymous" would overstate what the counting actually is.
+      expect(find.textContaining('pseudonymous'), findsComponents);
+    });
+
+    testComponents('points at the site notice for the site', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      expect(find.textContaining('site privacy notice'), findsOneComponent);
     });
   });
 }
