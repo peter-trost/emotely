@@ -1,4 +1,5 @@
 import 'package:emotely_web/environment.dart';
+import 'package:emotely_web/pages/app_privacy.dart';
 import 'package:emotely_web/pages/confirm.dart';
 import 'package:emotely_web/pages/delete_account.dart';
 import 'package:emotely_web/pages/home.dart';
@@ -39,6 +40,14 @@ class const App({super.key}) extends StatelessComponent {
           title: 'Privacy — emotely',
           builder: (_, _) => const Privacy(),
         ),
+        // The URL both store listings point at. Google Play rejected the
+        // 2026-09-13 update because the legacy emotely.de/app-privacy/ was
+        // dead and /privacy disclaims the app in its first sentence.
+        Route(
+          path: '/app-privacy',
+          title: 'App privacy notice — emotely',
+          builder: (_, _) => const AppPrivacy(),
+        ),
         Route(
           path: '/delete-account',
           title: 'Delete your account — emotely',
@@ -57,6 +66,10 @@ class const App({super.key}) extends StatelessComponent {
         a(href: '/imprint', [.text('Imprint')]),
         .text(' · '),
         a(href: '/privacy', [.text('Privacy')]),
+        .text(' · '),
+        // Google Play requires the app's policy to be reachable; the store
+        // listings link straight here, and so does every page.
+        a(href: '/app-privacy', [.text('App privacy')]),
         .text(' · '),
         // Google asks for the deletion route to be easy to find, so it
         // sits in the footer of every page rather than only in privacy.
