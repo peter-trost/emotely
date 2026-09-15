@@ -171,6 +171,45 @@ the wild*.
    entry persistence, `posthog_flutter`.
 6. **Subscription + polish** — RevenueCat, paywall, ship to TestFlight.
 
+## Setting up a machine
+
+One script brings a fresh Linux box — a cloud agent container, a VM, a CI
+runner — to where every job in `.github/workflows/ci.yml` runs locally:
+
+```bash
+sudo scripts/setup-dev-environment.sh            # install
+sudo scripts/setup-dev-environment.sh --verify   # install, then run every CI job
+```
+
+It wants root on x86_64 and installs into a system prefix, which is what a
+container is; it is not a dotfiles-friendly installer for a personal laptop.
+Docker must already be there (it starts the daemon, it does not install
+Engine) or the Supabase job is skipped — and the script says so rather than
+claiming a clean run.
+
+It is idempotent, it aborts on the first failed step, and it takes **every
+version from the repository** — Node from `.nvmrc`, pnpm from `packageManager`,
+Flutter from `apps/app/.fvmrc`, Dart from the checksum-pinned
+`apps/web/scripts/vercel-install.sh`, the Supabase CLI and `jaspr_cli` from
+`.github/workflows/ci.yml`. Bumping a pin means editing the file that owns it;
+the script follows, and refuses to run when two files pin the same tool
+differently. Every download is checked against a checksum the upstream project
+publishes, fetched at run time.
+
+The toolchain lands in `/opt/emotely-toolchain` (uninstall is `rm -rf` of that
+one directory) and `/opt/emotely-toolchain/env.sh` puts it on `PATH`. Two Dart
+SDKs live there on purpose: `dart` is the standalone SDK `apps/web` is pinned
+to, and `flutter-dart` is Flutter's bundled one — the only one that can resolve
+`sdk: flutter` packages, so it is what `apps/app` uses wherever CI says `dart`.
+
+What it deliberately leaves out, and prints when it finishes: secrets (it
+writes an empty `apps/agent/.env.local` template and stops there), Entire —
+whose hooks in `.claude/settings.json` no-op while the CLI is absent, so
+commits made on such a machine carry no `Entire-Checkpoint` trailer — `fvm`,
+the GitHub CLI, and everything needed to run the app on a device (no Android
+SDK, no JDK, no emulator, no Xcode, so the android half of `app-release.yml`
+is out of reach too). `apps/app`'s unit and widget tests do run.
+
 ## Running the app
 
 Build-time configuration is `--dart-define`s read in `apps/app/lib/app/environment.dart`

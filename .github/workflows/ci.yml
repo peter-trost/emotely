@@ -18,6 +18,7 @@ jobs:
     outputs:
       agent: ${{ steps.filter.outputs.agent }}
       app: ${{ steps.filter.outputs.app }}
+      scripts: ${{ steps.filter.outputs.scripts }}
       supabase: ${{ steps.filter.outputs.supabase }}
       web: ${{ steps.filter.outputs.web }}
     steps:
@@ -40,6 +41,9 @@ jobs:
               - 'apps/app/**'
               # The Dart contract is pinned against the emitted JSON Schema.
               - 'packages/contract/contract.schema.json'
+              - '.github/workflows/ci.yml'
+            scripts:
+              - 'scripts/**'
               - '.github/workflows/ci.yml'
             supabase:
               - 'supabase/**'
@@ -131,6 +135,17 @@ jobs:
       - run: jaspr build --sitemap-domain https://getemotely.com
       - run: git diff --exit-code -- lib
 
+  # The machine-setup script bootstraps every other job, so it is the one file
+  # that has to work where nothing else does yet — and the only one CI could not
+  # see before. shellcheck is the lint for it; runners ship it preinstalled.
+  scripts:
+    needs: changes
+    if: needs.changes.outputs.scripts == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: shellcheck --external-sources --severity=style scripts/*.sh
+
   # The schema gate: migrations apply to a fresh Postgres, and the pgTAP suite
   # proves row-level security holds (ADR 0010). Only the database container
   # is started; nothing else is needed to run SQL tests.
@@ -171,7 +186,7 @@ jobs:
 
   # The single required check. Green only if every job succeeded or was skipped.
   ci-ok:
-    needs: [changes, agent, app, supabase, web]
+    needs: [changes, agent, app, scripts, supabase, web]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
