@@ -177,6 +177,28 @@ void main() {
       },
     );
 
+    testComponents(
+      'the privacy page answers the Art. 13 questions a reader cannot infer',
+      (tester) {
+        tester.pumpComponent(const Privacy());
+
+        // Art. 13 (2) (e): whether giving the address is obligatory, and
+        // what happens if you do not. Voluntariness alone does not say it.
+        expect(find.textContaining('under no obligation'), findsOneComponent);
+        // Art. 33/34: a breach has a named timeline, not just a promise of
+        // "appropriate measures".
+        expect(find.textContaining('within 72 hours'), findsOneComponent);
+        // WP260: a dated change log plus an active notice, never "check
+        // this page periodically" on its own.
+        expect(find.textContaining('told by email before'), findsOneComponent);
+        // Art. 13 (1) (b): the absence of a DPO is itself the disclosure.
+        expect(
+          find.textContaining('no data protection officer'),
+          findsOneComponent,
+        );
+      },
+    );
+
     testComponents('the privacy page points at the deletion page', (tester) {
       tester.pumpComponent(const Privacy());
 
