@@ -116,3 +116,60 @@ the app is in front of testers), but it does mean a downgrade would start
 failing every session rather than silently loosening privacy — which is the
 safer failure, and one more reason not to downgrade.
 
+## Amendment 2026-09-15 (b): the benchmark measures provider qualification
+
+The previous amendment made the qualifying provider set a model-selection
+constraint but left the enforcement to a human reading a note. The monthly
+benchmark — the thing that actually ranks candidates — did not know about it,
+so it could put a model on top that cannot serve a single session (#98).
+
+**It measures it now.** Every candidate gets one cheap probe round, sent with
+the same `SESSION_PROVIDER_OPTIONS` constant the product uses, before any
+protocol or scenario run. The verdict becomes an `ineligibilityReasons()` entry
+and a **Providers** column in the generated report, so a non-qualifying model
+can never top the table regardless of latency or cost.
+
+**The gateway answers this directly**, which is better than the prose parsing
+the first amendment relied on. `providerMetadata.gateway` carries
+`enabledZeroDataRetention` and `enabledDisallowPromptTraining` — booleans
+confirming the filters were understood and applied — and
+`routing.skippedProviderAttempts` names each provider that was dropped, with a
+reason (`zdr_not_supported`, `zdr_ineligible_model`). Reading the booleans also
+closes the typo hole noted in `session-core.ts`: a misspelled option key
+type-checks and is silently ignored, and a round that comes back without these
+confirmations is a round with no privacy filtering at all.
+
+**The measured picture, all twelve candidates, 2026-09-15.** The feared outcome
+did not materialise: every candidate *serves* under both flags, including
+`nvidia/nemotron-3.5-lightning`, the #1-ranked model from benchmark #30. So
+promoting it would not have failed 100% of sessions.
+
+What the measurement did surface is a thinner failure mode. Only three
+candidates keep a deep qualifying pool — `openai/gpt-oss-120b` 8/8,
+`deepseek/deepseek-v4-flash` 7/9, `anthropic/claude-haiku-4.5` 4/4 — while
+`nemotron` drops to 2 of 3 (`runinfra` skipped, `zdr_not_supported`) and **eight
+of the twelve are left with a single qualifying provider**: `qwen3.7-flash`,
+`glm-4.7-flash`, `gemini-2.5-flash-lite`, `gemini-3.7-flash`, `gpt-5-nano`,
+`gpt-5-mini`, `gpt-5.6-luna`, `gpt-5.6-luna-fast`.
+
+**Hence a floor of two qualifying providers.** Under a fail-closed filter, one
+provider is a single point of failure for the whole product: one outage, or one
+withdrawn Vercel agreement, and every session fails rather than degrades. A
+model at 1/N is disqualified no matter how fast or cheap it is. The current
+default clears this comfortably at 8/8.
+
+**Outright rejection is real, just not on the shortlist.** Sampling the wider
+catalog found models the gateway refuses under these flags —
+`arcee-ai/trinity-large-thinking` ("No ZDR … providers … available"), and
+`anthropic/claude-fable-5` / `-5.1`, which are ZDR-ineligible as models. Those
+return HTTP 400, so the benchmark classifies a privacy rejection as
+ineligibility and rethrows anything else rather than blaming privacy for a 503.
+
+**Still not guarded: the deploy path.** `EMOTELY_MODEL` is a Vercel environment
+variable read in `api/advance-session.ts` — outside the repo and outside CI —
+so changing it still bypasses every check here. A startup probe was considered
+and deliberately deferred: the endpoint is a per-request serverless function,
+so a live gateway round at cold start would add latency to the metric we rank
+on and would turn a transient gateway blip into an outage of the whole
+endpoint. The better shape is a deploy-time or scheduled smoke check, decided
+on its own (follow-up to #98).

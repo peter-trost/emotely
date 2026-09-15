@@ -28,17 +28,26 @@ amendment 2026-09-15). Both **fail closed**: if no provider serving the model
 qualifies, the gateway rejects the request and the session dies on its first
 round — there is no quiet fallback to a weaker provider.
 
-So a model is only eligible if the providers that serve it qualify under both
-filters. Measure before promoting one (via `EMOTELY_MODEL`, the `agent-model`
-flag, or the monthly benchmark): run a round and read
-`providerMetadata.gateway.routing.planningReasoning`, which names the planned
-providers and states whether they support ZDR and disallow prompt training.
-The benchmark does not score this yet — [issue #98](https://github.com/peter-trost/emotely/issues/98).
+So a model is only eligible if enough of the providers that serve it qualify
+under both filters.
 
-`EMOTELY_MODEL` in particular takes a **provider-qualified** value: not just a
-model the gateway knows, but one whose providers *all* satisfy both filters.
-A model that merely exists in the catalog will deploy fine and then fail every
-single round.
+**The monthly benchmark measures this for you.** It probes every candidate with
+one cheap round before scoring it, reports a **Providers** column (qualifying /
+considered), and refuses to call a model eligible below **two** qualifying
+providers — under a fail-closed filter, a single provider is a single point of
+failure for the whole product. Measured 2026-09-15: the default
+`openai/gpt-oss-120b` is 8/8, but eight of the twelve candidates sit at 1.
+
+To check a model by hand, run a round with those two `providerOptions.gateway`
+flags and read `providerMetadata.gateway`: `enabledZeroDataRetention` and
+`enabledDisallowPromptTraining` confirm the filters were applied at all (a
+misspelled option key is silently ignored), and `routing.skippedProviderAttempts`
+names each provider that was dropped and why.
+
+`EMOTELY_MODEL` is a Vercel environment variable, so changing it bypasses both
+the benchmark and CI — there is no deploy-time guard yet (follow-up to
+[issue #98](https://github.com/peter-trost/emotely/issues/98)). When a rejection
+does happen, the runbook below says how to recognise and recover from it.
 
 ## Runbook: every session is failing
 
