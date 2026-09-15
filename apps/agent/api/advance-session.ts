@@ -5,7 +5,7 @@ import { z } from "zod";
 import { defaultQuestionSet } from "../src/default-question-set.ts";
 import { createAdvanceSessionHandler } from "../src/http-advance-session.ts";
 import { createCallerVerifier, supabaseAuth } from "../src/request-auth.ts";
-import { DEFAULT_MODEL, MIN_APP_VERSION } from "../src/session-config.ts";
+import { DEFAULT_MODEL } from "../src/session-config.ts";
 import { advanceSession } from "../src/session-core.ts";
 import { flushTelemetry, initTelemetry } from "../src/telemetry.ts";
 
@@ -38,7 +38,6 @@ const transcriptSchema = z.array(modelMessageSchema);
 const handler = createAdvanceSessionHandler({
   secret,
   ...(previousSecret === undefined ? {} : { previousSecret }),
-  minAppVersion: MIN_APP_VERSION,
   verifyCaller: createCallerVerifier(supabaseAuth(supabaseUrl)),
   advance: ({ messages, answer }) =>
     advanceSession({

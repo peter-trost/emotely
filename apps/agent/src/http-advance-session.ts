@@ -106,8 +106,6 @@ export function createAdvanceSessionHandler(deps: {
    */
   previousSecret?: string;
   advance: Advance;
-  /** Oldest app version this server still serves; the app blocks below it. */
-  minAppVersion: string;
   /** Who is calling; `undefined` is a 401 (ADR 0010). */
   verifyCaller: VerifyCaller;
 }) {
@@ -152,7 +150,6 @@ export function createAdvanceSessionHandler(deps: {
       transcript: result.messages,
       signature: signTranscript(result.messages, deps.secret),
       prompt_id: result.promptId,
-      min_app_version: deps.minAppVersion,
     };
     if (result.status === "completed") {
       return json(HTTP_OK, {

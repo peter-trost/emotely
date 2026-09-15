@@ -75,7 +75,6 @@ Round awaiting({
   required AskQuestion question,
   String signature = AgentStub.signature,
   List<Object?> transcript = AgentStub.transcript,
-  String? minAppVersion,
 }) =>
     () async => _json({
       'status': 'awaiting_answer',
@@ -83,14 +82,12 @@ Round awaiting({
       'signature': signature,
       'prompt_id': 'session/v1',
       'pending': {'tool_call_id': toolCallId, 'question': question.toJson()},
-      'min_app_version': ?minAppVersion,
     });
 
 /// The agent finished with [summary] and the recorded [answers].
 Round completed({
   required String summary,
   required Map<String, Answer> answers,
-  String? minAppVersion,
 }) =>
     () async => _json({
       'status': 'completed',
@@ -101,7 +98,6 @@ Round completed({
         'summary': summary,
         'answers': answers.map((id, answer) => MapEntry(id, answer.toJson())),
       },
-      'min_app_version': ?minAppVersion,
     });
 
 /// The server refused the round with [statusCode] and [message].

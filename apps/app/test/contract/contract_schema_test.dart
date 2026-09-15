@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:emotely/config/startup_config.dart';
 import 'package:emotely/contract/contract.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,11 +81,6 @@ void main() {
   });
 
   group('advance_session envelope', () {
-    Map<String, dynamic> object(Map<String, dynamic> schema) =>
-        schema['properties'] as Map<String, dynamic>;
-    List<Object?> required(Map<String, dynamic> schema) =>
-        schema['required'] as List<Object?>;
-
     test(
       'request: what AgentClient posts is what the schema describes',
       () async {
@@ -167,12 +163,51 @@ void main() {
       }
     });
   });
+
+  group('config_response', () {
+    Map<String, dynamic> configSchema() =>
+        schema['config_response'] as Map<String, dynamic>;
+
+    test('every key the Dart decoder needs is guaranteed by the server', () {
+      const config = StartupConfig(
+        minAppVersion: '1.0.0',
+        storeUrl: 'https://store.test/emotely',
+      );
+
+      expect(required(configSchema()), containsAll(_needed(config.toJson())));
+    });
+
+    test('decodes what the schema describes, through the real path', () {
+      // The gate blocks the whole app on this decode, so it is pinned the
+      // same way the session envelope is: encode, decode, compare.
+      const config = StartupConfig(
+        minAppVersion: '2.0.0',
+        storeUrl: 'https://store.test/emotely',
+      );
+
+      final decoded = StartupConfig.fromJson(config.toJson());
+
+      expect(decoded, config);
+      expect(
+        config.toJson().keys,
+        everyElement(isIn(object(configSchema()).keys)),
+      );
+    });
+  });
 }
 
 /// The keys a freezed `fromJson` cannot do without: everything the Dart side
 /// serializes with a value. Nullable fields (encoded as null) are optional.
 Iterable<String> _needed(Map<String, dynamic> encoded) =>
     encoded.entries.where((e) => e.value != null).map((e) => e.key);
+
+/// The `properties` of a JSON Schema object.
+Map<String, dynamic> object(Map<String, dynamic> schema) =>
+    schema['properties'] as Map<String, dynamic>;
+
+/// The `required` list of a JSON Schema object.
+List<Object?> required(Map<String, dynamic> schema) =>
+    schema['required'] as List<Object?>;
 
 /// The wire name of [type] as `ask_question` actually serializes it.
 String _wireNameOf(AnswerType type) =>

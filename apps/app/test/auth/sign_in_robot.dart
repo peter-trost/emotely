@@ -42,6 +42,8 @@ class SignInRobot(
 
   Future<void> launch() async {
     await tester.pumpWidget(app);
+    // Past the startup gate first (#49), then the sign-in screen's own frame.
+    await tester.pumpAndSettle();
     await tester.pump();
   }
 

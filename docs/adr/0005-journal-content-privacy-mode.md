@@ -43,18 +43,20 @@ email address: …`) and, for a 5xx, gotrue keeps the whole response body.
 
 1. *Handled failures* go through one class, `ErrorReporter` (type, stack
    trace, the step and ids). It forwards the message only for
-   `AgentException` (the agent's own error text) and the two transport
-   errors that only name a host (`ClientException`, `TimeoutException`);
-   every other exception — every `AuthException` and `PostgrestException`
-   among them — goes out as its type plus the error code and status with
-   the message withheld.
+   `AgentException` (the agent's own error text), `ConfigException` (written
+   in this app, from a status code or a transport error — never from a
+   parse error, which would embed the body it choked on) and the two
+   transport errors that only name a host (`ClientException`,
+   `TimeoutException`); every other exception — every `AuthException` and
+   `PostgrestException` among them — goes out as its type plus the error
+   code and status with the message withheld.
 2. *Uncaught errors* are captured by the SDK itself (`FlutterError`,
    platform dispatcher, isolates; release builds only). A `beforeSend`
    hook, `contentFreeExceptions`, applies the same rule on the wire to
    every `$exception` event: each exception item keeps its type and stack
-   frames but loses its text unless the type is one of the three above or
+   frames but loses its text unless the type is one of the four above or
    `WithheldException`, the stand-in path 1 substitutes, whose message is
-   already withheld — four in `forwardedTypes`, not three;
+   already withheld — five in `forwardedTypes`, not four;
    and the Flutter error details keep only the library and the silent
    flag (`context`, `information` and `error_summary` can quote a widget's
    content). Exception steps (free-text breadcrumbs in a native buffer)

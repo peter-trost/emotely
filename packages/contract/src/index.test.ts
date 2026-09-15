@@ -6,6 +6,7 @@ import {
   answerValueSchemas,
   askQuestionInput,
   completeSessionInput,
+  configResponse,
   recordAnswerInput,
 } from "./index.ts";
 
@@ -169,7 +170,6 @@ describe("advance_session response", () => {
     transcript: [{ role: "user", content: "hi" }],
     signature: "abc",
     prompt_id: "session/v1",
-    min_app_version: "1.0.0",
   };
 
   it("accepts the next question and the finished entry", () => {
@@ -193,16 +193,15 @@ describe("advance_session response", () => {
     assert.deepEqual(advanceSessionResponse.parse(completed), completed);
   });
 
-  it("always names the minimum supported app version", () => {
-    const { min_app_version: _, ...unversioned } = base;
-    assert.equal(
-      advanceSessionResponse.safeParse({
-        status: "completed",
-        ...unversioned,
-        entry: { summary: "x", answers: {} },
-      }).success,
-      false,
-    );
+  it("no longer carries the minimum version: that is the config endpoint's", () => {
+    const stale = {
+      status: "completed" as const,
+      ...base,
+      min_app_version: "1.0.0",
+      entry: { summary: "x", answers: {} },
+    };
+    const parsed = advanceSessionResponse.parse(stale);
+    assert.equal("min_app_version" in parsed, false);
   });
 
   it("rejects an unknown status and a malformed recorded answer", () => {
@@ -218,5 +217,53 @@ describe("advance_session response", () => {
       }).success,
       false,
     );
+  });
+});
+
+describe("config response", () => {
+  const config = {
+    min_app_version: "1.0.0",
+    store_url: "https://apps.apple.com/app/emotely",
+  };
+
+  it("names the minimum app version and where to get a newer one", () => {
+    assert.deepEqual(configResponse.parse(config), config);
+  });
+
+  it("requires both fields: the app blocks rather than guess either", () => {
+    for (const key of ["min_app_version", "store_url"] as const) {
+      const { [key]: _, ...missing } = config;
+      assert.equal(configResponse.safeParse(missing).success, false, key);
+    }
+  });
+
+  it("takes the minimum as bare semver, like app_version", () => {
+    for (const bad of ["1.2", "v1.2.3", "1.2.3+4", ""]) {
+      assert.equal(
+        configResponse.safeParse({ ...config, min_app_version: bad }).success,
+        false,
+        bad,
+      );
+    }
+  });
+
+  it("takes an absolute http(s) store url, never a relative or other scheme", () => {
+    for (const bad of [
+      "/releases",
+      "javascript:alert(1)",
+      "market://details?id=com.emotely",
+      "",
+    ]) {
+      assert.equal(
+        configResponse.safeParse({ ...config, store_url: bad }).success,
+        false,
+        bad,
+      );
+    }
+  });
+
+  it("ignores unknown keys so the server can add fields (ADR 0009 rule 1)", () => {
+    const parsed = configResponse.parse({ ...config, future_flag: true });
+    assert.deepEqual(parsed, config);
   });
 });
