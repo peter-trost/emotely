@@ -8,6 +8,8 @@ import {
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import { PostHogSpanProcessor } from "@posthog/ai/otel";
 import { registerTelemetry } from "ai";
+import { PostHog } from "posthog-node";
+import { createErrorReporter, type ReportError } from "./error-tracking.ts";
 
 /**
  * ADR 0005: journal content never leaves the process via telemetry. These
@@ -28,11 +30,35 @@ export const PRIVACY_TELEMETRY = {
  * awaiting it silently loses events.
  */
 let activeProcessor: SpanProcessor | undefined;
+/**
+ * The exception client, separate from the span pipeline: `$ai_generation`
+ * spans and `$exception` events are different PostHog products on the same
+ * project, and only the latter needs a `posthog-node` client. One client per
+ * process, reused by every report (ADR 0004: one vendor, one SDK).
+ */
+let exceptionClient: PostHog | undefined;
 
-/** Flush queued spans without tearing the pipeline down (serverless use). */
+/**
+ * Flush queued spans *and* queued exceptions without tearing the pipeline
+ * down (serverless use). A Vercel function can freeze the moment the
+ * response is returned, so the caller runs this inside `waitUntil`; skipping
+ * it loses the very events that say the service is down.
+ */
 export async function flushTelemetry(): Promise<void> {
-  await activeProcessor?.forceFlush();
+  await Promise.all([activeProcessor?.forceFlush(), exceptionClient?.flush()]);
 }
+
+/**
+ * Report a handled failure to PostHog error tracking, content-free
+ * (ADR 0005). A no-op until `initTelemetry` has been given PostHog
+ * credentials — observability must never block journaling.
+ */
+export const reportError: ReportError = (error, context) => {
+  if (exceptionClient === undefined) {
+    return;
+  }
+  createErrorReporter(exceptionClient)(error, context);
+};
 
 export function initTelemetry(
   opts: {
@@ -47,6 +73,14 @@ export function initTelemetry(
     const processor = new PostHogSpanProcessor(opts.posthog);
     activeProcessor = processor;
     processors.push(processor);
+    // Exceptions are captured explicitly, never autocaptured: the SDK's
+    // uncaught handler would report errors this code has not passed through
+    // the content-free rule, and stack-trace processing needs a file system
+    // a serverless runtime may not give it.
+    exceptionClient = new PostHog(opts.posthog.projectToken, {
+      host: opts.posthog.host,
+      enableExceptionAutocapture: false,
+    });
   } else {
     return async () => {
       // telemetry disabled — nothing to flush
@@ -78,5 +112,7 @@ export function initTelemetry(
 
   return async () => {
     await provider.shutdown();
+    await exceptionClient?.shutdown();
+    exceptionClient = undefined;
   };
 }
