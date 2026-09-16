@@ -75,11 +75,40 @@ point a script at. A real app reads it once per launch.
 
 We chose the WAF over an in-function limiter because the rule rejects at the
 edge, before a function invocation is billed, and because a Hobby project gets
-one rate-limit rule at no cost. The cost of that choice is that the rule is
-**dashboard configuration, not code**: it is not in this repository, not in CI,
-and will not survive a project re-creation. This ADR is the record; re-apply it
-by hand if the project is ever rebuilt. Verified live on 2026-09-04: the 31st
-request inside a minute from one IP gets a 429.
+one rate-limit rule at no cost. Verified live on 2026-09-04: the 31st request
+inside a minute from one IP gets a 429.
+
+### The rules are not in `vercel.json`, but they are reproducible
+
+`vercel.json` can carry WAF rules via `routes[].mitigate`, but only the `deny`
+and `challenge` actions — **not `rate_limit`**, which is what both rules here
+use. So these cannot be deployment configuration, and they stay out of CI.
+
+They are not dashboard-only either (as this ADR claimed until 2026-09-16). The
+CLI creates them non-interactively, which is what makes them reproducible by an
+agent rather than by hand. Changes stage as a draft and need an explicit
+publish; `vercel firewall rules list --expand` shows the live configuration.
+
+```bash
+vercel firewall rules add "Rate limit advance-session" \
+  --project emotely-agent \
+  --condition '{"type":"path","op":"eq","value":"/api/advance-session"}' \
+  --action rate_limit --rate-limit-window 60 --rate-limit-requests 30 \
+  --rate-limit-keys ip --rate-limit-action rate_limit --yes
+
+vercel firewall rules add "Rate limit config" \
+  --project emotely-agent \
+  --condition '{"type":"path","op":"eq","value":"/api/config"}' \
+  --action rate_limit --rate-limit-window 60 --rate-limit-requests 60 \
+  --rate-limit-keys ip --rate-limit-action rate_limit --yes
+
+vercel firewall diff --project emotely-agent      # review
+vercel firewall publish --project emotely-agent   # make live
+```
+
+What remains true is that the rules live on the project, not in this
+repository: nothing in CI asserts they exist, and a project re-creation drops
+them. The commands above are the recovery procedure.
 
 ## What follows from it
 
