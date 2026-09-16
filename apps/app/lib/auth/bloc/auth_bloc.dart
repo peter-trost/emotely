@@ -189,15 +189,15 @@ class AuthBloc({
   /// IP: the email one for sending codes, the request one on every sign-in
   /// bucket (`sign_in_sign_ups`, `token_verifications`) — where a
   /// credential may well be right, so it must not be called wrong.
-  static String _describe(
-    Exception error, {
-    required String fallback,
-  }) => switch (error) {
-    AuthApiException(code: 'over_email_send_rate_limit') => tooManyCodesMessage,
-    AuthApiException(code: 'over_request_rate_limit') => tooManyAttemptsMessage,
-    AuthRetryableFetchException() => unreachableMessage,
-    _ => fallback,
-  };
+  static String _describe(Exception error, {required String fallback}) =>
+      switch (error) {
+        AuthApiException(errorCode: 'over_email_send_rate_limit') =>
+          tooManyCodesMessage,
+        AuthApiException(errorCode: 'over_request_rate_limit') =>
+          tooManyAttemptsMessage,
+        AuthRetryableFetchException() => unreachableMessage,
+        _ => fallback,
+      };
 
   static const tooManyCodesMessage =
       'Too many codes were requested. Please try again later.';

@@ -18,21 +18,25 @@ void main() {
       final reporter = spy.errorReporter;
       const refused = AgentException(429, 'rate limited');
       final unreachable = http.ClientException('Connection refused');
-      const saveRefused = PostgrestException(message: 'refused', code: '42501');
+      const saveRefused = PostgrestApiException(
+        message: 'refused',
+        statusCode: 403,
+        errorCode: '42501',
+      );
       const noCode = AuthApiException(
         'email rate limit exceeded',
-        statusCode: '429',
-        code: 'over_email_send_rate_limit',
+        statusCode: 429,
+        errorCode: 'over_email_send_rate_limit',
       );
       const wrongCode = AuthApiException(
         'Token has expired or is invalid',
-        statusCode: '403',
-        code: 'otp_expired',
+        statusCode: 403,
+        errorCode: 'otp_expired',
       );
       const wrongPassword = AuthApiException(
         'Invalid login credentials',
-        statusCode: '400',
-        code: 'invalid_credentials',
+        statusCode: 400,
+        errorCode: 'invalid_credentials',
       );
 
       await reporter.sessionFailed(refused, trace, statusCode: 429);
@@ -48,40 +52,42 @@ void main() {
       expect(spy.exceptions, [
         captured(refused, {'step': 'session_round', 'status_code': 429}),
         captured(unreachable, {'step': 'session_round'}),
-        captured(withheld(PostgrestException, code: '42501'), {
-          'step': 'session_save',
-          'session_id': 's-1',
-        }),
-        captured(withheld(PostgrestException, code: '42501'), {
-          'step': 'session_save',
-        }),
-        captured(withheld(PostgrestException, code: '42501'), {
-          'step': 'entry_save',
-          'session_id': 's-1',
-        }),
+        captured(
+          withheld(PostgrestApiException, code: '42501', statusCode: 403),
+          {'step': 'session_save', 'session_id': 's-1'},
+        ),
+        captured(
+          withheld(PostgrestApiException, code: '42501', statusCode: 403),
+          {'step': 'session_save'},
+        ),
+        captured(
+          withheld(PostgrestApiException, code: '42501', statusCode: 403),
+          {'step': 'entry_save', 'session_id': 's-1'},
+        ),
         captured(
           withheld(
             AuthApiException,
             code: 'over_email_send_rate_limit',
-            statusCode: '429',
+            statusCode: 429,
           ),
           {'step': 'sign_in_code_request'},
         ),
         captured(
-          withheld(AuthApiException, code: 'otp_expired', statusCode: '403'),
+          withheld(AuthApiException, code: 'otp_expired', statusCode: 403),
           {'step': 'sign_in_code_verify'},
         ),
         captured(
           withheld(
             AuthApiException,
             code: 'invalid_credentials',
-            statusCode: '400',
+            statusCode: 400,
           ),
           {'step': 'sign_in_password'},
         ),
-        captured(withheld(PostgrestException, code: '42501'), {
-          'step': 'account_deletion',
-        }),
+        captured(
+          withheld(PostgrestApiException, code: '42501', statusCode: 403),
+          {'step': 'account_deletion'},
+        ),
       ]);
       for (final exception in spy.exceptions) {
         expect(exception.stackTrace, same(trace));
@@ -106,19 +112,20 @@ void main() {
       const needle = 'needle.person@example.com';
       const jsonBody = '{"summary": "the day the sea turned violet"}';
       const json = FormatException('Unexpected character', jsonBody);
-      const postgrest = PostgrestException(
+      const postgrest = PostgrestApiException(
         message: 'new row violates check constraint',
-        code: '23514',
+        statusCode: 400,
+        errorCode: '23514',
         details: 'Failing row contains (the day the sea turned violet)',
       );
       const api = AuthApiException(
         'Unable to validate email address: $needle',
-        statusCode: '400',
-        code: 'validation_failed',
+        statusCode: 400,
+        errorCode: 'validation_failed',
       );
-      final fetch = AuthRetryableFetchException(
+      final fetch = AuthRetryableApiException(
         message: '{"message":"Error sending magic link email to $needle"}',
-        statusCode: '500',
+        statusCode: 500,
       );
       final unknown = AuthUnknownException(
         message: 'unexpected',
@@ -128,19 +135,15 @@ void main() {
       expect(ErrorReporter.contentFree(json), withheld(FormatException));
       expect(
         ErrorReporter.contentFree(postgrest),
-        withheld(PostgrestException, code: '23514'),
+        withheld(PostgrestApiException, code: '23514', statusCode: 400),
       );
       expect(
         ErrorReporter.contentFree(api),
-        withheld(
-          AuthApiException,
-          code: 'validation_failed',
-          statusCode: '400',
-        ),
+        withheld(AuthApiException, code: 'validation_failed', statusCode: 400),
       );
       expect(
         ErrorReporter.contentFree(fetch),
-        withheld(AuthRetryableFetchException, statusCode: '500'),
+        withheld(AuthRetryableApiException, statusCode: 500),
       );
       expect(
         ErrorReporter.contentFree(unknown),
@@ -159,21 +162,33 @@ void main() {
       // of the same kind must read as one.
       expect({
         ErrorReporter.contentFree(
-          const PostgrestException(message: 'row a', code: '23514'),
+          const PostgrestApiException(
+            message: 'row a',
+            statusCode: 400,
+            errorCode: '23514',
+          ),
         ),
         ErrorReporter.contentFree(
-          const PostgrestException(message: 'row b', code: '23514'),
+          const PostgrestApiException(
+            message: 'row b',
+            statusCode: 400,
+            errorCode: '23514',
+          ),
         ),
         ErrorReporter.contentFree(
-          const PostgrestException(message: 'row c', code: '42501'),
+          const PostgrestApiException(
+            message: 'row c',
+            statusCode: 403,
+            errorCode: '42501',
+          ),
         ),
       }, hasLength(2));
       expect(
-        '${withheld(PostgrestException, code: '23514')}',
-        'PostgrestException 23514 (message withheld, ADR 0005)',
+        '${withheld(PostgrestApiException, code: '23514', statusCode: 400)}',
+        'PostgrestApiException 400 23514 (message withheld, ADR 0005)',
       );
       expect(
-        '${withheld(AuthApiException, code: 'otp_expired', statusCode: '403')}',
+        '${withheld(AuthApiException, code: 'otp_expired', statusCode: 403)}',
         'AuthApiException 403 otp_expired (message withheld, ADR 0005)',
       );
       expect(

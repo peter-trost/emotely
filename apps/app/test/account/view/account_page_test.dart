@@ -146,9 +146,10 @@ void main() {
       // Reported while PostHog still knows who this is: the user is only
       // forgotten once the deletion went through.
       expect(robot.analytics.exceptions, [
-        captured(withheld(PostgrestException, code: 'XX000'), {
-          'step': 'account_deletion',
-        }),
+        captured(
+          withheld(PostgrestApiException, code: 'XX000', statusCode: 409),
+          {'step': 'account_deletion'},
+        ),
       ]);
       expect(robot.analytics.resets, 0);
 
