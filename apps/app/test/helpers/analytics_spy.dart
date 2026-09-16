@@ -175,5 +175,5 @@ Matcher captured(Object error, Map<String, Object> properties) =>
         .having((captured) => captured.stackTrace, 'stackTrace', isNotNull);
 
 /// What a [type] of exception looks like once its message is withheld.
-WithheldException withheld(Type type, {String? code, String? statusCode}) =>
+WithheldException withheld(Type type, {String? code, int? statusCode}) =>
     WithheldException(type, code: code, statusCode: statusCode);

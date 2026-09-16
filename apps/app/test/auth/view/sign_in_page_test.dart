@@ -111,7 +111,7 @@ void main() {
           withheld(
             AuthApiException,
             code: 'validation_failed',
-            statusCode: '400',
+            statusCode: 400,
           ),
           {'step': 'sign_in_code_request'},
         ),
@@ -205,7 +205,7 @@ void main() {
       // A refused code is a handled failure like a refused request.
       expect(robot.analytics.exceptions, [
         captured(
-          withheld(AuthApiException, code: 'otp_expired', statusCode: '403'),
+          withheld(AuthApiException, code: 'otp_expired', statusCode: 403),
           {'step': 'sign_in_code_verify'},
         ),
       ]);
@@ -421,7 +421,7 @@ void main() {
             withheld(
               AuthApiException,
               code: 'invalid_credentials',
-              statusCode: '400',
+              statusCode: 400,
             ),
             {'step': 'sign_in_password'},
           ),
@@ -470,7 +470,7 @@ void main() {
             withheld(
               AuthApiException,
               code: 'over_request_rate_limit',
-              statusCode: '429',
+              statusCode: 429,
             ),
             {'step': 'sign_in_password'},
           ),

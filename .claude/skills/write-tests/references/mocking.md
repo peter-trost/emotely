@@ -29,7 +29,8 @@
   names, properties, identities, each exception's type, text, cause chain,
   properties and stack trace) — what the needle tests scan. Assert a report
   with `captured(error, {'step': ..., ...})`; an exception whose message the
-  reporter withholds is `withheld(PostgrestException, code: 'XX000')` or
+  reporter withholds is
+  `withheld(PostgrestApiException, code: 'XX000', statusCode: 409)` or
   `withheld(AuthApiException, code: ..., statusCode: ...)`.
 - No tests for pure passthrough layers — a delegation with no logic gets its
   coverage from the layer above.
