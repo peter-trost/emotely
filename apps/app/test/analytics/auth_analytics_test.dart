@@ -86,15 +86,15 @@ void main() {
           withheld(
             AuthApiException,
             code: 'validation_failed',
-            statusCode: '400',
+            statusCode: 400,
           ),
           {'step': 'sign_in_code_request'},
         ),
-        captured(withheld(AuthRetryableFetchException, statusCode: '500'), {
+        captured(withheld(AuthRetryableApiException, statusCode: 500), {
           'step': 'sign_in_code_request',
         }),
         captured(
-          withheld(AuthApiException, code: 'otp_expired', statusCode: '403'),
+          withheld(AuthApiException, code: 'otp_expired', statusCode: 403),
           {'step': 'sign_in_code_verify'},
         ),
       ]);
@@ -148,11 +148,11 @@ void main() {
           withheld(
             AuthApiException,
             code: 'invalid_credentials',
-            statusCode: '400',
+            statusCode: 400,
           ),
           {'step': 'sign_in_password'},
         ),
-        captured(withheld(AuthRetryableFetchException, statusCode: '500'), {
+        captured(withheld(AuthRetryableApiException, statusCode: 500), {
           'step': 'sign_in_password',
         }),
       ]);
