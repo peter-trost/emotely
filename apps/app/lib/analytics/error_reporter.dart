@@ -81,6 +81,12 @@ class const ErrorReporter({required final Posthog posthog}) {
   Future<void> configLoadFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'config_load');
 
+  /// The store could not be opened from the force-update screen. The user is
+  /// stuck: the screen has no way past it and the one action it offers just
+  /// failed, so this is worth knowing about even though nothing can retry it.
+  Future<void> storeLaunchFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'store_launch');
+
   /// Whether consent stands could not be read. The gate stays shut on this,
   /// so it is worth knowing how often it happens.
   Future<void> consentLoadFailed(Exception error, StackTrace stackTrace) =>

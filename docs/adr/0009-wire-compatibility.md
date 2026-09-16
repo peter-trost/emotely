@@ -111,10 +111,14 @@ here on.
 3. Only then delete the endpoints or wire shapes the blocked versions needed.
 
 The force-update screen sends users to the `store_url` the config response
-names (`EMOTELY_STORE_URL` on the server, the releases page until the store
-listings exist, #9). It moved off the app's dart-defines deliberately: the
-only people who ever see that link are the ones who cannot install a build
-carrying a corrected one, so it has to be fixable without a release.
+names. The app sends `?platform=ios|android` and the server answers with that
+store's listing, falling back to a neutral link for anything it does not
+recognise — so a request it cannot classify still gets somewhere to go. The
+links moved off the app's dart-defines deliberately: the only people who ever
+follow one are the ones who cannot install a build carrying a corrected one,
+so they have to be fixable without a release (`EMOTELY_STORE_URL`,
+`EMOTELY_STORE_URL_IOS`, `EMOTELY_STORE_URL_ANDROID`; the releases page until
+the store listings exist, #9).
 
 ## Recovery goes through the pipeline; Instant Rollback is break-glass
 

@@ -1,5 +1,7 @@
 // coverage:ignore-file
 // Composition root; behavior lives in EmotelyApp and is tested there.
+import 'dart:io' show Platform;
+
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/consent_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
@@ -10,6 +12,7 @@ import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
 import 'package:emotely/config/config_client.dart';
 import 'package:emotely/session/agent/agent_client.dart';
+
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
@@ -43,14 +46,16 @@ Future<void> main() async {
   final httpClient = http.Client();
   runApp(
     EmotelyApp(
+      // `version` is pubspec's `version` without the build number.
+      appVersion: packageInfo.version,
       configClient: ConfigClient(
         httpClient: httpClient,
         endpoint: Uri.parse(configUrl),
+        platform: _platform,
       ),
       agentClient: AgentClient(
         httpClient: httpClient,
         endpoint: Uri.parse(agentUrl),
-        // `version` is pubspec's `version` without the build number.
         appVersion: packageInfo.version,
         accessToken: () => supabase.client.auth.currentSession?.accessToken,
       ),
@@ -63,3 +68,11 @@ Future<void> main() async {
     ),
   );
 }
+
+/// What this build calls itself when asking for a store link. Lives here
+/// because `Platform` reports the host a widget test runs on, not a device.
+String get _platform => Platform.isIOS
+    ? 'ios'
+    : Platform.isAndroid
+    ? 'android'
+    : 'unknown';

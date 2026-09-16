@@ -22,6 +22,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 class const EmotelyApp({
   required final AgentClient agentClient,
   required final ConfigClient configClient,
+  required final String appVersion,
   required final SessionAnalytics analytics,
   required final SupabaseClient supabase,
   required final AuthAnalytics authAnalytics,
@@ -59,7 +60,7 @@ class const EmotelyApp({
           lazy: false,
           create: (_) => ConfigBloc(
             client: configClient,
-            appVersion: agentClient.appVersion,
+            appVersion: appVersion,
             analytics: analytics,
             errors: errorReporter,
           )..add(const ConfigEvent.loaded()),

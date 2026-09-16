@@ -22,6 +22,7 @@ Widget appUnderTest({
   // every test would sit on the checking screen.
   final configStub = config ?? (ConfigStub()..serves());
   return EmotelyApp(
+    appVersion: AgentStub.appVersion,
     configClient: configStub.configClient,
     agentClient: agent.agentClient,
     analytics: analytics.analytics,

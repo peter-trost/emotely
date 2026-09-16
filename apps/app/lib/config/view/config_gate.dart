@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/config/bloc/config_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -81,11 +82,10 @@ class const _UpdateRequired({
       ),
       FilledButton(
         key: ConfigGate.updateKey,
-        // Fire-and-forget: if the store cannot open there is nothing the
-        // screen can do about it, and it must stay blocking either way.
-        onPressed: () => unawaited(
-          launchUrl(Uri.parse(storeUrl), mode: LaunchMode.externalApplication),
-        ),
+        // The screen stays blocking whether or not the store opens — there is
+        // nothing else it could show. But a failure here strands the user on
+        // their only way out, so it is reported rather than swallowed.
+        onPressed: () => unawaited(_openStore(context, storeUrl)),
         child: const Text('Update'),
       ),
     ],
@@ -96,6 +96,16 @@ class const _UpdateRequired({
 /// and blocks with a retry. Not "allowed by default": the version gate is the
 /// one thing that must fail shut, or a build the server has stopped serving
 /// walks straight past it whenever the network is down.
+/// Opens [storeUrl], reporting a failure instead of dropping it.
+Future<void> _openStore(BuildContext context, String storeUrl) async {
+  final errors = context.read<ErrorReporter>();
+  try {
+    await launchUrl(Uri.parse(storeUrl), mode: LaunchMode.externalApplication);
+  } on Exception catch (error, stackTrace) {
+    unawaited(errors.storeLaunchFailed(error, stackTrace));
+  }
+}
+
 class const _Failure({required final String message}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _GateScaffold(

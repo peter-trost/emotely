@@ -15,6 +15,45 @@ void main() {
       expect(config.storeUrl, 'https://store.test/x');
     });
 
+    test('asks for the store link of its own platform', () async {
+      final stub = ConfigStub()
+        ..platform = 'android'
+        ..serves();
+
+      await stub.configClient.fetch();
+
+      expect(stub.requested.single.queryParameters['platform'], 'android');
+    });
+
+    test('keeps any query the endpoint already carried', () async {
+      final stub = ConfigStub()..serves();
+      final client = ConfigClient(
+        httpClient: stub.client,
+        endpoint: Uri.parse('https://agent.test/api/config?trace=1'),
+        platform: 'ios',
+      );
+
+      await client.fetch();
+
+      expect(stub.requested.single.queryParameters, {
+        'trace': '1',
+        'platform': 'ios',
+      });
+    });
+
+    test('keeps the original stack trace when the transport fails', () async {
+      // The trace names the socket layer that gave up; it is the only clue a
+      // report of this carries, and it is content-free (ADR 0005).
+      final stub = ConfigStub()..script([configUnreachable()]);
+
+      final trace = await stub.configClient.fetch().then<StackTrace?>(
+        (_) => null,
+        onError: (Object _, StackTrace s) => s,
+      );
+
+      expect(trace.toString(), contains('configUnreachable'));
+    });
+
     test('names the status code when the server refuses', () async {
       final stub = ConfigStub()..script([configRefused(503)]);
 

@@ -18,6 +18,9 @@ class ConfigStub() {
   var _calls = 0;
   final _rounds = <ConfigRound>[];
 
+  /// Every URL the app asked for, in order.
+  final requested = <Uri>[];
+
   /// How many times the app asked. The gate must ask once per launch, and
   /// once more per retry — never once per session round.
   int get calls => _calls;
@@ -28,8 +31,13 @@ class ConfigStub() {
   static const minAppVersion = '1.0.0';
   static const storeUrl = 'https://store.test/emotely';
 
+  /// A client talking to this stub. [platform] is fixed so tests do not
+  /// depend on the host they run on.
   ConfigClient get configClient =>
-      ConfigClient(httpClient: client, endpoint: endpoint);
+      ConfigClient(httpClient: client, endpoint: endpoint, platform: platform);
+
+  /// What the client reports itself as; overridable per test.
+  var platform = 'ios';
 
   /// Queues the answers, served first-in first-out; the last one repeats so
   /// a test need not script a round per retry.
@@ -37,10 +45,12 @@ class ConfigStub() {
     _rounds
       ..clear()
       ..addAll(rounds);
-    when(client.get(any, headers: anyNamed('headers'))).thenAnswer((_) {
-      _calls++;
-      return _rounds.length == 1 ? _rounds.first() : _rounds.removeAt(0)();
-    });
+    when(client.get(any, headers: anyNamed('headers')))
+        .thenAnswer((invocation) {
+          _calls++;
+          requested.add(invocation.positionalArguments.first as Uri);
+          return _rounds.length == 1 ? _rounds.first() : _rounds.removeAt(0)();
+        });
   }
 
   /// The default: a config this build satisfies.

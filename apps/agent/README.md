@@ -10,7 +10,7 @@ this file holds what is specific to operating the service.
 | Endpoint | Auth | What it does |
 | --- | --- | --- |
 | `POST /api/advance-session` | Supabase JWT ([ADR 0010](../../docs/adr/0010-supabase-data-layer.md)) | One session round: verifies the signed transcript, calls the model, returns the next question or the finished entry. |
-| `GET /api/config` | none | The startup config the app reads once before anything else: `min_app_version` and `store_url`. Public and edge-cached — see below. |
+| `GET /api/config` | none | The startup config the app reads once before anything else: `min_app_version` and `store_url`. Takes `?platform=ios\|android` to pick the right store listing. Public and edge-cached — see below. |
 
 `GET /api/config` is the one unauthenticated endpoint. The app checks it
 **above the sign-in gate** ([#49](https://github.com/peter-trost/emotely/issues/49)):
@@ -48,7 +48,9 @@ Vercel project by a human, never committed (see the root
 | `AI_GATEWAY_API_KEY` | yes | Vercel AI Gateway key ([ADR 0003](../../docs/adr/0003-model-gateway-and-cost-ceiling.md)). |
 | `EMOTELY_MODEL` | no | Overrides `DEFAULT_MODEL` in `src/session-config.ts`. The value must be served by providers that **all** qualify under the gateway's privacy filters (below), or every round fails. |
 | `POSTHOG_KEY`, `POSTHOG_HOST` | no | LLM observability **and error tracking**; both or neither ([ADR 0004](../../docs/adr/0004-posthog-observability-stack.md)). Unset means no spans and no exception reports — the runbook below has nothing to read. |
-| `EMOTELY_STORE_URL` | no | Where the app's force-update screen sends the user, served by `GET /api/config`. Overrides `STORE_URL` in `src/session-config.ts`; set it to correct the link without an app release, which is the only kind of fix that reaches someone who cannot install one. |
+| `EMOTELY_STORE_URL` | no | Where the force-update screen sends a caller that named no platform, or one we do not know. Overrides `STORE_URL` in `src/session-config.ts`. Set these to correct a link without an app release — the only kind of fix that reaches someone who cannot install one. |
+| `EMOTELY_STORE_URL_IOS` | no | The App Store listing, served for `?platform=ios`. Overrides `STORE_URL_IOS`. |
+| `EMOTELY_STORE_URL_ANDROID` | no | The Play listing, served for `?platform=android`. Overrides `STORE_URL_ANDROID`. |
 
 ## Picking a model: it must qualify under the privacy filters
 

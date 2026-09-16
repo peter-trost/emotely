@@ -41,21 +41,18 @@ class ConfigBloc({
       emit(ConfigState.failure(message: error.message));
       return;
     }
-    emit(
-      _blocks(config)
-          ? ConfigState.updateRequired(
-              minAppVersion: config.minAppVersion,
-              storeUrl: config.storeUrl,
-            )
-          : const ConfigState.ready(),
-    );
-  }
-
-  /// Whether the server's minimum is newer than this build. An unparseable
-  /// version on either side blocks: the gate exists to be conservative, and
-  /// guessing "allowed" is the one wrong answer it must never give.
-  bool _blocks(StartupConfig config) {
-    final blocked = _isNewerThanThisBuild(config.minAppVersion);
+    final bool blocked;
+    try {
+      blocked = _isNewerThanThisBuild(config.minAppVersion);
+    } on FormatException catch (error, stackTrace) {
+      // A version neither side can parse is a misconfigured server, not an
+      // out-of-date app: the update screen would send the user to a store
+      // that cannot fix it. Fail shut, but as a failure with a retry, and
+      // report it — nobody else will notice a bad constant on this path.
+      unawaited(_errors.configLoadFailed(error, stackTrace));
+      emit(const ConfigState.failure(message: unreadableVersionMessage));
+      return;
+    }
     if (blocked) {
       unawaited(
         _analytics.updateRequired(
@@ -64,14 +61,26 @@ class ConfigBloc({
         ),
       );
     }
-    return blocked;
+    emit(
+      blocked
+          ? ConfigState.updateRequired(
+              minAppVersion: config.minAppVersion,
+              storeUrl: config.storeUrl,
+            )
+          : const ConfigState.ready(),
+    );
   }
 
-  bool _isNewerThanThisBuild(String minAppVersion) {
-    try {
-      return Version.parse(minAppVersion) > Version.parse(_appVersion);
-    } on FormatException {
-      return true;
-    }
-  }
+  /// Whether the server's minimum is newer than this build.
+  ///
+  /// Throws [FormatException] if either version is unparseable; the caller
+  /// treats that as a failed read rather than guessing which way it falls.
+  bool _isNewerThanThisBuild(String minAppVersion) =>
+      Version.parse(minAppVersion) > Version.parse(_appVersion);
 }
+
+/// Shown when the server named a version the app cannot read. Deliberately
+/// not the force-update wording: the user can do nothing about it, and a
+/// retry is the only honest action on offer.
+const unreadableVersionMessage =
+    'emotely is not answering correctly right now. Please try again.';

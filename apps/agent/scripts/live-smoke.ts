@@ -146,6 +146,20 @@ if (!/^https?:\/\//.test(config.store_url ?? "")) {
 if (!(configRes.headers.get("cache-control") ?? "").includes("s-maxage")) {
   throw new Error("config is not cacheable at the edge");
 }
+// Each platform must get a usable link, and the cache must key on which.
+if (!(configRes.headers.get("vary") ?? "").includes("platform")) {
+  throw new Error("config does not vary on platform");
+}
+for (const platform of ["ios", "android"]) {
+  const platformRes = await fetch(`${BASE}/api/config?platform=${platform}`);
+  const body = (await platformRes.json()) as { store_url?: string };
+  if (
+    platformRes.status !== 200 ||
+    !/^https?:\/\//.test(body.store_url ?? "")
+  ) {
+    throw new Error(`config for ${platform} has no usable store_url`);
+  }
+}
 
 console.log(
   `# live-smoke OK: ${askedOrder.length} questions, summary ${res.entry.summary.length} chars, 401s verified (anonymous, tampered, forged), config min ${config.min_app_version}`,

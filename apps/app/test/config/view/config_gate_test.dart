@@ -94,6 +94,24 @@ void main() {
       expect(launcher.launched, ['https://store.test/new']);
     });
 
+    testWidgets('reports a store that will not open', (tester) async {
+      // The screen stays blocking either way, but the user is now stuck on
+      // their only way out — worth knowing about.
+      final launcher = UrlLauncherSpy.setup()..fails = true;
+      final config = ConfigStub()..serves(minAppVersion: '9.0.0');
+      final robot = ConfigRobot(tester, config);
+      await robot.launch();
+      await robot.settle();
+
+      await robot.tapUpdate();
+
+      expect(launcher.launched, isEmpty);
+      expect(
+        robot.analytics.exceptions.single.properties,
+        containsPair('step', 'store_launch'),
+      );
+    });
+
     testWidgets('has no way past the force-update screen', (tester) async {
       final config = ConfigStub()..serves(minAppVersion: '9.0.0');
       final robot = ConfigRobot(tester, config);
@@ -182,20 +200,6 @@ void main() {
       expect(robot.failure, findsOneWidget);
     });
 
-    testWidgets('blocks on a minimum it cannot parse', (tester) async {
-      // Fails shut: a minimum the app cannot compare is not permission to
-      // run. The server validates the shape, so this only happens if that
-      // guarantee is ever broken — exactly when guessing is worst.
-      final config = ConfigStub()..serves(minAppVersion: 'not-a-version');
-      final robot = ConfigRobot(tester, config);
-
-      await robot.launch();
-      await robot.settle();
-
-      expect(robot.updateRequired, findsOneWidget);
-      expect(robot.signIn, findsNothing);
-    });
-
     testWidgets('the retry asks again and lets the app through', (
       tester,
     ) async {
@@ -232,6 +236,29 @@ void main() {
 
       await robot.settle();
       expect(config.calls, 2);
+    });
+
+    testWidgets('a minimum it cannot parse is a failure, not an update', (
+      tester,
+    ) async {
+      // A version neither side can parse is a misconfigured server, not an
+      // out-of-date app: the store cannot fix it, so the update screen would
+      // be a lie. Still fails shut, and still reports.
+      final config = ConfigStub()..serves(minAppVersion: 'not-a-version');
+      final robot = ConfigRobot(tester, config);
+
+      await robot.launch();
+      await robot.settle();
+
+      expect(robot.failure, findsOneWidget);
+      expect(robot.updateRequired, findsNothing);
+      expect(robot.signIn, findsNothing);
+      expect(
+        robot.analytics.exceptions.single.properties,
+        containsPair('step', 'config_load'),
+      );
+      // Not an update_required: the app never established a real minimum.
+      expect(robot.analytics.events, isEmpty);
     });
 
     testWidgets('reports the failure to error tracking, without a version', (

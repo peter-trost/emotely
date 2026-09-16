@@ -10,11 +10,14 @@
 // The agent serves signed-in users only, so the run signs in as the smoke
 // user (a password account like the store review accounts; everyone else
 // signs in with a code through the app's own screen).
+import 'dart:io' show Platform;
+
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/consent_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
+
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
 import 'package:emotely/config/config_client.dart';
@@ -96,16 +99,19 @@ class LiveSessionRobot(final WidgetTester tester) {
     // is unreadable or blocks this build, the app never reaches the journal
     // and this test says so.
     final httpClient = http.Client();
+    final appVersion = (await PackageInfo.fromPlatform()).version;
     await tester.pumpWidget(
       EmotelyApp(
+        appVersion: appVersion,
         configClient: ConfigClient(
           httpClient: httpClient,
           endpoint: Uri.parse(configUrl),
+          platform: Platform.isIOS ? 'ios' : 'android',
         ),
         agentClient: AgentClient(
           httpClient: httpClient,
           endpoint: Uri.parse(agentUrl),
-          appVersion: (await PackageInfo.fromPlatform()).version,
+          appVersion: appVersion,
           accessToken: () => supabase.client.auth.currentSession?.accessToken,
         ),
         analytics: SessionAnalytics(posthog: posthog),
