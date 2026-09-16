@@ -110,9 +110,10 @@ void main() {
       // No row yet, so no id to name; the SQLSTATE says what Postgres
       // objected to, its message stays on the device (it may quote the row).
       expect(robot.analytics.exceptions, [
-        captured(withheld(PostgrestException, code: 'XX000'), {
-          'step': 'session_save',
-        }),
+        captured(
+          withheld(PostgrestApiException, code: 'XX000', statusCode: 409),
+          {'step': 'session_save'},
+        ),
       ]);
 
       await robot.answerRating(3);
@@ -145,10 +146,10 @@ void main() {
       expect(robot.summary, findsNothing);
       expect(robot.analytics.events.last, event('entry_save_failed'));
       expect(robot.analytics.exceptions, [
-        captured(withheld(PostgrestException, code: 'XX000'), {
-          'step': 'entry_save',
-          'session_id': SupabaseStub.sessionId,
-        }),
+        captured(
+          withheld(PostgrestApiException, code: 'XX000', statusCode: 409),
+          {'step': 'entry_save', 'session_id': SupabaseStub.sessionId},
+        ),
       ]);
 
       await robot.tapRetry();

@@ -15,7 +15,7 @@ typedef AuthRound = Future<http.Response> Function();
 /// the production code paths.
 class SupabaseStub() {
   this {
-    // Auth (gotrue) posts through the client's verb methods ...
+    // Auth posts through the client's verb methods ...
     when(client.post(any, headers: anyNamed('headers'), body: anyNamed('body')))
         .thenAnswer(
           (invocation) => _serve(
@@ -203,16 +203,17 @@ AuthRound sessionGranted({String sub = SupabaseStub.userId}) =>
     () async => _json(SupabaseStub.session(sub: sub), 200);
 
 /// Supabase refused with its error envelope, e.g. `otp_expired`.
+///
+/// The envelope is the one GoTrue answers to the `2024-01-01` API version
+/// the SDK pins on every request: `code` is the error code, `message` the
+/// sentence. (The older shape carried the HTTP status as `code` and the
+/// error code as `error_code`; the SDK no longer reads it.)
 AuthRound authRefused({
   required int statusCode,
   required String errorCode,
   required String message,
 }) =>
-    () async => _json({
-      'code': statusCode,
-      'error_code': errorCode,
-      'msg': message,
-    }, statusCode);
+    () async => _json({'code': errorCode, 'message': message}, statusCode);
 
 /// The session was ended server-side.
 AuthRound signedOut() =>
@@ -265,7 +266,7 @@ AuthRound rpcReturned(Object? value) =>
       headers: const {'content-type': 'application/json'},
     );
 
-/// The data API refused; postgrest raises it as a `PostgrestException`.
+/// The data API refused; postgrest raises it as a `PostgrestApiException`.
 /// 4xx on purpose: postgrest retries 5xx on idempotent methods, which would
 /// eat several scripted rounds for one failure.
 AuthRound restRefused({int statusCode = 409, String message = 'refused'}) =>

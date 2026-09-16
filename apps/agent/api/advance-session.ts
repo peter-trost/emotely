@@ -7,7 +7,11 @@ import { createAdvanceSessionHandler } from "../src/http-advance-session.ts";
 import { createCallerVerifier, supabaseAuth } from "../src/request-auth.ts";
 import { DEFAULT_MODEL } from "../src/session-config.ts";
 import { advanceSession } from "../src/session-core.ts";
-import { flushTelemetry, initTelemetry } from "../src/telemetry.ts";
+import {
+  flushTelemetry,
+  initTelemetry,
+  reportError,
+} from "../src/telemetry.ts";
 
 const secret = process.env["SESSION_SIGNING_SECRET"];
 if (!secret) {
@@ -39,6 +43,12 @@ const handler = createAdvanceSessionHandler({
   secret,
   ...(previousSecret === undefined ? {} : { previousSecret }),
   verifyCaller: createCallerVerifier(supabaseAuth(supabaseUrl)),
+  // A gateway refusal is the outage signal (issue #99): without it the only
+  // alarm is the nightly smoke, so a model whose providers stop qualifying
+  // takes the app down for up to a day unnoticed.
+  onFailure: (error) => {
+    reportError(error, { step: "session_round", model });
+  },
   advance: ({ messages, answer }) =>
     advanceSession({
       questionSet: defaultQuestionSet,

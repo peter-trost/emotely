@@ -320,13 +320,14 @@ void main() {
         expect(robot.analytics.events, hasLength(10));
         expect(robot.analytics.exceptions, [
           captured(withheld(FormatException), {'step': 'session_round'}),
-          captured(withheld(PostgrestException, code: 'XX000'), {
-            'step': 'session_save',
-          }),
-          captured(withheld(PostgrestException, code: 'XX000'), {
-            'step': 'entry_save',
-            'session_id': SupabaseStub.sessionId,
-          }),
+          captured(
+            withheld(PostgrestApiException, code: 'XX000', statusCode: 409),
+            {'step': 'session_save'},
+          ),
+          captured(
+            withheld(PostgrestApiException, code: 'XX000', statusCode: 409),
+            {'step': 'entry_save', 'session_id': SupabaseStub.sessionId},
+          ),
         ]);
         final outgoing = robot.analytics.outgoingStrings.toList();
         expect(outgoing, isNotEmpty);

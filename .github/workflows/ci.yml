@@ -33,7 +33,7 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'tsconfig*.json'
-              - 'biome.json'
+              - 'biome.jsonc'
               - '.nvmrc'
               - '.github/workflows/ci.yml'
             app:

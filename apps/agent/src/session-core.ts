@@ -171,10 +171,11 @@ const SESSION_TELEMETRY = {
  * type-checks, is forwarded to the gateway verbatim, and is silently ignored
  * there. Neither `satisfies GatewayProviderOptions` nor the unit test below
  * would catch it: the test asserts what we send, not what the gateway
- * understood. Only a live round proves the filter was applied — read
- * `providerMetadata.gateway.routing.planningReasoning`, which states in words
- * whether ZDR and the training opt-out were honoured. Treat the eval as the
- * real check when editing these keys (issue #98).
+ * understood. Only a live round proves the filter was applied — the gateway
+ * echoes `enabledZeroDataRetention` and `enabledDisallowPromptTraining` back on
+ * `providerMetadata.gateway`. `provider-qualification.ts` reads exactly those,
+ * and the monthly benchmark fails a model whose flags come back unconfirmed, so
+ * that eval is the real check when editing these keys.
  */
 const GATEWAY_PRIVACY_OPTIONS = {
   disallowPromptTraining: true,

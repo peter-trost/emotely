@@ -110,32 +110,37 @@ class const ErrorReporter({required final Posthog posthog}) {
   /// may quote what it choked on — a Postgres error the failing row, a JSON
   /// error the body, GoTrue the address it validated or, for a 5xx, the
   /// whole response body — and goes out as a [WithheldException] instead.
+  /// Every Supabase service shares one exception base, so one arm keeps the
+  /// codes of a refusal from any of them (auth, data API, and whatever the
+  /// app may call next) and one the code of a failure raised on the device.
   static Exception contentFree(Exception error) => switch (error) {
-    // ConfigException wraps a transport error or a status code, never a
-    // journal or a user — it is written here, not by a server or a database.
+    // ConfigException carries a status code or a transport error, never a
+    // journal or a user — it is written here, not by a server or a database,
+    // and never from a parse error (which would embed the body it read).
     AgentException() ||
     ConfigException() ||
     http.ClientException() ||
     TimeoutException() => error,
-    PostgrestException(:final code) => WithheldException(
+    SupabaseApiException(:final errorCode, :final statusCode) =>
+      WithheldException(
+        error.runtimeType,
+        code: errorCode,
+        statusCode: statusCode,
+      ),
+    SupabaseException(:final errorCode) => WithheldException(
       error.runtimeType,
-      code: code,
-    ),
-    AuthException(:final code, :final statusCode) => WithheldException(
-      error.runtimeType,
-      code: code,
-      statusCode: statusCode,
+      code: errorCode,
     ),
     _ => WithheldException(error.runtimeType),
   };
 }
 
 /// An exception reported without its message: [type] says what failed,
-/// [code] (a SQLSTATE, a GoTrue error code) and [statusCode] which way; the
-/// text stays on the device because it may quote the journal or the user
-/// (ADR 0005).
+/// [code] (a SQLSTATE, a GoTrue error code) and [statusCode] (the HTTP
+/// status, when a service answered at all) which way; the text stays on the
+/// device because it may quote the journal or the user (ADR 0005).
 ///
-/// What a debugger gives up: for a `PostgrestException` the `message`,
+/// What a debugger gives up: for a `PostgrestApiException` the `message`,
 /// `details` and `hint` — i.e. which constraint or policy objected, only
 /// the SQLSTATE class survives; for an `AuthException` GoTrue's sentence.
 /// The way back is to reproduce locally with the ids the report carries,
@@ -145,7 +150,7 @@ class const ErrorReporter({required final Posthog posthog}) {
 class const WithheldException(
   final Type type, {
   final String? code,
-  final String? statusCode,
+  final int? statusCode,
 }) implements Exception {
   @override
   String toString() =>

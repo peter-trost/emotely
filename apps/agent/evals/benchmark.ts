@@ -1,7 +1,11 @@
 import process from "node:process";
-import { sessionCostUsd } from "../src/cost.ts";
-import { defaultQuestionSet } from "../src/default-question-set.ts";
-import { runSession } from "../src/session.ts";
+import { generateText } from "ai";
+import {
+  describeQualification,
+  measureQualification,
+  type ProviderQualification,
+  qualificationReason,
+} from "../src/provider-qualification.ts";
 import {
   BUDGET_USD_PER_MONTH,
   type ModelReport,
@@ -11,15 +15,21 @@ import {
   SCENARIO_RUNS,
   SESSIONS_PER_MONTH,
 } from "./benchmark-config.ts";
+import {
+  emptyProtocolStats,
+  type ProtocolStats,
+  runProtocol,
+} from "./benchmark-protocol.ts";
 import { newModels, renderReport } from "./benchmark-report.ts";
 import { type CatalogModel, fetchCatalog } from "./catalog.ts";
-import { runScenarioOnce, scriptedClient } from "./harness.ts";
-import { fullSessionAnswers, scenarios } from "./scenarios.ts";
+import { runScenarioOnce } from "./harness.ts";
+import { scenarios } from "./scenarios.ts";
 
 // Model benchmark (ADR 0003 amendment): eligible = protocol 3/3, every
-// behavior scenario 2-of-3, projected monthly cost within budget; ranked by
-// median per-round latency, cost as tiebreak. Progress on stderr, markdown
-// report on stdout. Re-run monthly by .github/workflows/monthly-benchmark.yml.
+// behavior scenario 2-of-3, projected monthly cost within budget, and enough
+// providers qualifying under ZDR + no-prompt-training; ranked by median
+// per-round latency, cost as tiebreak. Progress on stderr, markdown report on
+// stdout. Re-run monthly by .github/workflows/monthly-benchmark.yml.
 
 const DEFAULT_CANDIDATES = [
   // cheap tier
@@ -53,107 +63,6 @@ const median = (values: number[]): number =>
     P50,
   );
 
-/** Per-question protocol violations; empty means the run passed. */
-function protocolViolations(
-  answers: Record<string, { answer_type: string; value: unknown }>,
-  asked: Set<string>,
-): string[] {
-  const violations: string[] = [];
-  for (const q of defaultQuestionSet.questions) {
-    const recorded = answers[q.id];
-    if (!asked.has(q.id)) {
-      violations.push(
-        `${q.id}: ${recorded ? "answered without asking" : "never asked"}`,
-      );
-    } else if (!recorded) {
-      violations.push(`${q.id}: unanswered`);
-    } else if (recorded.answer_type !== q.answer_type) {
-      violations.push(`${q.id}: ${recorded.answer_type} ≠ ${q.answer_type}`);
-    } else if (
-      q.min_answers !== undefined &&
-      !(Array.isArray(recorded.value) && recorded.value.length >= q.min_answers)
-    ) {
-      violations.push(`${q.id}: fewer than ${q.min_answers} answers`);
-    }
-  }
-  return violations;
-}
-
-type ProtocolStats = {
-  passes: number;
-  crashes: number;
-  latencies: number[];
-  costs: number[];
-  cachedShares: number[];
-};
-
-const CRASH_RETRIES = 1;
-
-async function runProtocol(
-  id: string,
-  rates: CatalogModel | undefined,
-): Promise<ProtocolStats> {
-  const stats: ProtocolStats = {
-    passes: 0,
-    crashes: 0,
-    latencies: [],
-    costs: [],
-    cachedShares: [],
-  };
-  for (let i = 0; i < PROTOCOL_RUNS; i++) {
-    try {
-      // Gateway 503s and malformed tool calls are retried once so an
-      // infrastructure blip does not decide eligibility.
-      const client = scriptedClient(fullSessionAnswers);
-      const result = await withCrashRetry(id, () =>
-        runSession({
-          questionSet: defaultQuestionSet,
-          client,
-          model: id,
-          temperature: 0,
-        }),
-      );
-      stats.latencies.push(...result.roundLatenciesMs);
-      if (rates) {
-        stats.costs.push(sessionCostUsd([result.usage], rates));
-      }
-      stats.cachedShares.push(
-        result.usage.inputTokens === 0
-          ? 0
-          : result.usage.cacheReadTokens / result.usage.inputTokens,
-      );
-      const violations = protocolViolations(result.answers, client.asked);
-      if (violations.length === 0) {
-        stats.passes++;
-      } else {
-        process.stderr.write(
-          `  ${id} protocol violations: ${violations.join(", ")}\n`,
-        );
-      }
-    } catch (err) {
-      stats.crashes++;
-      process.stderr.write(`  ${id} protocol run crashed: ${String(err)}\n`);
-    }
-  }
-  return stats;
-}
-
-async function withCrashRetry<T>(
-  id: string,
-  attempt: () => Promise<T>,
-): Promise<T> {
-  let lastError: unknown;
-  for (let tries = 0; tries <= CRASH_RETRIES; tries++) {
-    try {
-      return await attempt();
-    } catch (err) {
-      lastError = err;
-      process.stderr.write(`  ${id} crashed, retrying: ${String(err)}\n`);
-    }
-  }
-  throw lastError;
-}
-
 async function runScenarios(id: string): Promise<Record<string, number>> {
   const passes: Record<string, number> = {};
   for (const scenario of scenarios) {
@@ -176,15 +85,25 @@ async function runScenarios(id: string): Promise<Record<string, number>> {
   return passes;
 }
 
-function ineligibilityReasons(
-  rates: CatalogModel | undefined,
-  protocol: ProtocolStats,
-  scenarioPasses: Record<string, number>,
-  monthlyUsd: number,
-): string[] {
+function ineligibilityReasons(opts: {
+  rates: CatalogModel | undefined;
+  protocol: ProtocolStats;
+  scenarioPasses: Record<string, number>;
+  monthlyUsd: number;
+  qualification: ProviderQualification;
+}): string[] {
+  const { rates, protocol, scenarioPasses, monthlyUsd, qualification } = opts;
   const reasons: string[] = [];
   if (!rates) {
     reasons.push("no catalog price");
+  }
+  // Both gateway privacy filters fail closed (ADR 0003 amendment), so a model
+  // whose providers do not qualify cannot serve a single session — no latency
+  // or cost number can redeem it. Listed first: it is the disqualifier that
+  // says "never promote this", not "this scored badly".
+  const qualificationProblem = qualificationReason(qualification);
+  if (qualificationProblem !== undefined) {
+    reasons.push(qualificationProblem);
   }
   if (protocol.passes < PROTOCOL_RUNS) {
     reasons.push(`protocol ${protocol.passes}/${PROTOCOL_RUNS}`);
@@ -203,26 +122,37 @@ function ineligibilityReasons(
   return reasons;
 }
 
+const noScenarioPasses = (): Record<string, number> =>
+  Object.fromEntries(scenarios.map((sc) => [sc.name, 0]));
+
 async function benchmarkModel(
   id: string,
   rates: CatalogModel | undefined,
 ): Promise<ModelReport> {
-  const protocol = await runProtocol(id, rates);
+  // Measured first, with one cheap round: a model the privacy filters refuse
+  // cannot complete a protocol run either, and the failure would otherwise
+  // surface as an unexplained crash after three full sessions of spend.
+  const qualification = await measureQualification(id, (opts) =>
+    generateText(opts),
+  );
+  const unservable = !qualification.served;
+  const protocol = unservable
+    ? emptyProtocolStats()
+    : await runProtocol(id, rates);
   // A model that fails every protocol run (e.g. loops to the round cap) is
   // already ineligible; don't let it burn scenario budget or stall the pool.
   const scenarioPasses =
-    protocol.passes === 0
-      ? Object.fromEntries(scenarios.map((sc) => [sc.name, 0]))
-      : await runScenarios(id);
+    protocol.passes === 0 ? noScenarioPasses() : await runScenarios(id);
   const sorted = [...protocol.latencies].sort((a, b) => a - b);
   const cost =
     protocol.costs.length === 0 ? NOT_MEASURED : median(protocol.costs);
-  const reasons = ineligibilityReasons(
+  const reasons = ineligibilityReasons({
     rates,
     protocol,
     scenarioPasses,
-    cost * SESSIONS_PER_MONTH,
-  );
+    monthlyUsd: cost * SESSIONS_PER_MONTH,
+    qualification,
+  });
   return {
     id,
     protocolPasses: protocol.passes,
@@ -232,6 +162,7 @@ async function benchmarkModel(
     sessionCostUsd: cost,
     cachedShare:
       protocol.cachedShares.length === 0 ? 0 : median(protocol.cachedShares),
+    providerQualification: describeQualification(qualification),
     eligible: reasons.length === 0,
     reason: reasons.join(", "),
   };

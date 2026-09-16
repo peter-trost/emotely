@@ -47,7 +47,7 @@ Vercel project by a human, never committed (see the root
 | `SUPABASE_URL` | yes | The Supabase project whose users may call ([ADR 0010](../../docs/adr/0010-supabase-data-layer.md)). |
 | `AI_GATEWAY_API_KEY` | yes | Vercel AI Gateway key ([ADR 0003](../../docs/adr/0003-model-gateway-and-cost-ceiling.md)). |
 | `EMOTELY_MODEL` | no | Overrides `DEFAULT_MODEL` in `src/session-config.ts`. The value must be served by providers that **all** qualify under the gateway's privacy filters (below), or every round fails. |
-| `POSTHOG_KEY`, `POSTHOG_HOST` | no | LLM observability; both or neither ([ADR 0004](../../docs/adr/0004-posthog-observability-stack.md)). |
+| `POSTHOG_KEY`, `POSTHOG_HOST` | no | LLM observability **and error tracking**; both or neither ([ADR 0004](../../docs/adr/0004-posthog-observability-stack.md)). Unset means no spans and no exception reports — the runbook below has nothing to read. |
 | `EMOTELY_STORE_URL` | no | Where the app's force-update screen sends the user, served by `GET /api/config`. Overrides `STORE_URL` in `src/session-config.ts`; set it to correct the link without an app release, which is the only kind of fix that reaches someone who cannot install one. |
 
 ## Picking a model: it must qualify under the privacy filters
@@ -58,14 +58,95 @@ amendment 2026-09-15). Both **fail closed**: if no provider serving the model
 qualifies, the gateway rejects the request and the session dies on its first
 round — there is no quiet fallback to a weaker provider.
 
-So a model is only eligible if the providers that serve it qualify under both
-filters. Measure before promoting one (via `EMOTELY_MODEL`, the `agent-model`
-flag, or the monthly benchmark): run a round and read
-`providerMetadata.gateway.routing.planningReasoning`, which names the planned
-providers and states whether they support ZDR and disallow prompt training.
-The benchmark does not score this yet — [issue #98](https://github.com/peter-trost/emotely/issues/98).
-Alarming on gateway rejections is [issue #99](https://github.com/peter-trost/emotely/issues/99),
-which owns the runbook.
+So a model is only eligible if enough of the providers that serve it qualify
+under both filters.
+
+**The monthly benchmark measures this for you.** It probes every candidate with
+one cheap round before scoring it, reports a **Providers** column (qualifying /
+considered), and refuses to call a model eligible below **two** qualifying
+providers — under a fail-closed filter, a single provider is a single point of
+failure for the whole product. Measured 2026-09-15: the default
+`openai/gpt-oss-120b` is 8/8, but eight of the twelve candidates sit at 1.
+
+To check a model by hand, run a round with those two `providerOptions.gateway`
+flags and read `providerMetadata.gateway`: `enabledZeroDataRetention` and
+`enabledDisallowPromptTraining` confirm the filters were applied at all (a
+misspelled option key is silently ignored), and `routing.skippedProviderAttempts`
+names each provider that was dropped and why.
+
+`EMOTELY_MODEL` is a Vercel environment variable, so changing it bypasses both
+the benchmark and CI — there is no deploy-time guard yet (follow-up to
+[issue #98](https://github.com/peter-trost/emotely/issues/98)). When a rejection
+does happen, the runbook below says how to recognise and recover from it.
+
+## Runbook: every session is failing
+
+**Symptom.** Every round returns **502** with `{"error":"model unavailable"}`,
+and PostHog error tracking fills with `$exception` events carrying
+`failure_kind: "provider_ineligible"` and the configured `model`. The app
+shows its generic failure and reports `session_failed` with status 502.
+
+A 502 means the *gateway refused the round*, not that the service is broken —
+a server bug still 500s loudly and is not reported this way. `failure_kind`
+separates the two cases the gateway has:
+
+| `failure_kind` | What it means |
+| --- | --- |
+| `provider_ineligible` | No provider serving the model satisfies ZDR / the training opt-out. Fails closed, so **every** session dies. |
+| `gateway_error` | Any other gateway refusal — auth, rate limit, model not found, upstream 5xx. |
+
+**For `provider_ineligible`, check these two, in this order.**
+
+1. **The Vercel plan.** Request-level Zero Data Retention is **Pro and
+   Enterprise only**. A downgrade to Hobby therefore does not quietly weaken
+   privacy — it hard-fails every round of every session (root
+   [`AGENTS.md`](../../AGENTS.md) § Billing, and
+   [ADR 0003](../../docs/adr/0003-model-gateway-and-cost-ceiling.md)). Confirm
+   the `emotely-agent` team is still on Pro before looking at anything else:
+   this is the likeliest cause, and the fastest to rule in or out.
+2. **Provider eligibility for the configured model.** The set of providers
+   serving a model changes under us — the gateway can drop one, or a provider
+   can withdraw its ZDR agreement — so a model that qualified last month may
+   not today. Check which model is actually in force (`EMOTELY_MODEL` on the
+   project, else the `agent-model` flag payload, else `DEFAULT_MODEL` in
+   `src/session-config.ts`), then run one round against it and read
+   `providerMetadata.gateway.routing.planningReasoning`. The error message
+   itself names the model and the providers it considered, and it reaches
+   PostHog verbatim — gateway text is allowlisted precisely so this diagnosis
+   needs no extra round.
+
+**Recovery** is to put an eligible model back in force — revert
+`EMOTELY_MODEL` or the `agent-model` flag to `DEFAULT_MODEL`, which is
+measured — or to restore the plan. Do **not** recover by dropping the privacy
+options: they are load-bearing for the privacy notice
+([ADR 0005](../../docs/adr/0005-journal-content-privacy-mode.md)), and failing
+closed is the intended behaviour.
+
+**Why the alarm exists.** Before this, a gateway rejection surfaced as an
+unhandled 500 and the only alarm was the nightly `live-smoke` job, so a total
+outage could run for up to 24 hours unnoticed (issue #99).
+
+### What the reports do and do not contain
+
+Exception reports are content-free by construction
+([ADR 0005](../../docs/adr/0005-journal-content-privacy-mode.md)): the
+properties are the step, the model id, the failure kind and the upstream
+status, and only an allowlisted gateway error keeps its message.
+`src/error-tracking.ts` owns the rule and explains each decision.
+
+**You get the stack trace**, with the source context `posthog-node` attaches
+to each frame — that is what tells you where a failure came from.
+
+Two things are deliberately withheld, so do not go looking for them:
+
+- **The cause chain.** A `GatewayError`'s `cause` is an `APICallError` whose
+  `requestBodyValues` hold the prompt — i.e. the journal transcript. It is
+  dropped before the SDK sees it, which is the whole reason this module
+  rebuilds the error instead of forwarding it.
+- **Any non-gateway error's message**, which arrives as a `WithheldError`
+  naming only the type and status.
+
+To debug past that, reproduce locally with the model id the report carries.
 
 ## Rotating the signing secret
 
