@@ -148,9 +148,28 @@ gh pr-review comments reply --pr <n> --repo peter-trost/emotely \
   --thread-id <id> --body '[from Claude]: ...'
 ```
 
-## Merging is not yours
+## Merging is the user's, unless they hand it to you
 
-Report that a PR is ready; let the user merge it. Never merge a PR yourself.
+Report that a PR is ready; let the user merge it. Do not merge a PR on your own
+initiative — not because CI is green, not because it looks routine.
+
+**The exception is the user explicitly asking you to merge.** Then merge it,
+once it is actually ready: `ci-ok` green, `mergeable: MERGEABLE`, no unresolved
+threads, and no pending review asking for changes. An instruction to merge is
+not an instruction to bypass the gates — if the PR is not ready, keep watching
+and merge when it becomes ready, or report what is blocking it.
+
+```bash
+gh pr merge <n> --squash --delete-branch
+```
+
+Squash is the repo's merge strategy (`main` squash-merges); keep it.
+
+"Explicitly" means the user asked for *this* merge — "merge it", "ship it",
+"land it once green". A general "babysit this PR", "keep an eye on CI" or "get
+this through" is not authorization to merge: babysitting is watching, and the
+standing rule still holds. When you are unsure which you were given, ask —
+merging is not reversible by you.
 
 ## Staying current with `main`
 
@@ -265,7 +284,9 @@ Each pass, in either phase, in this order:
    commit, which retriggers CI anyway — so acting on review first avoids
    re-running checks on a SHA you are about to replace.
 3. **Failed checks?** Diagnose, then fix (branch-related) or re-run (flaky).
-4. **Mergeable?** Check conflicts and the up-to-date requirement.
+4. **Mergeable?** Check conflicts and the up-to-date requirement. If the user
+   asked you to merge this PR and it is now ready, merge it here — that is the
+   terminal state, and waiting for a further go-ahead just costs a round trip.
 5. Otherwise wait and repeat.
 
 After any push, start again from the new SHA in the same turn. A push is not a
@@ -276,9 +297,10 @@ finish line, and neither is the first all-green snapshot.
 While watching, report only changes and the occasional heartbeat — not every
 poll. Say it once when CI first goes green for a SHA, then keep watching.
 
-Stop and hand back only when the PR is merged or closed, or when you are
-actually blocked: the retry budget is spent, `gh` auth or push permission
-fails, the worktree holds unrelated uncommitted changes, a conflict turns on a
+Stop and hand back only when the PR is merged or closed, when it is ready and
+merging it was not yours to do, or when you are actually blocked: the retry
+budget is spent, `gh` auth or push permission fails, the worktree holds
+unrelated uncommitted changes, a conflict turns on a
 question of intent, or a reviewer is asking for a decision that is not yours to
 make. Say which of those it is, and what you would do next.
 
