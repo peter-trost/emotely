@@ -14,7 +14,11 @@ handling. If a step is only documented for humans, move it into a skill.
 - Research the latest version and current API of any dependency, model, or action
   from its canonical source before pinning or calling it — never from memory.
 - `main` is protected: all changes land via squash-merged PR, `ci-ok` green.
-- Never point at a skill from a `CLAUDE.md`: skill descriptions are already in
+- Agent guidance is `AGENTS.md`; every `CLAUDE.md` is a symlink to the
+  `AGENTS.md` beside it, at the root and in each directory that carries its own
+  (`apps/app`, `apps/web`, `scripts`). Edit the `AGENTS.md`, and put a fact in
+  the nearest one rather than here when it only matters in that directory.
+- Never point at a skill from an `AGENTS.md`: skill descriptions are already in
   context, so the pointer is noise. Put the fact itself here or in the skill.
 - Lints are deny-by-default and always errors: biome `preset: "all"`
   (`biome.jsonc`), all TS strictness flags,
@@ -54,15 +58,6 @@ handling. If a step is only documented for humans, move it into a skill.
 
 ## Tooling
 
-- [`scripts/setup-dev-environment.sh`](scripts/setup-dev-environment.sh) — brings
-  a fresh Linux machine to where every job in `ci.yml` runs locally (Node, pnpm,
-  Flutter, Dart, the Supabase CLI, a headless Chromium). Root on x86_64, Docker
-  expected to exist already. Idempotent, fails loudly, and reads every version
-  pin out of the repo rather than carrying its own. `dart` is the standalone SDK
-  `apps/web` is pinned to; `flutter-dart` is Flutter's bundled one and is what
-  `apps/app` uses wherever CI says `dart`. It does not cover the device-side
-  jobs (`app-release.yml` needs an Android SDK and a JDK) and installs no
-  secrets, no `fvm` and no `gh`; it lists what it skipped when it finishes.
 - [Entire](docs/tooling/entire.md) — captures agent sessions and links them to
   commits. Active in this repo; capture is automatic. Use `entire why <file>:<line>`
   / `entire checkpoint explain <sha>` to recover the intent behind a change, and
