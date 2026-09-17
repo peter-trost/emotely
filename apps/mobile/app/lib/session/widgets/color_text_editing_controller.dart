@@ -1,4 +1,4 @@
-import 'package:emotely/contract/hex_color_converter.dart';
+import 'package:contract/contract.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// A [TextEditingController] that renders `#RRGGBB` codes in the text as

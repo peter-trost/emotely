@@ -22,19 +22,29 @@ A failing eval is a real signal about model behaviour, not a flake to re-run.
 Judged behaviour evals run nightly; the CI one is deterministic. If it fails
 only on a fork PR for a missing key, that is expected and not yours to fix.
 
-## `app` — `apps/mobile/app` (Flutter)
+## `app` — `apps/mobile` (the Flutter workspace)
 
-| Failing step | What it means | Reproduce (in `apps/mobile/app`) |
+One step, `melos run ci`, runs four gates per package; the log names the
+package (`[contract]`, `[emotely]`, …) in front of every line, so read the
+package name first and reproduce from that package's directory. All of them
+are `melos run <script>` from `apps/mobile` (scripts in its `pubspec.yaml`).
+
+| Failing script | What it means | Reproduce |
 | --- | --- | --- |
-| `build_runner build --only-check` | committed generated code is stale | `dart run build_runner build --delete-conflicting-outputs`, commit |
-| `dart format --set-exit-if-changed .` | formatting | `dart format .` |
-| `flutter analyze --fatal-infos` | `flutter_agent_lints`; infos fail too | `flutter analyze --fatal-infos` |
-| `very_good test --coverage --min-coverage 100` | a test failed, or hand-written code is uncovered | see below |
+| `codegen:check` | committed generated code is stale in that package | `dart run build_runner build` in the package, commit |
+| `format` | formatting | `dart format .` in the package |
+| `analyze` | `flutter_agent_lints` via `packages/utility/analysis`; infos fail too | `flutter analyze --fatal-infos` in the package |
+| `test` | a test failed, or hand-written code is uncovered | see below |
 
-Coverage is a hard 100% gate on hand-written code, with generated files
-(`*.freezed.dart`, `*.g.dart`, `*.mocks.dart`) excluded and `main.dart` carrying
-a `coverage:ignore-file` marker. A coverage failure on a PR that added code
-means the new code needs tests — not that the threshold needs lowering.
+On a pull request the job runs only the packages that changed plus their
+dependents (`EMOTELY_SCOPE`); a change outside any package runs everything. A
+package that passes locally but was skipped on the PR was not run, not fixed.
+
+Coverage is a hard 100% gate on hand-written code per package, with generated
+files (`*.freezed.dart`, `*.g.dart`, `*.mocks.dart`) excluded and `main.dart`
+carrying a `coverage:ignore-file` marker; `analysis` and `testing` have no
+tests and are not measured. A coverage failure on a PR that added code means
+the new code needs tests — not that the threshold needs lowering.
 
 Regenerating with `--delete-conflicting-outputs` and `--build-filter` together
 is blocked by a global hook, and rightly: the first deletes every generated

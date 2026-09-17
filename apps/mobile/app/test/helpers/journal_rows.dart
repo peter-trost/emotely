@@ -1,7 +1,7 @@
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 
-import 'supabase_stub.dart';
+import 'package:testing/testing.dart';
 
 /// A `sessions` row as Supabase returns it.
 Map<String, Object?> sessionRow({

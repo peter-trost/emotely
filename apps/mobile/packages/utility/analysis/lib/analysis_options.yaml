@@ -1,0 +1,20 @@
+# The one analyzer configuration for every package under apps/mobile. Each
+# package's own analysis_options.yaml is a single line:
+#
+#     include: package:analysis/analysis_options.yaml
+#
+# Policy: deny-by-default lints (see AGENTS.md). flutter_agent_lints decides
+# every SDK rule as an error or an explicitly reasoned `false`; the
+# experimental variant adds the rules the SDK still marks experimental
+# (primary constructors among them). Every override below must carry a
+# justification. CI runs `flutter analyze --fatal-infos` per package.
+include: package:flutter_agent_lints/experimental.yaml
+
+analyzer:
+  exclude:
+    - build/**
+  errors:
+    # freezed places @JsonSerializable / @JsonKey on factory constructors
+    # and parameters by design (its README asks for exactly this override);
+    # the annotations are read by the generator, not the analyzer.
+    invalid_annotation_target: ignore

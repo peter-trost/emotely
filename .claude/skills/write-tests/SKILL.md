@@ -3,11 +3,14 @@ name: write-tests
 description: Flutter testing conventions for apps/mobile/app. Use whenever writing or reviewing Dart/Flutter tests — widget tests, bloc tests, integration tests, mocks, or the coverage gate.
 ---
 
-# Writing tests for apps/mobile/app
+# Writing tests for apps/mobile
 
 The philosophy: **drive tests through the UI with real blocs; mock the agent
 API at the http seam — never a bloc.** Error states are injected by making the
-mocked API return them. Coverage is a hard 100% CI gate.
+mocked API return them. Coverage is a hard 100% CI gate, per package: run
+`melos run test` from `apps/mobile` (or `very_good test --coverage
+--min-coverage 100 --exclude-coverage '**/*.{freezed,g,mocks}.dart'` inside
+one package). `analysis` and `testing` have no tests and are not measured.
 
 Read the reference for the kind of test you are writing:
 
@@ -24,7 +27,9 @@ Read the reference for the kind of test you are writing:
 Non-negotiables that apply to every test file:
 
 1. Every widget test file also runs the 3-line a11y guideline check
-   (`expectMeetsAccessibilityGuidelines` from `test/helpers/a11y.dart`).
+   (`expectMeetsAccessibilityGuidelines` from `package:testing`, the shared
+   test-support package in `apps/mobile/packages/utility/testing`; the app's
+   `test/helpers/helpers.dart` re-exports it).
 2. No test may hit the network.
 3. `group()` takes the class reference, not a string; test names are plain
    declarative sentences — no given/when/then, no "should", no Arrange/Act

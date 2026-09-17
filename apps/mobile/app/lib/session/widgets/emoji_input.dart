@@ -1,4 +1,4 @@
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:emotely/session/widgets/submit_button.dart';
 import 'package:material_ui/material_ui.dart';
 

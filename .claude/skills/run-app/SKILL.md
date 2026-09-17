@@ -40,6 +40,11 @@ http://127.0.0.1:54324 instead of a mailbox.
 - Flutter is pinned by FVM (`apps/mobile/app/.fvmrc`); always call `fvm flutter` /
   `fvm dart` from `apps/mobile/app`. The global Flutter also matches the pin so the
   VGV plugin's MCP tools work, but FVM is the source of truth.
+- `apps/mobile` is a pub workspace (ADR 0015): `flutter pub get` anywhere in
+  it resolves every package into the one `apps/mobile/pubspec.lock`. The
+  per-package gates are melos scripts in `apps/mobile/pubspec.yaml`
+  (`dart pub global activate melos 8.7.0`, and `very_good_cli 1.5.0` for the
+  coverage gate — older very_good releases crash inside a workspace member).
 - First native build after adding a CocoaPods plugin may need
   `pod repo update` (the error says "specs repository is too out-of-date").
 
@@ -104,6 +109,17 @@ the background: press HOME and give it ~45 s before querying.
 
 ## Unit gate (what CI runs)
 
+Every package in the workspace, each in its own directory — codegen
+tripwire, format, analyze, the 100% coverage gate:
+
 ```bash
-cd apps/mobile/app && fvm flutter analyze --fatal-infos && fvm dart format --set-exit-if-changed . && fvm dart run build_runner build --only-check && fvm dart pub global run very_good_cli:very_good test --coverage --min-coverage 100 --exclude-coverage '**/*.{freezed,g,mocks}.dart'
+cd apps/mobile && melos run ci
+```
+
+One gate at a time is `melos run codegen:check` / `format` / `analyze` /
+`test`. To run only what changed since `main` plus its dependents, as a
+pull request's CI does:
+
+```bash
+cd apps/mobile && EMOTELY_SCOPE="--diff=origin/main...HEAD --include-dependents" melos run ci
 ```

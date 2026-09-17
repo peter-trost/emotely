@@ -5,9 +5,11 @@ description: Conventions for freezed / json_serializable data classes in apps/mo
 
 # freezed in apps/mobile/app
 
-Codegen defaults live in `apps/mobile/app/build.yaml` (snake_case fields and union
-values, `explicit_to_json`). Never repeat them per class; a per-class
-annotation carries only what genuinely differs, e.g.
+Codegen defaults live in each package's `build.yaml` (snake_case fields and
+union values, `explicit_to_json`) — `apps/mobile/app/build.yaml` and
+`apps/mobile/packages/utility/contract/build.yaml` today; a new package that
+generates code copies the block. Never repeat the defaults per class; a
+per-class annotation carries only what genuinely differs, e.g.
 `@Freezed(unionKey: 'answer_type')`.
 
 ## Shape of a class
@@ -71,8 +73,10 @@ enums as `enum Foo() { ... }`. Never add an empty `this;` body part;
 
 ## Generated code
 
-- Regenerate: `dart run build_runner build` (the
-  `--delete-conflicting-outputs` flag no longer exists in build_runner 2.16).
+- Regenerate: `dart run build_runner build` in the package that owns the
+  file (the `--delete-conflicting-outputs` flag no longer exists in
+  build_runner 2.16); `melos run codegen:check` from `apps/mobile` checks
+  every package.
 - `*.freezed.dart` / `*.g.dart` are committed, excluded from analysis and
   coverage, and CI fails on drift (`build_runner build --only-check`).
 

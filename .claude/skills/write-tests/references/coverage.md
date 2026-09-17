@@ -1,7 +1,9 @@
 # Coverage
 
-- CI gate: `very_good test --coverage --min-coverage 100` in the app job —
-  hard failure below 100%.
+- CI gate: `very_good test --coverage --min-coverage 100` per package
+  (`melos run test` from `apps/mobile`) — hard failure below 100% in any
+  package that has a `test/` directory. `analysis` and `testing` have none
+  and are not measured; test support is not behavior.
 - Exemptions are per-file and explicit: `// coverage:ignore-file` on its own
   line, reserved for composition roots (main.dart). Generated files
   (`*.freezed.dart`, `*.g.dart`, `*.mocks.dart`) are excluded via

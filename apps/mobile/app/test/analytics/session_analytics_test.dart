@@ -1,5 +1,5 @@
+import 'package:contract/contract.dart';
 import 'package:emotely/analytics/session_analytics.dart';
-import 'package:emotely/contract/contract.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/helpers.dart';

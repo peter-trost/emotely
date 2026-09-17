@@ -1,0 +1,42 @@
+# The pub workspace for the Flutter client: the app plus its own packages,
+# resolved together into one pubspec.lock and one package_config.json here.
+# Layering (ADR 0015): utilities depend only on utilities, features only on
+# utilities, the app is the glue that composes features.
+name: mobile
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - app
+  - packages/utility/analysis
+  - packages/utility/contract
+  - packages/utility/testing
+
+dev_dependencies:
+  # melos reads the workspace list above; it only recognises the workspace
+  # when it is declared here, and its configuration lives in the `melos` key.
+  melos: 8.7.0
+
+# `melos run <script>`. Every gate runs per package, in that package's
+# directory. EMOTELY_SCOPE narrows a run to the packages that changed plus
+# their dependents (CI sets it on pull requests, e.g.
+# `--diff=origin/main...HEAD --include-dependents`); unset, every package runs.
+melos:
+  scripts:
+    codegen:check:
+      description: Committed generated code (freezed, json_serializable, mockito) must match its source.
+      run: melos exec --fail-fast --concurrency=1 --file-exists=build.yaml $EMOTELY_SCOPE -- dart run build_runner build --only-check
+    format:
+      description: dart format, failing on any change.
+      run: melos exec --fail-fast $EMOTELY_SCOPE -- dart format --set-exit-if-changed .
+    analyze:
+      description: flutter analyze with infos fatal, against the workspace rule set.
+      run: melos exec --fail-fast $EMOTELY_SCOPE -- flutter analyze --fatal-infos
+    test:
+      description: The suite with the hard 100% coverage gate on hand-written code; packages without a test/ directory (analysis, testing) are not measured.
+      run: melos exec --fail-fast --concurrency=1 --dir-exists=test $EMOTELY_SCOPE -- dart pub global run very_good_cli:very_good test --coverage --min-coverage 100 --exclude-coverage "'**/*.{freezed,g,mocks}.dart'"
+    ci:
+      description: Everything the CI app job runs, in its order.
+      run: melos run codegen:check && melos run format && melos run analyze && melos run test

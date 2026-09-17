@@ -1,4 +1,4 @@
-import 'package:emotely/contract/hex_color_converter.dart';
+import 'package:contract/contract.dart';
 import 'package:emotely/session/widgets/color_text_editing_controller.dart';
 import 'package:material_ui/material_ui.dart';
 

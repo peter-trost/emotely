@@ -1,11 +1,10 @@
 import 'dart:convert';
 
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:mockito/mockito.dart';
-
-import '../mocks.mocks.dart';
+import 'package:testing/testing.dart';
 
 /// One scripted server round.
 typedef Round = Future<http.Response> Function();

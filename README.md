@@ -31,6 +31,7 @@ The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
 12. [Reuse the original store listings](docs/adr/0012-reuse-the-original-store-listings.md) — keep the existing Play record and its install base
 13. [Fastlane release pipeline](docs/adr/0013-fastlane-release-pipeline.md) — match signing, ASC API key, TestFlight and the Play internal track from CI
 14. [Explicit consent, append-only](docs/adr/0014-explicit-consent-as-an-append-only-record.md) — Art. 9 (2) (a) consent before the first session, every grant and withdrawal its own immutable row, wording versioned and CI-enforced
+15. [Lego package layering](docs/adr/0015-lego-package-layering.md) — utilities, features, app as glue; a pub workspace with melos, every gate per package and scoped to what changed
 
 The project's language is defined in [`CONTEXT.md`](CONTEXT.md).
 
@@ -45,8 +46,12 @@ emotely/
 │  ├─ agent/      TypeScript · Vercel AI SDK agent loop · deploys to Vercel
 │  │             tools: ask_question / record_answer / complete_session
 │  │             evals/ — offline fixtures → cost + quality (CI gate)
-│  ├─ mobile/
-│  │  └─ app/     Flutter (iOS + Android) · renders one native widget per tool call
+│  ├─ mobile/     a pub workspace (melos): the Flutter client and its packages
+│  │  ├─ app/               the glue: composes the features · iOS + Android
+│  │  └─ packages/
+│  │     ├─ utility/        depend only on utilities: analysis (the rule set),
+│  │     │                  contract (the tool-call shapes), testing (shared test support)
+│  │     └─ feature/        depend only on utilities, never on each other
 │  └─ web/        Jaspr (Dart) · getemotely.com landing page + waitlist · static, deploys to Vercel
 ├─ packages/
 │  └─ contract/   the tool-call schema — single source of truth for both sides
@@ -63,8 +68,9 @@ monorepo a schema change plus both sides move in one atomic, CI-verified commit.
 Solo founder → one CI, one release story, one front door. Both repos are public
 anyway, so the usual "keep one half private" argument doesn't apply.
 
-Tooling stays boring: pnpm workspaces for the TS side, Flutter's own tooling for
-`apps/mobile/app`, path-filtered GitHub Actions. No Nx/Turbo/Bazel.
+Tooling stays boring: pnpm workspaces for the TS side, a pub workspace plus
+melos for `apps/mobile` ([ADR 0015](docs/adr/0015-lego-package-layering.md)),
+path-filtered GitHub Actions. No Nx/Turbo/Bazel.
 
 ### The stack
 
@@ -191,8 +197,8 @@ claiming a clean run.
 It is idempotent, it aborts on the first failed step, and it takes **every
 version from the repository** — Node from `.nvmrc`, pnpm from `packageManager`,
 Flutter from `apps/mobile/app/.fvmrc`, Dart from the checksum-pinned
-`apps/web/scripts/vercel-install.sh`, the Supabase CLI and `jaspr_cli` from
-`.github/workflows/ci.yml`. Bumping a pin means editing the file that owns it;
+`apps/web/scripts/vercel-install.sh`, the Supabase CLI, `jaspr_cli`, `melos`
+and `very_good_cli` from `.github/workflows/ci.yml`. Bumping a pin means editing the file that owns it;
 the script follows, and refuses to run when two files pin the same tool
 differently. Every download is checked against a checksum the upstream project
 publishes, fetched at run time.

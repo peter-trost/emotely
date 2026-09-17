@@ -85,30 +85,60 @@ jobs:
             exit 1
           fi
 
+  # The Flutter workspace (apps/mobile): the app and its packages, each gated
+  # on its own — codegen tripwire, format, analyze, and the hard 100% coverage
+  # gate on hand-written code (generated files excluded, main.dart carrying a
+  # coverage:ignore-file marker). The gates are melos scripts in
+  # apps/mobile/pubspec.yaml, so CI and a developer run the same thing.
   app:
     needs: changes
     if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: apps/mobile/app
+        working-directory: apps/mobile
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # `melos --diff` compares against the base branch, so it needs history.
+          fetch-depth: 0
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version-file: apps/mobile/app/.fvmrc
           cache: true
       - run: flutter pub get
-      # Generated code (freezed / json_serializable / mockito) is committed;
-      # fail if it no longer matches its source.
-      - run: dart run build_runner build --only-check
-      - run: dart format --set-exit-if-changed .
-      - run: flutter analyze --fatal-infos
-      # Hard coverage gate on hand-written code; generated files are excluded
-      # and main.dart (composition root) carries a coverage:ignore-file marker.
-      - run: dart pub global activate very_good_cli
-      - run: dart pub global run very_good_cli:very_good test --coverage --min-coverage 100 --exclude-coverage '**/*.{freezed,g,mocks}.dart'
+      - run: dart pub global activate melos 8.7.0
+      # 1.5.0 is the first release whose coverage works inside a workspace
+      # member (very_good_cli #1683); older ones crash on the missing local
+      # package_config.json.
+      - run: dart pub global activate very_good_cli 1.5.0
+      # On a pull request, run only the packages that changed plus their
+      # dependents — unless something outside a package changed (the workspace
+      # pubspec or lock, the shared rule set in packages/utility/analysis, the
+      # contract schema the app is pinned against, this workflow), which
+      # affects every package and runs everything. Pushes to main always run
+      # everything.
+      - name: Scope the gates to what changed
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: origin/${{ github.base_ref }}
+        run: |
+          # `:/` pathspecs resolve from the repo root, not this working directory.
+          changed=$(git diff --name-only "$BASE...HEAD" -- \
+            :/apps/mobile :/packages/contract/contract.schema.json :/.github/workflows/ci.yml)
+          outside=$(printf '%s\n' "$changed" \
+            | grep -vE '^apps/mobile/(app|packages/[^/]+/[^/]+)/' \
+            | grep -v '^$' || true)
+          shared=$(printf '%s\n' "$changed" \
+            | grep '^apps/mobile/packages/utility/analysis/' || true)
+          if [ -n "$outside" ] || [ -n "$shared" ]; then
+            echo "workspace-wide change; every package runs"
+          else
+            echo "EMOTELY_SCOPE=--diff=$BASE...HEAD --include-dependents" >> "$GITHUB_ENV"
+            echo "scoped to the packages changed since $BASE and their dependents"
+          fi
+      - run: melos run ci
 
   # The landing page (apps/web): a Dart-only Jaspr site. Generated
   # *.options.dart files are committed; the build must not change them. The

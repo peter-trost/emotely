@@ -1,4 +1,4 @@
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:emotely/session/widgets/color_input.dart';
 import 'package:emotely/session/widgets/emoji_input.dart';
 import 'package:emotely/session/widgets/longtext_input.dart';

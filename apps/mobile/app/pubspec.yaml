@@ -20,6 +20,9 @@ version: 1.0.0+1
 
 environment:
   sdk: ^3.13.0
+# One member of the apps/mobile workspace: dependencies resolve there, into
+# the single pubspec.lock next to the root pubspec.
+resolution: workspace
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -28,6 +31,9 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  # Workspace packages resolve to the copy in apps/mobile/packages whatever
+  # constraint is written here; `any` says exactly that.
+  contract: any
   # Cupertino Icons font for iOS-style icons.
   cupertino_icons: ^1.0.8
   flutter:
@@ -45,9 +51,10 @@ dependencies:
   url_launcher: 6.3.2
 
 dev_dependencies:
+  # The analyzer configuration (flutter_agent_lints behind it) and the shared
+  # test support, both workspace packages.
+  analysis: any
   build_runner: 2.16.1
-  flutter_agent_lints: 1.0.1
-  flutter_launcher_icons: 0.14.4
   flutter_test:
     sdk: flutter
   freezed: 4.0.1
@@ -55,8 +62,7 @@ dev_dependencies:
     sdk: flutter
   json_serializable: 6.14.1
   mockito: 5.8.1
-  plugin_platform_interface: 2.1.8
-  url_launcher_platform_interface: 2.3.2
+  testing: any
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -108,7 +114,12 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
 # App launcher icons, generated from the web favicon (apps/web/web/favicon.svg).
-# Regenerate after changing assets/icon/*: `dart run flutter_launcher_icons`.
+# The tool is not a dependency: flutter_launcher_icons 0.14.4 (its newest
+# release) pins cli_util ^0.4.1, which cannot resolve next to melos in the
+# workspace, and it is only ever run by hand. Regenerate after changing
+# assets/icon/*, from this directory:
+#   dart pub global activate flutter_launcher_icons 0.14.4
+#   dart pub global run flutter_launcher_icons
 # iOS gets the favicon composition full-bleed; Android gets an adaptive icon
 # with the glyph centred inside the safe zone (the favicon's off-centre "e"
 # would be clipped by circular masks).

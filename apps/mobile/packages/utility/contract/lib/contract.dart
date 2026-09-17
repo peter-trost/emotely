@@ -2,7 +2,7 @@
 /// agent, pinned against its generated JSON Schema in CI.
 library;
 
-export 'answer.dart';
-export 'answer_type.dart';
-export 'ask_question.dart';
-export 'hex_color_converter.dart';
+export 'src/answer.dart';
+export 'src/answer_type.dart';
+export 'src/ask_question.dart';
+export 'src/hex_color_converter.dart';

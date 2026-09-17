@@ -14,8 +14,10 @@ dist/
 # Flutter / Dart
 coverage/
 .fvm/
-apps/mobile/app/.dart_tool/
-apps/mobile/app/build/
+# The workspace resolves once at apps/mobile; every member has its own build/.
+apps/mobile/.dart_tool/
+apps/mobile/**/.dart_tool/
+apps/mobile/**/build/
 apps/mobile/app/.flutter-plugins
 apps/mobile/app/.flutter-plugins-dependencies
 apps/mobile/app/ios/Pods/
