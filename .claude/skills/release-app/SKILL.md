@@ -1,9 +1,9 @@
 ---
 name: release-app
-description: How to ship the Flutter app (apps/app) to TestFlight and the Play internal track with fastlane and the app-release workflow, how signing works (match, the ASC API key, the Android upload keystore), and how to rotate any of it. Use whenever asked to release, ship a beta, upload a build, fix signing, or touch apps/app/fastlane or .github/workflows/app-release.yml.
+description: How to ship the Flutter app (apps/mobile/app) to TestFlight and the Play internal track with fastlane and the app-release workflow, how signing works (match, the ASC API key, the Android upload keystore), and how to rotate any of it. Use whenever asked to release, ship a beta, upload a build, fix signing, or touch apps/mobile/app/fastlane or .github/workflows/app-release.yml.
 ---
 
-# Releasing the app (apps/app)
+# Releasing the app (apps/mobile/app)
 
 Decisions in [ADR 0012](../../../docs/adr/0012-reuse-the-original-store-listings.md)
 (store identity `de.emotely.emotely`, version `2.0.0+`) and
@@ -12,7 +12,7 @@ match, the `release` environment).
 
 ## Ship a beta build
 
-Every merge to `main` that touches `apps/app/**`, the contract schema or the
+Every merge to `main` that touches `apps/mobile/app/**`, the contract schema or the
 workflow itself ships automatically (continuous delivery). To ship without a
 change, or to retry:
 
@@ -42,7 +42,7 @@ After the build shows up:
   read-only. To mint or rotate, run locally with the ASC API key:
 
   ```bash
-  cd apps/app
+  cd apps/mobile/app
   export APP_STORE_CONNECT_API_KEY_ID=8S5G6UTCKM \
          APP_STORE_CONNECT_ISSUER_ID=725518f0-067c-4ff1-b09b-05712e5b9e87 \
          APP_STORE_CONNECT_API_KEY_P8="$(security find-generic-password -s emotely_asc_api_key_8S5G6UTCKM_base64 -w | base64 -D)" \
@@ -153,7 +153,7 @@ the Resend quota (100 mails/day, shared with the website's waitlist). Both
 stores accept a demo account as "username + password"; Google's guidance for
 apps with one-time-PIN sign-in is to provide reusable sign-in details that do
 not expire. So two accounts sign in with a **password, not a code**, and never
-trigger an email (`apps/app/lib/auth/review_accounts.dart`):
+trigger an email (`apps/mobile/app/lib/auth/review_accounts.dart`):
 
 - `google-play-review@getemotely.com`
 - `app-store-review@getemotely.com`
@@ -187,7 +187,7 @@ created on the hosted project through the Auth admin API on 2026-09-13.
   informational only (dashboard, JWT) — nothing server-side reads it; the
   app decides by address.
 - **The pre-launch crawler runs on every upload to a track**, and
-  `app-release.yml` uploads on every merge that touches `apps/app` — not only
+  `app-release.yml` uploads on every merge that touches `apps/mobile/app` — not only
   on submissions. So an account a reviewer deleted stays broken, silently and
   email-free by design, until the script is re-run. The symptom: a
   pre-launch report whose crawls show the sign-in screen only, and in PostHog

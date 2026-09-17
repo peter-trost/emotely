@@ -18,7 +18,7 @@ import '../helpers/helpers.dart';
 /// restated by hand, so the pin cannot drift from the code it protects.
 void main() {
   final schema = jsonDecode(
-    File('../../packages/contract/contract.schema.json').readAsStringSync(),
+    File('../../../packages/contract/contract.schema.json').readAsStringSync(),
   ) as Map<String, dynamic>;
 
   /// One encoded sample per Dart variant, keyed by its wire name.

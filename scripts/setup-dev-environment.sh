@@ -17,7 +17,7 @@
 # Every version comes from the repository, never from this file:
 #   Node          .nvmrc
 #   pnpm          package.json  "packageManager"
-#   Flutter       apps/app/.fvmrc
+#   Flutter       apps/mobile/app/.fvmrc
 #   Dart          apps/web/scripts/vercel-install.sh  (checksum-pinned there)
 #   Supabase CLI  .github/workflows/ci.yml  (supabase/setup-cli "version:")
 #   jaspr_cli     .github/workflows/ci.yml, cross-checked against Vercel's
@@ -91,7 +91,7 @@ step. Every version comes from the repository, never from the script:
 
   Node          .nvmrc
   pnpm          package.json  "packageManager"
-  Flutter       apps/app/.fvmrc
+  Flutter       apps/mobile/app/.fvmrc
   Dart          apps/web/scripts/vercel-install.sh  (checksum-pinned there)
   Supabase CLI  .github/workflows/ci.yml
   jaspr_cli     .github/workflows/ci.yml, cross-checked against Vercel's
@@ -335,10 +335,10 @@ fi
 
 step "Flutter SDK"
 
-FLUTTER_VERSION=$(json_value "$REPO_ROOT/apps/app/.fvmrc" flutter)
+FLUTTER_VERSION=$(json_value "$REPO_ROOT/apps/mobile/app/.fvmrc" flutter)
 readonly FLUTTER_VERSION
-[ -n "$FLUTTER_VERSION" ] || die "apps/app/.fvmrc has no flutter version"
-require_release_number "the Flutter version" "$REPO_ROOT/apps/app/.fvmrc" "$FLUTTER_VERSION"
+[ -n "$FLUTTER_VERSION" ] || die "apps/mobile/app/.fvmrc has no flutter version"
+require_release_number "the Flutter version" "$REPO_ROOT/apps/mobile/app/.fvmrc" "$FLUTTER_VERSION"
 readonly FLUTTER_DIR="$PREFIX/flutter"
 
 # Flutter runs `git` against its own checkout — for `flutter --version`, and
@@ -354,7 +354,7 @@ if [ -x "$FLUTTER_DIR/bin/flutter" ] \
    && [ "$(git -C "$FLUTTER_DIR" describe --tags 2>/dev/null || true)" = "$FLUTTER_VERSION" ]; then
   skip "Flutter $FLUTTER_VERSION already installed"
 else
-  info "installing Flutter $FLUTTER_VERSION (apps/app/.fvmrc)"
+  info "installing Flutter $FLUTTER_VERSION (apps/mobile/app/.fvmrc)"
   fetch "https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json" \
     "$WORK_DIR/flutter-releases.json"
   # The release index carries the archive path and its sha256 per version.
@@ -397,12 +397,12 @@ ok "Flutter $FLUTTER_VERSION"
 ok "Dart ${dart_version_output#Dart SDK version: }"
 
 # `dart` on PATH is the standalone SDK, which cannot resolve `sdk: flutter`
-# packages. Inside apps/app, use this wrapper wherever CI says `dart`.
+# packages. Inside apps/mobile/app, use this wrapper wherever CI says `dart`.
 install -d "$PREFIX/bin"
 cat > "$PREFIX/bin/flutter-dart" <<WRAPPER
 #!/usr/bin/env sh
 # Flutter's bundled Dart — the one that can resolve \`sdk: flutter\` packages.
-# Use it for apps/app (\`flutter-dart run build_runner build --only-check\`);
+# Use it for apps/mobile/app (\`flutter-dart run build_runner build --only-check\`);
 # plain \`dart\` is the standalone SDK the landing page is pinned to.
 #
 # It also puts Flutter's bin first on PATH for everything it starts, so a tool
@@ -576,8 +576,8 @@ step "Workspace dependencies"
 info "pnpm install (agent + contract)"
 (cd "$REPO_ROOT" && pnpm install --frozen-lockfile)
 
-info "apps/app: flutter pub get"
-(cd "$REPO_ROOT/apps/app" && flutter pub get)
+info "apps/mobile/app: flutter pub get"
+(cd "$REPO_ROOT/apps/mobile/app" && flutter pub get)
 
 info "apps/web: dart pub get"
 (cd "$REPO_ROOT/apps/web" && dart pub get)
@@ -622,7 +622,7 @@ else
   dart pub global activate jaspr_cli "$JASPR_CLI_VERSION" >/dev/null
 fi
 
-# very_good_cli runs the app's coverage gate, against apps/app, so it belongs to
+# very_good_cli runs the app's coverage gate, against apps/mobile/app, so it belongs to
 # Flutter's bundled SDK. CI does not pin it and neither does this — it is a test
 # runner, not a build input.
 flutter_dart_version=$(flutter-dart --version 2>&1 | sed -n 's/.*version: \([0-9][0-9.]*\).*/\1/p')
@@ -657,7 +657,7 @@ if [ "$VERIFY" -eq 1 ]; then
   SKIPPED+=("agent eval (needs AI_GATEWAY_API_KEY)")
 
   info "app: codegen check, format, analyze, tests"
-  (cd "$REPO_ROOT/apps/app" \
+  (cd "$REPO_ROOT/apps/mobile/app" \
     && flutter-dart run build_runner build --only-check \
     && flutter-dart format --set-exit-if-changed . \
     && flutter analyze --fatal-infos \
@@ -712,7 +712,7 @@ What this does NOT set up, on purpose:
     so commits made here carry no Entire-Checkpoint trailer. Installing it
     means running `entire enable`, which writes git hooks and pushes to a
     private checkpoint repo: the maintainer's call, see docs/tooling/entire.md.
-  · fvm. The run-app skill drives apps/app through `fvm flutter` / `fvm dart`;
+  · fvm. The run-app skill drives apps/mobile/app through `fvm flutter` / `fvm dart`;
     here the pinned SDK is on PATH directly, as `flutter` and `flutter-dart`.
   · The GitHub CLI. `main` is protected and merges go through PRs; the release
     and supabase skills shell out to `gh`. Install and authenticate it yourself
@@ -720,5 +720,5 @@ What this does NOT set up, on purpose:
   · Anything that runs the app on a device. No Android SDK, no JDK, no
     emulator, no Xcode: `flutter run`, `flutter build`, integration_test and
     the android half of app-release.yml are all out of reach on this machine.
-    apps/app's unit and widget tests do run.
+    apps/mobile/app's unit and widget tests do run.
 NOTES

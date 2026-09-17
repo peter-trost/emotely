@@ -1,5 +1,5 @@
 # The agent deploy needs the TS workspace only.
-apps/app
+apps/mobile
 docs
 .github
 *.log

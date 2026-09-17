@@ -8,7 +8,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/app/**'
+      - 'apps/mobile/**'
       # The Dart contract is pinned against the emitted JSON Schema.
       - 'packages/contract/contract.schema.json'
       - '.github/workflows/app-release.yml'
@@ -25,17 +25,17 @@ jobs:
     environment: release
     defaults:
       run:
-        working-directory: apps/app
+        working-directory: apps/mobile/app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
-          flutter-version-file: apps/app/.fvmrc
+          flutter-version-file: apps/mobile/app/.fvmrc
           cache: true
       - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
         with:
-          working-directory: apps/app
+          working-directory: apps/mobile/app
           bundler-cache: true
       # match pulls the certificate + profile from the private repo.
       - uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 # v0.10.0
@@ -58,7 +58,7 @@ jobs:
     environment: release
     defaults:
       run:
-        working-directory: apps/app
+        working-directory: apps/mobile/app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -68,11 +68,11 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
-          flutter-version-file: apps/app/.fvmrc
+          flutter-version-file: apps/mobile/app/.fvmrc
           cache: true
       - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
         with:
-          working-directory: apps/app
+          working-directory: apps/mobile/app
           bundler-cache: true
       # The upload keystore and its key.properties, straight from secrets.
       # key.properties points at ../upload-keystore.jks relative to the app

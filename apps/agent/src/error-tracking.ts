@@ -5,7 +5,7 @@ import type { PostHog } from "posthog-node";
  * the same content-free rule as the client (ADR 0005).
  *
  * **Why the rule is applied here and not on the wire.** The Flutter side can
- * scrub in a `beforeSend` hook (`apps/app/lib/analytics/error_tracking.dart`).
+ * scrub in a `beforeSend` hook (`apps/mobile/app/lib/analytics/error_tracking.dart`).
  * `posthog-node` has no such seam — its options type is
  * `Omit<PostHogCoreOptions, 'before_send' | …>`, so `before_send` is removed
  * on purpose — and it walks `error.cause` into `$exception_list` when it

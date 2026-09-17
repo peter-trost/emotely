@@ -45,7 +45,8 @@ emotely/
 │  ├─ agent/      TypeScript · Vercel AI SDK agent loop · deploys to Vercel
 │  │             tools: ask_question / record_answer / complete_session
 │  │             evals/ — offline fixtures → cost + quality (CI gate)
-│  ├─ app/        Flutter (iOS + Android) · renders one native widget per tool call
+│  ├─ mobile/
+│  │  └─ app/     Flutter (iOS + Android) · renders one native widget per tool call
 │  └─ web/        Jaspr (Dart) · getemotely.com landing page + waitlist · static, deploys to Vercel
 ├─ packages/
 │  └─ contract/   the tool-call schema — single source of truth for both sides
@@ -63,7 +64,7 @@ Solo founder → one CI, one release story, one front door. Both repos are publi
 anyway, so the usual "keep one half private" argument doesn't apply.
 
 Tooling stays boring: pnpm workspaces for the TS side, Flutter's own tooling for
-`apps/app`, path-filtered GitHub Actions. No Nx/Turbo/Bazel.
+`apps/mobile/app`, path-filtered GitHub Actions. No Nx/Turbo/Bazel.
 
 ### The stack
 
@@ -167,7 +168,7 @@ the wild*.
    fastest reliable one. Gateway decided: Vercel AI Gateway (ADR 0003 amendment).
 4. **PostHog online** — OTel span processor (content recording off), flag-driven model
    selection, first LLM prompt experiment.
-5. **`apps/app`** — Flutter shell rendering a widget per tool call, Supabase auth +
+5. **`apps/mobile/app`** — Flutter shell rendering a widget per tool call, Supabase auth +
    entry persistence, `posthog_flutter`.
 6. **Subscription + polish** — RevenueCat, paywall, ship to TestFlight.
 
@@ -189,7 +190,7 @@ claiming a clean run.
 
 It is idempotent, it aborts on the first failed step, and it takes **every
 version from the repository** — Node from `.nvmrc`, pnpm from `packageManager`,
-Flutter from `apps/app/.fvmrc`, Dart from the checksum-pinned
+Flutter from `apps/mobile/app/.fvmrc`, Dart from the checksum-pinned
 `apps/web/scripts/vercel-install.sh`, the Supabase CLI and `jaspr_cli` from
 `.github/workflows/ci.yml`. Bumping a pin means editing the file that owns it;
 the script follows, and refuses to run when two files pin the same tool
@@ -200,7 +201,7 @@ The toolchain lands in `/opt/emotely-toolchain` (uninstall is `rm -rf` of that
 one directory) and `/opt/emotely-toolchain/env.sh` puts it on `PATH`. Two Dart
 SDKs live there on purpose: `dart` is the standalone SDK `apps/web` is pinned
 to, and `flutter-dart` is Flutter's bundled one — the only one that can resolve
-`sdk: flutter` packages, so it is what `apps/app` uses wherever CI says `dart`.
+`sdk: flutter` packages, so it is what `apps/mobile/app` uses wherever CI says `dart`.
 
 What it deliberately leaves out, and prints when it finishes: secrets (it
 writes an empty `apps/agent/.env.local` template and stops there), Entire —
@@ -208,11 +209,11 @@ whose hooks in `.claude/settings.json` no-op while the CLI is absent, so
 commits made on such a machine carry no `Entire-Checkpoint` trailer — `fvm`,
 the GitHub CLI, and everything needed to run the app on a device (no Android
 SDK, no JDK, no emulator, no Xcode, so the android half of `app-release.yml`
-is out of reach too). `apps/app`'s unit and widget tests do run.
+is out of reach too). `apps/mobile/app`'s unit and widget tests do run.
 
 ## Running the app
 
-Build-time configuration is `--dart-define`s read in `apps/app/lib/app/environment.dart`
+Build-time configuration is `--dart-define`s read in `apps/mobile/app/lib/app/environment.dart`
 (agent URL, PostHog token — empty means analytics and error tracking off;
 uncaught-error autocapture is off in debug builds regardless). How to build, run,
 drive the app on a simulator, and run the on-device acceptance session is an

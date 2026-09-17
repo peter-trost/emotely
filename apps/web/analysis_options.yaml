@@ -1,5 +1,5 @@
 # Policy: deny-by-default lints (see AGENTS.md), the same rule set as
-# apps/app; flutter_agent_lints has no Flutter dependency, its Flutter-only
+# apps/mobile/app; flutter_agent_lints has no Flutter dependency, its Flutter-only
 # rules simply never fire here. jaspr_lints adds the framework's own checks
 # as an analyzer plugin. Every override must carry a justification.
 # CI runs `dart analyze --fatal-infos`.

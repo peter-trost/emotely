@@ -14,3 +14,10 @@ half private" argument for splitting doesn't apply.
 Tooling stays deliberately boring: pnpm workspaces for the TS side, Flutter's own
 tooling for `apps/app`, path-filtered GitHub Actions. No Nx/Turbo/Bazel — the repo
 is small and mixed-language dirs don't interfere.
+
+## Amendment 2026-09-17
+
+The Flutter client moved from `apps/app` to `apps/mobile/app`, so that
+`apps/mobile/` can hold the app next to its own Dart packages as one pub
+workspace (issue #39, the lego package layering). The paths above are the
+historical ones; the decision itself is unchanged.

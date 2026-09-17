@@ -3,7 +3,7 @@
 # vercel.json). Exit 0 skips the deployment, any other exit code builds it.
 #
 # Why this exists: Vercel's built-in "skip unaffected projects" only knows the
-# pnpm workspace graph. Everything outside a workspace package (apps/app, docs,
+# pnpm workspace graph. Everything outside a workspace package (apps/mobile, docs,
 # AGENTS.md, ...) counts as a "global change" and deploys every project, so
 # app-only PRs were building the agent. This script names the agent's build
 # inputs explicitly and diffs only those.
