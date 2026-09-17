@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../helpers/helpers.dart';
-import '../../session/session_robot.dart';
 import '../consent_robot.dart';
 
 void main() {
@@ -35,7 +34,7 @@ void main() {
         ..rest(consentGrant, grants)
         ..rest(consentWithdraw, withdrawals);
       final agent = AgentStub()
-        ..script([awaiting(toolCallId: 'c1', question: SessionRobot.rate)]);
+        ..script([awaiting(toolCallId: 'c1', question: rateQuestion)]);
       return ConsentRobot(tester, supabase: supabase, agent: agent);
     }
 
@@ -151,7 +150,7 @@ void main() {
       final robot = robotWith(tester);
       robot.supabase.rest('GET /rest/v1/sessions', [
         rows([
-          sessionRow(questions: [SessionRobot.rate]),
+          sessionRow(questions: [rateQuestion]),
         ]),
       ]);
       await robot.launch();

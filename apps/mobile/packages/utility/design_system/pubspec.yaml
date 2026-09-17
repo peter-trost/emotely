@@ -1,0 +1,20 @@
+name: design_system
+description: The emotely look — theme, and the widgets more than one feature renders (a filed entry, color-coded text).
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  agent_client: any
+  contract: any
+  flutter:
+    sdk: flutter
+  material_ui: ^1.1.0
+
+dev_dependencies:
+  analysis: any
+  flutter_test:
+    sdk: flutter
+  testing: any

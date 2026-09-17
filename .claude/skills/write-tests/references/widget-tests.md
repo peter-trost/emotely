@@ -1,8 +1,14 @@
 # Widget tests
 
-- Use the `pumpApp` extension (`test/helpers/pump_app.dart`) — real themes,
-  real localization once l10n exists, with a NON-English default locale so
-  hardcoded strings fail.
+- Use the `pumpApp` extension from `package:testing` — real themes, real
+  localization once l10n exists, with a NON-English default locale so
+  hardcoded strings fail. `pageUnderTest(page)` is the same for a whole
+  page that brings its own `Scaffold`.
+- A feature package's page tests compose the way the app does, in a robot:
+  `registerUtilitiesUnderTest(GetIt.I, agent:, supabase:, analytics:)`
+  (every utility over the scripted leaves), then the feature's own
+  `registerX(GetIt.I)`, then `pageUnderTest(TheFeaturePage())`. Nothing
+  else is registered from a test; see mocking.md.
 - Each test file defines a local `pumpTestWidget(tester, {...})` closure in
   `main()`'s scope; named parameters carry variation, mocks stay in scope.
 - Provide REAL blocs backed by the mocked agent API. Never mock a bloc; reach

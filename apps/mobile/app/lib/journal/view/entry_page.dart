@@ -1,4 +1,4 @@
-import 'package:emotely/session/view/entry_view.dart';
+import 'package:design_system/design_system.dart';
 import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 

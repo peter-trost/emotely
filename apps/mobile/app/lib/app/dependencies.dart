@@ -7,7 +7,7 @@ import 'package:emotely/config/config_dependencies.dart';
 import 'package:emotely/consent/consent_dependencies.dart';
 import 'package:emotely/consent/consent_text.dart';
 import 'package:emotely/journal/journal_dependencies.dart';
-import 'package:emotely/session/session_dependencies.dart';
+import 'package:feature_session/feature_session.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:journal_repository/journal_repository.dart';

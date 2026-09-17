@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../helpers/helpers.dart';
-import '../../session/session_robot.dart';
 import '../journal_robot.dart';
 
 void main() {
@@ -64,7 +63,7 @@ void main() {
       tester,
     ) async {
       final agent = AgentStub()
-        ..script([awaiting(toolCallId: 'c1', question: SessionRobot.rate)]);
+        ..script([awaiting(toolCallId: 'c1', question: rateQuestion)]);
       final robot = robotWith(tester, agent: agent);
       await robot.launch();
 
@@ -90,16 +89,16 @@ void main() {
     ) async {
       const pending = PendingQuestion(
         toolCallId: 'c2',
-        question: SessionRobot.grateful,
+        question: gratefulQuestion,
       );
       final agent = AgentStub()
-        ..script([awaiting(toolCallId: 'c3', question: SessionRobot.best)]);
+        ..script([awaiting(toolCallId: 'c3', question: bestQuestion)]);
       final robot = robotWith(
         tester,
         openSession: sessionRow(
           transcript: const ['stored', 'stored'],
           pending: pending,
-          questions: [SessionRobot.rate, SessionRobot.grateful],
+          questions: [rateQuestion, gratefulQuestion],
         ),
         agent: agent,
       );
@@ -116,7 +115,7 @@ void main() {
 
       expect(robot.session, findsOneWidget);
       expect(find.text('Question 2'), findsOneWidget);
-      expect(find.text(SessionRobot.grateful.question), findsOneWidget);
+      expect(find.text(gratefulQuestion.question), findsOneWidget);
       expect(agent.requests, isEmpty);
       expect(robot.analytics.events.last, event('session_resumed'));
 
@@ -154,7 +153,7 @@ void main() {
           ]);
         final robot = robotWith(
           tester,
-          openSession: sessionRow(questions: [SessionRobot.rate]),
+          openSession: sessionRow(questions: [rateQuestion]),
           agent: agent,
         );
         await robot.launch();
@@ -237,8 +236,8 @@ void main() {
             id: 'e-1',
             summary: 'A seven kind of day.',
             createdAt: newer,
-            answers: {SessionRobot.rate.questionId: const Answer.rating(7)},
-            questions: [SessionRobot.rate],
+            answers: {rateQuestion.questionId: const Answer.rating(7)},
+            questions: [rateQuestion],
           ),
         ],
       );
@@ -248,7 +247,7 @@ void main() {
 
       expect(robot.entryPage, findsOneWidget);
       expect(find.text('A seven kind of day.'), findsOneWidget);
-      expect(find.text(SessionRobot.rate.question), findsOneWidget);
+      expect(find.text(rateQuestion.question), findsOneWidget);
       expect(find.text('7 / 10'), findsOneWidget);
       expect(robot.analytics.events.last, event('entry_opened'));
 
