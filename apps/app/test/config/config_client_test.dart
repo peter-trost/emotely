@@ -1,4 +1,6 @@
 import 'package:emotely/config/config_client.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/helpers.dart';
@@ -24,6 +26,29 @@ void main() {
 
       expect(stub.requested.single.queryParameters['platform'], 'android');
     });
+
+    testWidgets('names the platform the framework is running as', (
+      tester,
+    ) async {
+      // The point of `defaultTargetPlatform` over `dart:io`: a variant drives
+      // it, so this covers the real default rather than an injected string.
+      final stub = ConfigStub()..serves();
+      final client = ConfigClient(
+        httpClient: stub.client,
+        endpoint: ConfigStub.endpoint,
+      );
+
+      await client.fetch();
+
+      expect(
+        stub.requested.single.queryParameters['platform'],
+        switch (defaultTargetPlatform) {
+          TargetPlatform.iOS => 'ios',
+          TargetPlatform.android => 'android',
+          _ => 'unknown',
+        },
+      );
+    }, variant: TargetPlatformVariant.all());
 
     test('keeps any query the endpoint already carried', () async {
       final stub = ConfigStub()..serves();

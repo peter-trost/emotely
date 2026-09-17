@@ -1,6 +1,5 @@
 // coverage:ignore-file
 // Composition root; behavior lives in EmotelyApp and is tested there.
-import 'dart:io' show Platform;
 
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/consent_analytics.dart';
@@ -51,7 +50,6 @@ Future<void> main() async {
       configClient: ConfigClient(
         httpClient: httpClient,
         endpoint: Uri.parse(configUrl),
-        platform: _platform,
       ),
       agentClient: AgentClient(
         httpClient: httpClient,
@@ -68,11 +66,3 @@ Future<void> main() async {
     ),
   );
 }
-
-/// What this build calls itself when asking for a store link. Lives here
-/// because `Platform` reports the host a widget test runs on, not a device.
-String get _platform => Platform.isIOS
-    ? 'ios'
-    : Platform.isAndroid
-    ? 'android'
-    : 'unknown';

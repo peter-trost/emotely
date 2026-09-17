@@ -2,7 +2,21 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:emotely/config/startup_config.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:http/http.dart' as http;
+
+/// What this build calls itself when asking for a store link.
+///
+/// `defaultTargetPlatform` rather than `dart:io`'s `Platform`: it reports the
+/// platform the framework is running as, which a test can drive with
+/// `TargetPlatformVariant`, where `Platform` would report the host the test
+/// runs on. Anything without a store of its own asks for the neutral link.
+String currentPlatform() => switch (defaultTargetPlatform) {
+  TargetPlatform.iOS => 'ios',
+  TargetPlatform.android => 'android',
+  _ => 'unknown',
+};
 
 /// Reads `GET /api/config`: what the app must know before it may run.
 ///
@@ -15,9 +29,9 @@ class const ConfigClient({
   final Duration timeout = defaultTimeout,
 
   /// What this build calls itself, so the server can pick the right store
-  /// listing. `main.dart` passes the real one; anything the server does not
+  /// listing. Defaults to [currentPlatform]; anything the server does not
   /// recognise gets a neutral link rather than none.
-  final String platform = 'unknown',
+  final String? platform,
 }) {
   /// Shorter than a session round: this runs before the first frame the user
   /// can act on, and a slow answer is indistinguishable from a hung one.
@@ -29,7 +43,10 @@ class const ConfigClient({
     // The store link differs per platform (iOS and Android have different
     // listings), and only the server knows the current ones.
     final url = endpoint.replace(
-      queryParameters: {...endpoint.queryParameters, 'platform': platform},
+      queryParameters: {
+        ...endpoint.queryParameters,
+        'platform': platform ?? currentPlatform(),
+      },
     );
     final http.Response response;
     try {

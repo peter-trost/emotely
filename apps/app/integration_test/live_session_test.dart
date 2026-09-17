@@ -10,7 +10,6 @@
 // The agent serves signed-in users only, so the run signs in as the smoke
 // user (a password account like the store review accounts; everyone else
 // signs in with a code through the app's own screen).
-import 'dart:io' show Platform;
 
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/consent_analytics.dart';
@@ -106,7 +105,6 @@ class LiveSessionRobot(final WidgetTester tester) {
         configClient: ConfigClient(
           httpClient: httpClient,
           endpoint: Uri.parse(configUrl),
-          platform: Platform.isIOS ? 'ios' : 'android',
         ),
         agentClient: AgentClient(
           httpClient: httpClient,
