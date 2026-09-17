@@ -48,10 +48,13 @@ handful, and the same tooling holds.
 - `flutter_launcher_icons` left the dependency graph: its newest release pins
   a `cli_util` that cannot resolve next to melos, and it is only ever run by
   hand (`dart pub global run flutter_launcher_icons` from `app`).
-- Cross-feature navigation needs a seam, since features cannot import each
-  other: one abstract navigator per feature, implemented by the app. That is
-  the last piece of this decision and is recorded when the first feature
-  package lands.
+- Reaching another feature needs a seam, since features cannot import each
+  other: one abstract navigator per feature, implemented by the app and
+  registered as a singleton (`AccountNavigator.signOut` is the first: the
+  account screen asks to be signed out, the app's implementation tells the
+  auth bloc). It is the one sanctioned interface with a single production
+  implementation, because it genuinely has two — the app's and the test
+  fake — and everything else stays concrete.
 
 Decided on #39 (design comment of 2026-09-17), implemented as a stack of
 pull requests starting with the move to `apps/mobile`.

@@ -1,5 +1,4 @@
-import 'package:emotely/consent/consent_text.dart';
-import 'package:emotely/consent/view/consent_page.dart';
+import 'package:feature_account/feature_account.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 

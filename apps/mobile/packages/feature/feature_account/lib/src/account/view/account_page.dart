@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:emotely/account/bloc/account_bloc.dart';
-import 'package:emotely/auth/bloc/auth_bloc.dart';
-import 'package:emotely/consent/bloc/consent_bloc.dart';
-import 'package:emotely/consent/consent_text.dart';
-import 'package:emotely/consent/view/consent_page.dart';
+import 'package:feature_account/src/account/bloc/account_bloc.dart';
+import 'package:feature_account/src/consent/bloc/consent_bloc.dart';
+import 'package:feature_account/src/consent/consent_text.dart';
+import 'package:feature_account/src/consent/view/consent_page.dart';
+import 'package:feature_account/src/navigator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:material_ui/material_ui.dart';
@@ -347,8 +347,10 @@ class const _Failure() extends StatelessWidget {
       TextButton(
         key: AccountView.signOutKey,
         onPressed: () {
-          // The root swaps to sign-in underneath; this route leaves too.
-          context.read<AuthBloc>().add(const AuthEvent.signOutRequested());
+          // The app signs out (the root swaps to sign-in underneath); this
+          // route leaves too. Resolving the navigator is one of the two
+          // container calls a widget may make (ADR 0015).
+          GetIt.I<AccountNavigator>().signOut(context);
           Navigator.of(context).pop();
         },
         child: const Text('Sign out'),

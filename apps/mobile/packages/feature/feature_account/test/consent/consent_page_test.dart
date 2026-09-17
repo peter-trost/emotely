@@ -1,0 +1,297 @@
+import 'package:feature_account/feature_account.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:testing/testing.dart';
+
+/// Drives the consent screen on its own route, composed the way the app
+/// composes it, with the consent bloc handed in from the route below as the
+/// journal hands it — and records what the route popped with.
+class _ConsentRobot(
+  final WidgetTester tester, {
+  required final SupabaseStub supabase,
+}) {
+  final analytics = AnalyticsSpy();
+
+  /// What the consent route popped with, once it has.
+  bool? result;
+
+  static const openKey = Key('launcher.open');
+
+  Finder get launcher => find.byKey(openKey);
+  Finder get consent => find.byType(ConsentPage);
+  Finder get checkbox => find.byKey(ConsentView.checkboxKey);
+  Finder get agree => find.byKey(ConsentView.agreeKey);
+  Finder get decline => find.byKey(ConsentView.declineKey);
+  Finder get notice => find.byKey(ConsentView.noticeKey);
+  Finder get retry => find.byKey(ConsentView.retryKey);
+  Finder get busy => find.byType(CircularProgressIndicator);
+
+  Widget get app {
+    registerUtilitiesUnderTest(
+      GetIt.I,
+      agent: AgentStub(),
+      supabase: supabase,
+      analytics: analytics,
+    );
+    registerAccount(GetIt.I);
+    return pageUnderTest(
+      BlocProvider(
+        create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
+        child: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: FilledButton(
+                key: openKey,
+                onPressed: () async {
+                  final consent = context.read<ConsentBloc>();
+                  result = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => BlocProvider.value(
+                        value: consent,
+                        child: const ConsentPage(),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Start'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Signed in, with the consent screen open.
+  Future<void> launch() async {
+    await supabase.signedIn();
+    await tester.pumpWidget(app);
+    await settle();
+    await tap(launcher);
+  }
+
+  /// The affirmative act: tick the box, then press the button.
+  Future<void> consentAndContinue() async {
+    await tap(checkbox);
+    await tap(agree);
+  }
+
+  Future<void> settle() => tester.pumpAndSettle();
+
+  /// Taps [finder], scrolling it into view first: the screen says more than
+  /// fits a test viewport, deliberately.
+  Future<void> tap(Finder finder) async {
+    await tester.ensureVisible(finder);
+    await tester.tap(finder);
+    await settle();
+  }
+
+  Future<void> back() async {
+    await tester.pageBack();
+    await settle();
+  }
+}
+
+void main() {
+  group(ConsentPage, () {
+    const version = {'version': testConsentVersion};
+
+    _ConsentRobot robotWith(
+      WidgetTester tester, {
+      bool granted = false,
+      List<AuthRound> grants = const [],
+      List<AuthRound> reads = const [],
+    }) {
+      final supabase = SupabaseStub()
+        ..rest(consentRead, reads)
+        ..always(consentRead, consentStands(granted: granted))
+        ..rest(consentGrant, grants);
+      return _ConsentRobot(tester, supabase: supabase);
+    }
+
+    testWidgets('asks, and records the consent once box and button agree', (
+      tester,
+    ) async {
+      final robot = robotWith(tester, grants: [rpcReturned(null)]);
+      await robot.launch();
+
+      expect(find.text(consentTitle), findsOneWidget);
+      for (final paragraph in [
+        consentWhatIsSent,
+        consentRecipients,
+        consentNoTraining,
+        consentSensitivity,
+        consentIrreversible,
+        consentLegalBasis,
+      ]) {
+        expect(find.text(paragraph), findsOneWidget);
+      }
+      // The box starts unticked, and until it is ticked the button cannot
+      // be pressed at all: no pre-ticked box, and no "by continuing".
+      expect(tester.widget<CheckboxListTile>(robot.checkbox).value, isFalse);
+      expect(tester.widget<FilledButton>(robot.agree).enabled, isFalse);
+
+      await robot.consentAndContinue();
+
+      // Recorded server-side, naming the wording that was agreed to, and
+      // only then does the route answer yes.
+      expect(robot.supabase.bodies('/rest/v1/rpc/record_consent'), [version]);
+      expect(robot.result, isTrue);
+      expect(robot.consent, findsNothing);
+      expect(robot.analytics.events, [event('consent_granted', version)]);
+    });
+
+    testWidgets('declining records nothing and answers no', (tester) async {
+      final robot = robotWith(tester);
+      await robot.launch();
+
+      await robot.tap(robot.decline);
+
+      expect(robot.supabase.to(consentGrant), isEmpty);
+      expect(robot.result, isFalse);
+      expect(robot.analytics.events, [event('consent_declined', version)]);
+    });
+
+    testWidgets('leaving by the back arrow is not an answer', (tester) async {
+      final robot = robotWith(tester);
+      await robot.launch();
+
+      await robot.back();
+
+      expect(robot.result, isNull);
+      expect(robot.supabase.to(consentGrant), isEmpty);
+      expect(robot.analytics.events, isEmpty);
+    });
+
+    testWidgets('the notice is a link the screen can open', (tester) async {
+      final launcher = UrlLauncherSpy.setup();
+      final robot = robotWith(tester);
+      await robot.launch();
+
+      await robot.tap(robot.notice);
+
+      expect(launcher.launched, [privacyNoticeUrl]);
+    });
+
+    testWidgets('shows progress while it reads, and while it writes', (
+      tester,
+    ) async {
+      final robot = robotWith(
+        tester,
+        reads: [delayedAuth(consentStands(granted: false))],
+        grants: [delayedAuth(rpcReturned(null))],
+      );
+      await robot.supabase.signedIn();
+      await tester.pumpWidget(robot.app);
+      await tester.pump();
+      await tester.tap(robot.launcher);
+      await tester.pump();
+      await tester.pump();
+
+      expect(robot.busy, findsOneWidget);
+      expect(robot.agree, findsNothing);
+
+      await robot.settle();
+      await robot.tap(robot.checkbox);
+      await tester.tap(robot.agree);
+      await tester.pump();
+
+      expect(robot.busy, findsOneWidget);
+      // The write is in flight; leaving now would strand it.
+      await tester.pageBack();
+      await tester.pump();
+
+      expect(robot.consent, findsOneWidget);
+
+      await robot.settle();
+
+      expect(robot.result, isTrue);
+    });
+
+    testWidgets('a consent that cannot be recorded starts nothing', (
+      tester,
+    ) async {
+      final robot = robotWith(
+        tester,
+        grants: [restRefused(), rpcReturned(null)],
+      );
+      await robot.launch();
+
+      await robot.consentAndContinue();
+
+      expect(robot.result, isNull);
+      expect(find.text(consentFailureMessage), findsOneWidget);
+      expect(robot.analytics.events, isEmpty);
+      expect(robot.analytics.exceptions, hasLength(1));
+
+      await robot.tap(robot.retry);
+
+      expect(robot.supabase.to(consentGrant), hasLength(2));
+      expect(robot.result, isTrue);
+    });
+
+    testWidgets('declining after a failed write still answers no', (
+      tester,
+    ) async {
+      final robot = robotWith(tester, grants: [restRefused()]);
+      await robot.launch();
+      await robot.consentAndContinue();
+
+      await robot.tap(robot.decline);
+
+      expect(robot.result, isFalse);
+    });
+
+    testWidgets('a consent that cannot be read is asked to be read again', (
+      tester,
+    ) async {
+      // Re-asking someone who has already consented, every time the
+      // network hiccups, trains them to tick the box without reading it.
+      final robot = robotWith(tester, reads: [restRefused()]);
+      await robot.launch();
+
+      expect(find.text(consentUnknownMessage), findsOneWidget);
+      expect(robot.checkbox, findsNothing);
+      expect(robot.analytics.exceptions, hasLength(1));
+
+      await robot.tap(robot.retry);
+
+      expect(robot.checkbox, findsOneWidget);
+    });
+
+    testWidgets('a failed read can be backed out of', (tester) async {
+      final robot = robotWith(tester, reads: [restRefused()]);
+      await robot.launch();
+
+      await robot.tap(robot.decline);
+
+      expect(robot.result, isFalse);
+      expect(robot.analytics.events, isEmpty);
+    });
+
+    testWidgets('meets accessibility guidelines asking and failing', (
+      tester,
+    ) async {
+      final robot = robotWith(tester, grants: [restRefused()]);
+      await robot.supabase.signedIn();
+      Future<Widget> freshApp() async {
+        await GetIt.I.reset();
+        return KeyedSubtree(key: UniqueKey(), child: robot.app);
+      }
+
+      await tester.expectMeetsAccessibilityGuidelines(
+        await freshApp(),
+        prepare: (tester) => robot.tap(robot.launcher),
+      );
+      await tester.expectMeetsAccessibilityGuidelines(
+        await freshApp(),
+        prepare: (tester) async {
+          await robot.tap(robot.launcher);
+          await robot.consentAndContinue();
+        },
+      );
+    });
+  });
+}
