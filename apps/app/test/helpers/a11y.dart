@@ -16,6 +16,9 @@ extension AccessibilityTesting on WidgetTester {
     addTearDown(platformDispatcher.clearAccessibilityFeaturesTestValue);
 
     await pumpWidget(widget);
+    // The startup gate holds the first frame until it has read the config
+    // (#49), so settle before [prepare] — it drives widgets behind the gate.
+    await pumpAndSettle();
     await prepare?.call(this);
     // Material widgets animate state changes (e.g. a button becoming
     // enabled); the guidelines must see the settled frame, not a blend.

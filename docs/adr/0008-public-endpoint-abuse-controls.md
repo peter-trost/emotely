@@ -55,13 +55,60 @@ magnitude above legitimate use. Counters are per Vercel region, so the effective
 global limit for a distributed attacker is higher — acceptable, because the
 budget backstop above catches what the rule lets through.
 
+A second rule covers the startup config endpoint, added with
+[#49](https://github.com/peter-trost/emotely/issues/49) now that Pro allows
+more than one:
+
+| Rule | Value |
+| --- | --- |
+| Project | `emotely-agent` → Firewall → Rules |
+| Match | Request Path equals `/api/config` |
+| Limit | 60 requests / 60 s, fixed window, keyed by IP |
+| Action | 429 Too Many Requests |
+
+The limit is looser because the endpoint is cheaper — no signature, no model
+call, no user lookup, and cached at the edge (`s-maxage=300`), so the
+overwhelming majority of reads never reach a function at all. It is still
+rate-limited rather than left open: an uncached path is still a function
+invocation, and an unauthenticated GET is the easiest thing in the system to
+point a script at. A real app reads it once per launch.
+
 We chose the WAF over an in-function limiter because the rule rejects at the
 edge, before a function invocation is billed, and because a Hobby project gets
-one rate-limit rule at no cost. The cost of that choice is that the rule is
-**dashboard configuration, not code**: it is not in this repository, not in CI,
-and will not survive a project re-creation. This ADR is the record; re-apply it
-by hand if the project is ever rebuilt. Verified live on 2026-09-04: the 31st
-request inside a minute from one IP gets a 429.
+one rate-limit rule at no cost. Verified live on 2026-09-04: the 31st request
+inside a minute from one IP gets a 429.
+
+### The rules are not in `vercel.json`, but they are reproducible
+
+`vercel.json` can carry WAF rules via `routes[].mitigate`, but only the `deny`
+and `challenge` actions — **not `rate_limit`**, which is what both rules here
+use. So these cannot be deployment configuration, and they stay out of CI.
+
+They are not dashboard-only either (as this ADR claimed until 2026-09-16). The
+CLI creates them non-interactively, which is what makes them reproducible by an
+agent rather than by hand. Changes stage as a draft and need an explicit
+publish; `vercel firewall rules list --expand` shows the live configuration.
+
+```bash
+vercel firewall rules add "Rate limit advance-session" \
+  --project emotely-agent \
+  --condition '{"type":"path","op":"eq","value":"/api/advance-session"}' \
+  --action rate_limit --rate-limit-window 60 --rate-limit-requests 30 \
+  --rate-limit-keys ip --rate-limit-action rate_limit --yes
+
+vercel firewall rules add "Rate limit config" \
+  --project emotely-agent \
+  --condition '{"type":"path","op":"eq","value":"/api/config"}' \
+  --action rate_limit --rate-limit-window 60 --rate-limit-requests 60 \
+  --rate-limit-keys ip --rate-limit-action rate_limit --yes
+
+vercel firewall diff --project emotely-agent      # review
+vercel firewall publish --project emotely-agent   # make live
+```
+
+What remains true is that the rules live on the project, not in this
+repository: nothing in CI asserts they exist, and a project re-creation drops
+them. The commands above are the recovery procedure.
 
 ## What follows from it
 
@@ -71,6 +118,16 @@ request inside a minute from one IP gets a 429.
 - **User auth (#7) replaces none of this.** It adds a per-user key for the rate
   limit and the ability to refuse anonymous sessions; signing, caps, and budget
   stay as they are.
-- **The Hobby plan allows one rate-limit rule per project.** Adding a second
-  (e.g. a tighter cap on empty-transcript session starts) needs Pro, which is on
-  the release path anyway (see `CLAUDE.md` § Billing).
+- **A second rate-limit rule needed Pro**, which the project has been on since
+  2026-09-13. `/api/config` uses that allowance
+  ([#49](https://github.com/peter-trost/emotely/issues/49)). A further rule
+  (e.g. a tighter cap on empty-transcript session starts) is now possible too.
+- **`/api/config` is public on purpose.** It answers without a token, unlike
+  every other endpoint here (ADR 0010), because the users it exists to block
+  are on a build the server no longer serves and must be told so before the
+  sign-in screen. What that costs is bounded by what the endpoint holds: a
+  version number and a public store link, both already visible in this
+  repository. It signs nothing, reads no database, and calls no model, so the
+  abuse it can support is bandwidth against a cached static body — the rule
+  above and the edge cache are the whole defence, and they are proportionate
+  to it.

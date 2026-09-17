@@ -15,6 +15,8 @@ void main() {
           analytics: AnalyticsSpy(),
         ),
       );
+      // The startup gate reads the config before anything renders (#49).
+      await tester.pumpAndSettle();
 
       expect(find.byType(SignInPage), findsOneWidget);
       expect(find.byType(JournalPage), findsNothing);
@@ -34,6 +36,7 @@ void main() {
           analytics: analytics,
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.byType(JournalPage), findsOneWidget);
       expect(find.text('Your journal'), findsOneWidget);

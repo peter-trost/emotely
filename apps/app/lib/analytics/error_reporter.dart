@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:emotely/config/config_client.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
@@ -74,6 +75,18 @@ class const ErrorReporter({required final Posthog posthog}) {
   Future<void> accountDeletionFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'account_deletion');
 
+  /// The startup config could not be read. The app blocks entirely on this,
+  /// so it is the most user-visible failure there is: worth knowing about
+  /// the moment it starts happening.
+  Future<void> configLoadFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'config_load');
+
+  /// The store could not be opened from the force-update screen. The user is
+  /// stuck: the screen has no way past it and the one action it offers just
+  /// failed, so this is worth knowing about even though nothing can retry it.
+  Future<void> storeLaunchFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'store_launch');
+
   /// Whether consent stands could not be read. The gate stays shut on this,
   /// so it is worth knowing how often it happens.
   Future<void> consentLoadFailed(Exception error, StackTrace stackTrace) =>
@@ -107,7 +120,13 @@ class const ErrorReporter({required final Posthog posthog}) {
   /// codes of a refusal from any of them (auth, data API, and whatever the
   /// app may call next) and one the code of a failure raised on the device.
   static Exception contentFree(Exception error) => switch (error) {
-    AgentException() || http.ClientException() || TimeoutException() => error,
+    // ConfigException carries a status code or a transport error, never a
+    // journal or a user — it is written here, not by a server or a database,
+    // and never from a parse error (which would embed the body it read).
+    AgentException() ||
+    ConfigException() ||
+    http.ClientException() ||
+    TimeoutException() => error,
     SupabaseApiException(:final errorCode, :final statusCode) =>
       WithheldException(
         error.runtimeType,

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/error_tracking.dart';
+import 'package:emotely/config/config_client.dart';
 import 'package:emotely/session/agent/agent_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -155,6 +156,26 @@ void main() {
         expect(leaving, isNot(contains('violet')));
         expect(leaving, isNot(contains('needle')));
       }
+    });
+
+    test('a config failure never quotes the body it could not read', () async {
+      // ConfigException is forwarded with its message, so the message must
+      // never be built from an error that embeds what it choked on — a
+      // FormatException carries the source it failed to parse (ADR 0005).
+      const body = '{"summary": "the day the sea turned violet"}';
+      final stub = ConfigStub()..script([configMalformed(body)]);
+
+      final error = await stub.configClient.fetch().then<Object?>(
+        (_) => null,
+        onError: (Object e) => e,
+      );
+
+      expect(error, isA<ConfigException>());
+      expect('$error', isNot(contains('violet')));
+      expect(
+        '${ErrorReporter.contentFree(error! as Exception)}',
+        isNot(contains('violet')),
+      );
     });
 
     test('a withheld exception is a value: same type and codes, same one', () {

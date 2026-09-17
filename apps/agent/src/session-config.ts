@@ -12,7 +12,23 @@ export const DEFAULT_MODEL = "openai/gpt-oss-120b";
 // app's `app_version`). Raise it only after a release the store has carried
 // long enough; the app shows a force-update screen below it, which is what
 // lets deprecated wire shapes be deleted rather than kept (#37).
+//
+// Served by `GET /api/config`, which the app reads once at startup (#49); the
+// session response no longer carries it. Raising it blocks apps at their next
+// launch, and at their next config cache miss — see CONFIG_CACHE_CONTROL.
 export const MIN_APP_VERSION = "1.0.0";
+
+// Where the app's force-update screen sends the user, served alongside the
+// minimum so the link can be corrected without an app release — the users who
+// see it are the ones who cannot receive one. The `EMOTELY_STORE_URL*`
+// variables override these per environment.
+//
+// `STORE_URL` answers a caller that did not name a platform, or named one we
+// do not know. Until the store listings exist (#9) all three are the releases
+// page, which works everywhere; the per-platform ones get real links then.
+export const STORE_URL = "https://github.com/peter-trost/emotely/releases";
+export const STORE_URL_IOS = STORE_URL;
+export const STORE_URL_ANDROID = STORE_URL;
 const FLAG_TIMEOUT_MS = 800;
 const CACHE_FILE = "agent-model.json";
 const ID_FILE = "distinct-id";

@@ -5,11 +5,40 @@ The deployed TypeScript service that runs the tool-calling session loop
 it live in the root [`README.md`](../../README.md) and [`docs/adr/`](../../docs/adr/);
 this file holds what is specific to operating the service.
 
+## Endpoints
+
+| Endpoint | Auth | What it does |
+| --- | --- | --- |
+| `POST /api/advance-session` | Supabase JWT ([ADR 0010](../../docs/adr/0010-supabase-data-layer.md)) | One session round: verifies the signed transcript, calls the model, returns the next question or the finished entry. |
+| `GET /api/config` | none | The startup config the app reads once before anything else: `min_app_version` and `store_url`. Takes `?platform=ios\|android` to pick the right store listing. Public and edge-cached — see below. |
+
+`GET /api/config` is the one unauthenticated endpoint. The app checks it
+**above the sign-in gate** ([#49](https://github.com/peter-trost/emotely/issues/49)):
+the users it exists to block are on a build the server no longer serves, so
+requiring a token would put a screen they may not be able to drive in front of
+the one telling them to update. It signs nothing, touches no database and
+calls no model, and its body (a version and a public link) is already in this
+repository. It is cached at the edge (`s-maxage=300`,
+`stale-while-revalidate=600`) and carries its own WAF rate-limit rule
+([ADR 0008](../../docs/adr/0008-public-endpoint-abuse-controls.md)).
+
+Two consequences worth knowing when you change `MIN_APP_VERSION`:
+
+- **A raise reaches users at their next launch, not instantly**, and only
+  after the edge cache expires (up to five minutes, longer while
+  `stale-while-revalidate` serves the old value). Plan it; it is not a stop
+  button.
+- **The app blocks when this endpoint is down.** That is deliberate (it fails
+  shut, ADR 0009), which makes availability here more user-visible than
+  anywhere else in the service — a broken `/api/config` is a hard outage even
+  though no model is involved. The nightly smoke probes it for that reason.
+
 ## Environment variables
 
-Read once per cold start in [`api/advance-session.ts`](api/advance-session.ts).
-Values are set on the `emotely-agent` Vercel project by a human, never
-committed (see the root [`AGENTS.md`](../../AGENTS.md)).
+Read once per cold start in [`api/advance-session.ts`](api/advance-session.ts)
+and [`api/config.ts`](api/config.ts). Values are set on the `emotely-agent`
+Vercel project by a human, never committed (see the root
+[`AGENTS.md`](../../AGENTS.md)).
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
@@ -19,6 +48,9 @@ committed (see the root [`AGENTS.md`](../../AGENTS.md)).
 | `AI_GATEWAY_API_KEY` | yes | Vercel AI Gateway key ([ADR 0003](../../docs/adr/0003-model-gateway-and-cost-ceiling.md)). |
 | `EMOTELY_MODEL` | no | Overrides `DEFAULT_MODEL` in `src/session-config.ts`. The value must be served by providers that **all** qualify under the gateway's privacy filters (below), or every round fails. |
 | `POSTHOG_KEY`, `POSTHOG_HOST` | no | LLM observability **and error tracking**; both or neither ([ADR 0004](../../docs/adr/0004-posthog-observability-stack.md)). Unset means no spans and no exception reports — the runbook below has nothing to read. |
+| `EMOTELY_STORE_URL` | no | Where the force-update screen sends a caller that named no platform, or one we do not know. Overrides `STORE_URL` in `src/session-config.ts`. Set these to correct a link without an app release — the only kind of fix that reaches someone who cannot install one. |
+| `EMOTELY_STORE_URL_IOS` | no | The App Store listing, served for `?platform=ios`. Overrides `STORE_URL_IOS`. |
+| `EMOTELY_STORE_URL_ANDROID` | no | The Play listing, served for `?platform=android`. Overrides `STORE_URL_ANDROID`. |
 
 ## Picking a model: it must qualify under the privacy filters
 

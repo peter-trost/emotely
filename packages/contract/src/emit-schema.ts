@@ -5,6 +5,7 @@ import {
   advanceSessionResponse,
   askQuestionInput,
   completeSessionInput,
+  configResponse,
   recordAnswerInput,
 } from "./index.ts";
 
@@ -21,6 +22,7 @@ const schema = {
   advance_session_response: z.toJSONSchema(advanceSessionResponse, {
     io: "input",
   }),
+  config_response: z.toJSONSchema(configResponse, { io: "input" }),
 };
 
 writeFileSync(

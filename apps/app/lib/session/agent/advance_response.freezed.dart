@@ -39,7 +39,7 @@ AdvanceResponse _$AdvanceResponseFromJson(
 /// @nodoc
 mixin _$AdvanceResponse {
 
- List<Object?> get transcript; String get signature; String get promptId; String? get minAppVersion;
+ List<Object?> get transcript; String get signature; String get promptId;
 /// Create a copy of AdvanceResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -53,20 +53,20 @@ $AdvanceResponseCopyWith<AdvanceResponse> get copyWith => _$AdvanceResponseCopyW
 @override
 bool operator ==(Object other) {
   final _this = this as AdvanceResponse;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AdvanceResponse&&const DeepCollectionEquality().equals(other.transcript, _this.transcript)&&(identical(other.signature, _this.signature) || other.signature == _this.signature)&&(identical(other.promptId, _this.promptId) || other.promptId == _this.promptId)&&(identical(other.minAppVersion, _this.minAppVersion) || other.minAppVersion == _this.minAppVersion));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AdvanceResponse&&const DeepCollectionEquality().equals(other.transcript, _this.transcript)&&(identical(other.signature, _this.signature) || other.signature == _this.signature)&&(identical(other.promptId, _this.promptId) || other.promptId == _this.promptId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as AdvanceResponse;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.transcript),_this.signature,_this.promptId,_this.minAppVersion);
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.transcript),_this.signature,_this.promptId);
 }
 
 @override
 String toString() {
   final _this = this as AdvanceResponse;
-  return 'AdvanceResponse(transcript: ${_this.transcript}, signature: ${_this.signature}, promptId: ${_this.promptId}, minAppVersion: ${_this.minAppVersion})';
+  return 'AdvanceResponse(transcript: ${_this.transcript}, signature: ${_this.signature}, promptId: ${_this.promptId})';
 }
 
 
@@ -77,7 +77,7 @@ abstract mixin class $AdvanceResponseCopyWith<$Res>  {
   factory $AdvanceResponseCopyWith(AdvanceResponse value, $Res Function(AdvanceResponse) _then) = _$AdvanceResponseCopyWithImpl;
 @useResult
 $Res call({
- List<Object?> transcript, String signature, String promptId, String? minAppVersion
+ List<Object?> transcript, String signature, String promptId
 });
 
 
@@ -94,13 +94,12 @@ class _$AdvanceResponseCopyWithImpl<$Res>
 
 /// Create a copy of AdvanceResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? transcript = null,Object? signature = null,Object? promptId = null,Object? minAppVersion = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? transcript = null,Object? signature = null,Object? promptId = null,}) {
   return _then(_self.copyWith(
 transcript: null == transcript ? _self.transcript : transcript // ignore: cast_nullable_to_non_nullable
 as List<Object?>,signature: null == signature ? _self.signature : signature // ignore: cast_nullable_to_non_nullable
 as String,promptId: null == promptId ? _self.promptId : promptId // ignore: cast_nullable_to_non_nullable
-as String,minAppVersion: freezed == minAppVersion ? _self.minAppVersion : minAppVersion // ignore: cast_nullable_to_non_nullable
-as String?,
+as String,
   ));
 }
 
@@ -185,11 +184,11 @@ return completed(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( List<Object?> transcript,  String signature,  String promptId,  PendingQuestion pending,  String? minAppVersion)?  awaitingAnswer,TResult Function( List<Object?> transcript,  String signature,  String promptId,  JournalEntry entry,  String? minAppVersion)?  completed,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( List<Object?> transcript,  String signature,  String promptId,  PendingQuestion pending)?  awaitingAnswer,TResult Function( List<Object?> transcript,  String signature,  String promptId,  JournalEntry entry)?  completed,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AwaitingAnswer() when awaitingAnswer != null:
-return awaitingAnswer(_that.transcript,_that.signature,_that.promptId,_that.pending,_that.minAppVersion);case Completed() when completed != null:
-return completed(_that.transcript,_that.signature,_that.promptId,_that.entry,_that.minAppVersion);case _:
+return awaitingAnswer(_that.transcript,_that.signature,_that.promptId,_that.pending);case Completed() when completed != null:
+return completed(_that.transcript,_that.signature,_that.promptId,_that.entry);case _:
   return orElse();
 
 }
@@ -207,11 +206,11 @@ return completed(_that.transcript,_that.signature,_that.promptId,_that.entry,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( List<Object?> transcript,  String signature,  String promptId,  PendingQuestion pending,  String? minAppVersion)  awaitingAnswer,required TResult Function( List<Object?> transcript,  String signature,  String promptId,  JournalEntry entry,  String? minAppVersion)  completed,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( List<Object?> transcript,  String signature,  String promptId,  PendingQuestion pending)  awaitingAnswer,required TResult Function( List<Object?> transcript,  String signature,  String promptId,  JournalEntry entry)  completed,}) {final _that = this;
 switch (_that) {
 case AwaitingAnswer():
-return awaitingAnswer(_that.transcript,_that.signature,_that.promptId,_that.pending,_that.minAppVersion);case Completed():
-return completed(_that.transcript,_that.signature,_that.promptId,_that.entry,_that.minAppVersion);}
+return awaitingAnswer(_that.transcript,_that.signature,_that.promptId,_that.pending);case Completed():
+return completed(_that.transcript,_that.signature,_that.promptId,_that.entry);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -225,11 +224,11 @@ return completed(_that.transcript,_that.signature,_that.promptId,_that.entry,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( List<Object?> transcript,  String signature,  String promptId,  PendingQuestion pending,  String? minAppVersion)?  awaitingAnswer,TResult? Function( List<Object?> transcript,  String signature,  String promptId,  JournalEntry entry,  String? minAppVersion)?  completed,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( List<Object?> transcript,  String signature,  String promptId,  PendingQuestion pending)?  awaitingAnswer,TResult? Function( List<Object?> transcript,  String signature,  String promptId,  JournalEntry entry)?  completed,}) {final _that = this;
 switch (_that) {
 case AwaitingAnswer() when awaitingAnswer != null:
-return awaitingAnswer(_that.transcript,_that.signature,_that.promptId,_that.pending,_that.minAppVersion);case Completed() when completed != null:
-return completed(_that.transcript,_that.signature,_that.promptId,_that.entry,_that.minAppVersion);case _:
+return awaitingAnswer(_that.transcript,_that.signature,_that.promptId,_that.pending);case Completed() when completed != null:
+return completed(_that.transcript,_that.signature,_that.promptId,_that.entry);case _:
   return null;
 
 }
@@ -241,7 +240,7 @@ return completed(_that.transcript,_that.signature,_that.promptId,_that.entry,_th
 @JsonSerializable()
 
 class AwaitingAnswer implements AdvanceResponse {
-  const AwaitingAnswer({required  List<Object?> transcript, required this.signature, required this.promptId, required this.pending, this.minAppVersion,  String? $type}): _transcript = transcript,$type = $type ?? 'awaiting_answer';
+  const AwaitingAnswer({required  List<Object?> transcript, required this.signature, required this.promptId, required this.pending,  String? $type}): _transcript = transcript,$type = $type ?? 'awaiting_answer';
   factory AwaitingAnswer.fromJson(Map<String, dynamic> json) => _$AwaitingAnswerFromJson(json);
 
  final  List<Object?> _transcript;
@@ -254,7 +253,6 @@ class AwaitingAnswer implements AdvanceResponse {
 @override final  String signature;
 @override final  String promptId;
  final  PendingQuestion pending;
-@override final  String? minAppVersion;
 
 @JsonKey(name: 'status')
 final String $type;
@@ -273,18 +271,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is AwaitingAnswer&&const DeepCollectionEquality().equals(other.transcript, _transcript)&&(identical(other.signature, signature) || other.signature == signature)&&(identical(other.promptId, promptId) || other.promptId == promptId)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.minAppVersion, minAppVersion) || other.minAppVersion == minAppVersion));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is AwaitingAnswer&&const DeepCollectionEquality().equals(other.transcript, _transcript)&&(identical(other.signature, signature) || other.signature == signature)&&(identical(other.promptId, promptId) || other.promptId == promptId)&&(identical(other.pending, pending) || other.pending == pending));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_transcript),signature,promptId,pending,minAppVersion);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_transcript),signature,promptId,pending);
 }
 
 @override
 String toString() {
-    return 'AdvanceResponse.awaitingAnswer(transcript: $transcript, signature: $signature, promptId: $promptId, pending: $pending, minAppVersion: $minAppVersion)';
+    return 'AdvanceResponse.awaitingAnswer(transcript: $transcript, signature: $signature, promptId: $promptId, pending: $pending)';
 }
 
 
@@ -295,7 +293,7 @@ abstract mixin class $AwaitingAnswerCopyWith<$Res> implements $AdvanceResponseCo
   factory $AwaitingAnswerCopyWith(AwaitingAnswer value, $Res Function(AwaitingAnswer) _then) = _$AwaitingAnswerCopyWithImpl;
 @override @useResult
 $Res call({
- List<Object?> transcript, String signature, String promptId, PendingQuestion pending, String? minAppVersion
+ List<Object?> transcript, String signature, String promptId, PendingQuestion pending
 });
 
 
@@ -312,14 +310,13 @@ class _$AwaitingAnswerCopyWithImpl<$Res>
 
 /// Create a copy of AdvanceResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? transcript = null,Object? signature = null,Object? promptId = null,Object? pending = null,Object? minAppVersion = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? transcript = null,Object? signature = null,Object? promptId = null,Object? pending = null,}) {
   return _then(AwaitingAnswer(
 transcript: null == transcript ? _self._transcript : transcript // ignore: cast_nullable_to_non_nullable
 as List<Object?>,signature: null == signature ? _self.signature : signature // ignore: cast_nullable_to_non_nullable
 as String,promptId: null == promptId ? _self.promptId : promptId // ignore: cast_nullable_to_non_nullable
 as String,pending: null == pending ? _self.pending : pending // ignore: cast_nullable_to_non_nullable
-as PendingQuestion,minAppVersion: freezed == minAppVersion ? _self.minAppVersion : minAppVersion // ignore: cast_nullable_to_non_nullable
-as String?,
+as PendingQuestion,
   ));
 }
 
@@ -339,7 +336,7 @@ $PendingQuestionCopyWith<$Res> get pending {
 @JsonSerializable()
 
 class Completed implements AdvanceResponse {
-  const Completed({required  List<Object?> transcript, required this.signature, required this.promptId, required this.entry, this.minAppVersion,  String? $type}): _transcript = transcript,$type = $type ?? 'completed';
+  const Completed({required  List<Object?> transcript, required this.signature, required this.promptId, required this.entry,  String? $type}): _transcript = transcript,$type = $type ?? 'completed';
   factory Completed.fromJson(Map<String, dynamic> json) => _$CompletedFromJson(json);
 
  final  List<Object?> _transcript;
@@ -352,7 +349,6 @@ class Completed implements AdvanceResponse {
 @override final  String signature;
 @override final  String promptId;
  final  JournalEntry entry;
-@override final  String? minAppVersion;
 
 @JsonKey(name: 'status')
 final String $type;
@@ -371,18 +367,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Completed&&const DeepCollectionEquality().equals(other.transcript, _transcript)&&(identical(other.signature, signature) || other.signature == signature)&&(identical(other.promptId, promptId) || other.promptId == promptId)&&(identical(other.entry, entry) || other.entry == entry)&&(identical(other.minAppVersion, minAppVersion) || other.minAppVersion == minAppVersion));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Completed&&const DeepCollectionEquality().equals(other.transcript, _transcript)&&(identical(other.signature, signature) || other.signature == signature)&&(identical(other.promptId, promptId) || other.promptId == promptId)&&(identical(other.entry, entry) || other.entry == entry));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_transcript),signature,promptId,entry,minAppVersion);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_transcript),signature,promptId,entry);
 }
 
 @override
 String toString() {
-    return 'AdvanceResponse.completed(transcript: $transcript, signature: $signature, promptId: $promptId, entry: $entry, minAppVersion: $minAppVersion)';
+    return 'AdvanceResponse.completed(transcript: $transcript, signature: $signature, promptId: $promptId, entry: $entry)';
 }
 
 
@@ -393,7 +389,7 @@ abstract mixin class $CompletedCopyWith<$Res> implements $AdvanceResponseCopyWit
   factory $CompletedCopyWith(Completed value, $Res Function(Completed) _then) = _$CompletedCopyWithImpl;
 @override @useResult
 $Res call({
- List<Object?> transcript, String signature, String promptId, JournalEntry entry, String? minAppVersion
+ List<Object?> transcript, String signature, String promptId, JournalEntry entry
 });
 
 
@@ -410,14 +406,13 @@ class _$CompletedCopyWithImpl<$Res>
 
 /// Create a copy of AdvanceResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? transcript = null,Object? signature = null,Object? promptId = null,Object? entry = null,Object? minAppVersion = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? transcript = null,Object? signature = null,Object? promptId = null,Object? entry = null,}) {
   return _then(Completed(
 transcript: null == transcript ? _self._transcript : transcript // ignore: cast_nullable_to_non_nullable
 as List<Object?>,signature: null == signature ? _self.signature : signature // ignore: cast_nullable_to_non_nullable
 as String,promptId: null == promptId ? _self.promptId : promptId // ignore: cast_nullable_to_non_nullable
 as String,entry: null == entry ? _self.entry : entry // ignore: cast_nullable_to_non_nullable
-as JournalEntry,minAppVersion: freezed == minAppVersion ? _self.minAppVersion : minAppVersion // ignore: cast_nullable_to_non_nullable
-as String?,
+as JournalEntry,
   ));
 }
 

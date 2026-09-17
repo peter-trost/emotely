@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
@@ -26,8 +27,18 @@ class UrlLauncherSpy.setup()
   /// URLs in the order the app launched them.
   final launched = <String>[];
 
+  /// When true, every launch throws as the real plugin does when no app can
+  /// handle the URL — nothing is recorded in [launched].
+  var fails = false;
+
   @override
   Future<bool> launchUrl(String url, LaunchOptions options) async {
+    if (fails) {
+      throw PlatformException(
+        code: 'ACTIVITY_NOT_FOUND',
+        message: 'No app found to handle the URL',
+      );
+    }
     launched.add(url);
     return true;
   }

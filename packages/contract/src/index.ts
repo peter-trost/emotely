@@ -79,8 +79,6 @@ const advanceSessionBase = {
   transcript: z.array(z.unknown()),
   signature: nonemptyString,
   prompt_id: nonemptyString,
-  // Below this the app must update before it can continue (force-update).
-  min_app_version: appVersion,
 };
 
 export const advanceSessionResponse = z.discriminatedUnion("status", [
@@ -102,3 +100,21 @@ export const advanceSessionResponse = z.discriminatedUnion("status", [
   }),
 ]);
 export type AdvanceSessionResponse = z.infer<typeof advanceSessionResponse>;
+
+// The startup config the app fetches once, before its first session
+// (`GET /api/config`). It carries what the app must know before it may run and
+// what no session round should have to repeat: the force-update threshold and
+// where to go when it trips. Held apart from the session envelope so the
+// version gate is not a session concern (#49) and so this stays cacheable at
+// the edge — it is the same for every caller and needs no auth.
+export const configResponse = z.object({
+  // Below this the app must update before it may start a session; compared
+  // against the `app_version` it reports on every session request.
+  min_app_version: appVersion,
+  // Where the force-update screen sends the user. Server-controlled so the
+  // store link can change without an app release — which matters most for the
+  // users who cannot get one, since they are the ones being sent there.
+  // http(s) only: the app hands this to the platform URL launcher.
+  store_url: z.url({ protocol: /^https?$/ }),
+});
+export type ConfigResponse = z.infer<typeof configResponse>;

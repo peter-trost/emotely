@@ -39,7 +39,6 @@ function gatewayRejection(): Error {
 function refusing(onFailure?: (error: unknown) => void) {
   return createAdvanceSessionHandler({
     secret: SECRET,
-    minAppVersion: "1.0.0",
     verifyCaller: signedIn,
     advance: async () => {
       throw gatewayRejection();
@@ -69,7 +68,6 @@ describe("a model round the gateway refused", () => {
     // reasoning as the transcript-shape parse in ADR 0008.
     const broken = createAdvanceSessionHandler({
       secret: SECRET,
-      minAppVersion: "1.0.0",
       verifyCaller: signedIn,
       advance: async () => {
         throw new Error("a server bug");

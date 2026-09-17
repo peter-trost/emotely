@@ -1,5 +1,6 @@
 // coverage:ignore-file
 // Composition root; behavior lives in EmotelyApp and is tested there.
+
 import 'package:emotely/analytics/auth_analytics.dart';
 import 'package:emotely/analytics/consent_analytics.dart';
 import 'package:emotely/analytics/error_reporter.dart';
@@ -8,7 +9,9 @@ import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
+import 'package:emotely/config/config_client.dart';
 import 'package:emotely/session/agent/agent_client.dart';
+
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
@@ -38,12 +41,19 @@ Future<void> main() async {
   );
   final packageInfo = await PackageInfo.fromPlatform();
   final posthog = Posthog();
+  // One client for both endpoints: same host, same connection pool.
+  final httpClient = http.Client();
   runApp(
     EmotelyApp(
+      // `version` is pubspec's `version` without the build number.
+      appVersion: packageInfo.version,
+      configClient: ConfigClient(
+        httpClient: httpClient,
+        endpoint: Uri.parse(configUrl),
+      ),
       agentClient: AgentClient(
-        httpClient: http.Client(),
+        httpClient: httpClient,
         endpoint: Uri.parse(agentUrl),
-        // `version` is pubspec's `version` without the build number.
         appVersion: packageInfo.version,
         accessToken: () => supabase.client.auth.currentSession?.accessToken,
       ),

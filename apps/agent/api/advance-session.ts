@@ -5,7 +5,7 @@ import { z } from "zod";
 import { defaultQuestionSet } from "../src/default-question-set.ts";
 import { createAdvanceSessionHandler } from "../src/http-advance-session.ts";
 import { createCallerVerifier, supabaseAuth } from "../src/request-auth.ts";
-import { DEFAULT_MODEL, MIN_APP_VERSION } from "../src/session-config.ts";
+import { DEFAULT_MODEL } from "../src/session-config.ts";
 import { advanceSession } from "../src/session-core.ts";
 import {
   flushTelemetry,
@@ -42,7 +42,6 @@ const transcriptSchema = z.array(modelMessageSchema);
 const handler = createAdvanceSessionHandler({
   secret,
   ...(previousSecret === undefined ? {} : { previousSecret }),
-  minAppVersion: MIN_APP_VERSION,
   verifyCaller: createCallerVerifier(supabaseAuth(supabaseUrl)),
   // A gateway refusal is the outage signal (issue #99): without it the only
   // alarm is the nightly smoke, so a model whose providers stop qualifying

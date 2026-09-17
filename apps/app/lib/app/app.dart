@@ -6,6 +6,9 @@ import 'package:emotely/analytics/session_analytics.dart';
 import 'package:emotely/app/theme.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
+import 'package:emotely/config/bloc/config_bloc.dart';
+import 'package:emotely/config/config_client.dart';
+import 'package:emotely/config/view/config_gate.dart';
 import 'package:emotely/consent/consent_store.dart';
 import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/journal/view/journal_page.dart';
@@ -18,6 +21,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 /// and the one decision above every screen — signed in or not.
 class const EmotelyApp({
   required final AgentClient agentClient,
+  required final ConfigClient configClient,
+  required final String appVersion,
   required final SessionAnalytics analytics,
   required final SupabaseClient supabase,
   required final AuthAnalytics authAnalytics,
@@ -38,18 +43,34 @@ class const EmotelyApp({
       RepositoryProvider.value(value: journalAnalytics),
       RepositoryProvider.value(value: consentAnalytics),
       RepositoryProvider.value(value: errorReporter),
+      RepositoryProvider.value(value: configClient),
     ],
-    child: BlocProvider(
-      create: (_) => AuthBloc(
-        supabase: supabase,
-        analytics: authAnalytics,
-        errors: errorReporter,
-      ),
+    child: MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => AuthBloc(
+            supabase: supabase,
+            analytics: authAnalytics,
+            errors: errorReporter,
+          ),
+        ),
+        // Not lazy: the gate must ask before the first frame the user could
+        // act on, not when something happens to read it.
+        BlocProvider(
+          lazy: false,
+          create: (_) => ConfigBloc(
+            client: configClient,
+            appVersion: appVersion,
+            analytics: analytics,
+            errors: errorReporter,
+          )..add(const ConfigEvent.loaded()),
+        ),
+      ],
       child: MaterialApp(
         title: 'emotely',
         theme: lightTheme,
         darkTheme: darkTheme,
-        home: const _Root(),
+        home: const ConfigGate(child: _Root()),
       ),
     ),
   );
