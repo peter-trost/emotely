@@ -41,3 +41,14 @@ const supabasePublishableKey = String.fromEnvironment(
   'EMOTELY_SUPABASE_PUBLISHABLE_KEY',
   defaultValue: 'sb_publishable_di6BB76PPuuoDklt7jtI0w_KlwO_8JF',
 );
+
+/// A define that has to be an absolute URL, checked once at launch so a bad
+/// value fails the launch and names its define — not the first request,
+/// somewhere behind the sign-in screen.
+Uri urlFrom(String value, {required String define}) {
+  final uri = Uri.tryParse(value);
+  if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+    throw ArgumentError.value(value, define, 'must be an absolute URL');
+  }
+  return uri;
+}

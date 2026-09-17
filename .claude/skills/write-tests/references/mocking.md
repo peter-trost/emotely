@@ -23,8 +23,18 @@
   the journal row builders, the a11y check and the submit helpers — lives in
   `package:testing`, which depends on the utilities it fakes (they dev-depend
   on it in turn). `appUnderTest(...)` in the app's
-  `test/helpers/app_harness.dart` wires the stubs together the way `main.dart`
-  does; only that and `pumpApp` stay in the app.
+  `test/helpers/app_harness.dart` composes the app with the production
+  `registerApp` over the stubs' clients; only that and `pumpApp` stay in the
+  app.
+- **The seam is the leaves, never a registration.** A test hands
+  `registerApp` its scripted http clients, Supabase client and PostHog mock
+  and touches the container for nothing else: no `registerSingleton` of a
+  repository, an analytics builder or a bloc in a test file. A feature
+  package's tests may additionally replace their own feature's navigator.
+  `appUnderTest` registers `GetIt.I.reset` as a teardown; get_it refuses a
+  second registration in the same test, on purpose — a test that has to
+  compose the app twice (an a11y pass per screen state) says so with
+  `await GetIt.I.reset()` between the two compositions.
   What may NOT be mocked: blocs, repositories with logic, widgets.
 - `SupabaseStub.script(otp:, verify:, password:, logout:)` queues the auth
   endpoints (`/auth/v1/otp`, `/verify`, `/token`, `/logout`). Rounds are

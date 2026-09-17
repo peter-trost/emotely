@@ -18,6 +18,7 @@ class JournalBloc({
   this : super(const JournalState.loading()) {
     on<JournalLoaded>(_onLoaded);
     on<JournalSessionDiscarded>(_onSessionDiscarded);
+    on<JournalEntryOpened>(_onEntryOpened);
   }
 
   Future<void> _onLoaded(
@@ -39,6 +40,9 @@ class JournalBloc({
       emit(const JournalState.failure());
     }
   }
+
+  void _onEntryOpened(JournalEntryOpened event, Emitter<JournalState> emit) =>
+      unawaited(_analytics.entryOpened());
 
   Future<void> _onSessionDiscarded(
     JournalSessionDiscarded event,

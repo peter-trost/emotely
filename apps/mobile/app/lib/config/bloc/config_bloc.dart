@@ -5,6 +5,7 @@ import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:pub_semver/pub_semver.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 part 'config_bloc.freezed.dart';
 part 'config_event.dart';
@@ -24,6 +25,7 @@ class ConfigBloc({
 }) extends Bloc<ConfigEvent, ConfigState> {
   this : super(const ConfigState.unknown()) {
     on<ConfigLoaded>(_onLoaded);
+    on<ConfigUpdateRequested>(_onUpdateRequested);
   }
 
   Future<void> _onLoaded(ConfigLoaded event, Emitter<ConfigState> emit) async {
@@ -67,6 +69,26 @@ class ConfigBloc({
             )
           : const ConfigState.ready(),
     );
+  }
+
+  /// Opens the store the server named. The screen stays blocking whether or
+  /// not the store opens — there is nothing else it could show — but a
+  /// failure here strands the user on their only way out, so it is reported
+  /// rather than swallowed.
+  Future<void> _onUpdateRequested(
+    ConfigUpdateRequested event,
+    Emitter<ConfigState> emit,
+  ) async {
+    if (state case ConfigUpdateRequired(:final storeUrl)) {
+      try {
+        await launchUrl(
+          Uri.parse(storeUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      } on Exception catch (error, stackTrace) {
+        unawaited(_errors.storeLaunchFailed(error, stackTrace));
+      }
+    }
   }
 
   /// Whether the server's minimum is newer than this build.

@@ -1,24 +1,19 @@
 import 'dart:async';
 
-import 'package:analytics/analytics.dart';
 import 'package:emotely/account/bloc/account_bloc.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/consent/bloc/consent_bloc.dart';
 import 'package:emotely/consent/consent_text.dart';
 import 'package:emotely/consent/view/consent_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
 /// Wires an [AccountBloc] to the Supabase client in scope.
 class const AccountPage({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (context) => AccountBloc(
-      supabase: context.read<SupabaseClient>(),
-      analytics: context.read<AuthAnalytics>(),
-      errors: context.read<ErrorReporter>(),
-    ),
+    create: (_) => GetIt.I<AccountBloc>(),
     child: const AccountView(),
   );
 }

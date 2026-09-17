@@ -2,6 +2,7 @@ import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     show AuthApiException, AuthException, AuthRetryableFetchException;
@@ -642,6 +643,8 @@ void main() {
       final robot = SignInRobot(tester, supabase: supabase, agent: AgentStub());
 
       await tester.expectMeetsAccessibilityGuidelines(robot.app);
+      // A second composition in one test starts from an empty container.
+      await GetIt.I.reset();
       await tester.expectMeetsAccessibilityGuidelines(
         robot.app,
         prepare: (tester) => robot.requestCode(),

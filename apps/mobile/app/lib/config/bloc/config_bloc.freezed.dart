@@ -56,11 +56,12 @@ extension ConfigEventPatterns on ConfigEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ConfigLoaded value)?  loaded,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ConfigLoaded value)?  loaded,TResult Function( ConfigUpdateRequested value)?  updateRequested,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case ConfigLoaded() when loaded != null:
-return loaded(_that);case _:
+return loaded(_that);case ConfigUpdateRequested() when updateRequested != null:
+return updateRequested(_that);case _:
   return orElse();
 
 }
@@ -78,11 +79,12 @@ return loaded(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ConfigLoaded value)  loaded,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ConfigLoaded value)  loaded,required TResult Function( ConfigUpdateRequested value)  updateRequested,}){
 final _that = this;
 switch (_that) {
 case ConfigLoaded():
-return loaded(_that);}
+return loaded(_that);case ConfigUpdateRequested():
+return updateRequested(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -96,11 +98,12 @@ return loaded(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ConfigLoaded value)?  loaded,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ConfigLoaded value)?  loaded,TResult? Function( ConfigUpdateRequested value)?  updateRequested,}){
 final _that = this;
 switch (_that) {
 case ConfigLoaded() when loaded != null:
-return loaded(_that);case _:
+return loaded(_that);case ConfigUpdateRequested() when updateRequested != null:
+return updateRequested(_that);case _:
   return null;
 
 }
@@ -117,10 +120,11 @@ return loaded(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  loaded,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  loaded,TResult Function()?  updateRequested,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ConfigLoaded() when loaded != null:
-return loaded();case _:
+return loaded();case ConfigUpdateRequested() when updateRequested != null:
+return updateRequested();case _:
   return orElse();
 
 }
@@ -138,10 +142,11 @@ return loaded();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  loaded,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  loaded,required TResult Function()  updateRequested,}) {final _that = this;
 switch (_that) {
 case ConfigLoaded():
-return loaded();}
+return loaded();case ConfigUpdateRequested():
+return updateRequested();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -155,10 +160,11 @@ return loaded();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  loaded,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  loaded,TResult? Function()?  updateRequested,}) {final _that = this;
 switch (_that) {
 case ConfigLoaded() when loaded != null:
-return loaded();case _:
+return loaded();case ConfigUpdateRequested() when updateRequested != null:
+return updateRequested();case _:
   return null;
 
 }
@@ -190,6 +196,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
     return 'ConfigEvent.loaded()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class ConfigUpdateRequested implements ConfigEvent {
+  const ConfigUpdateRequested();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is ConfigUpdateRequested);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'ConfigEvent.updateRequested()';
 }
 
 

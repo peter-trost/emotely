@@ -1,6 +1,7 @@
 import 'package:emotely/account/view/account_page.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../helpers/helpers.dart';
@@ -254,21 +255,26 @@ void main() {
       // Pumping the same widget type again updates the tree in place, and
       // the navigator would still be on the account screen; a key per pass
       // starts each one from the journal.
-      Widget freshApp() => KeyedSubtree(key: UniqueKey(), child: robot.app);
+      // Each pass is a fresh composition, so the container is emptied first:
+      // composing twice into a filled container fails loudly by design.
+      Future<Widget> freshApp() async {
+        await GetIt.I.reset();
+        return KeyedSubtree(key: UniqueKey(), child: robot.app);
+      }
 
       await tester.expectMeetsAccessibilityGuidelines(
-        freshApp(),
+        await freshApp(),
         prepare: (tester) => robot.tap(robot.openAccount),
       );
       await tester.expectMeetsAccessibilityGuidelines(
-        freshApp(),
+        await freshApp(),
         prepare: (tester) async {
           await robot.tap(robot.openAccount);
           await robot.askToDelete();
         },
       );
       await tester.expectMeetsAccessibilityGuidelines(
-        freshApp(),
+        await freshApp(),
         prepare: (tester) async {
           await robot.tap(robot.openAccount);
           await robot.askToDelete();

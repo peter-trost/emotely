@@ -1,9 +1,9 @@
 import 'package:agent_client/agent_client.dart';
-import 'package:analytics/analytics.dart';
 import 'package:emotely/session/bloc/session_bloc.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/widgets/answer_input.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -13,12 +13,8 @@ class const SessionPage({final OpenSession? resume, super.key})
     extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (context) => SessionBloc(
-      agentClient: context.read<AgentClient>(),
-      analytics: context.read<SessionAnalytics>(),
-      errors: context.read<ErrorReporter>(),
-      repository: context.read<JournalRepository>(),
-    )..add(SessionEvent.started(resume: resume)),
+    create: (_) =>
+        GetIt.I<SessionBloc>()..add(SessionEvent.started(resume: resume)),
     child: const SessionView(),
   );
 }

@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:analytics/analytics.dart';
-import 'package:consent_repository/consent_repository.dart';
 import 'package:emotely/account/view/account_page.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/consent/bloc/consent_bloc.dart';
@@ -11,6 +9,7 @@ import 'package:emotely/journal/bloc/journal_bloc.dart';
 import 'package:emotely/journal/view/entry_page.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -25,21 +24,14 @@ class const JournalPage({super.key}) extends StatelessWidget {
   Widget build(BuildContext context) => MultiBlocProvider(
     providers: [
       BlocProvider(
-        create: (context) => JournalBloc(
-          repository: context.read<JournalRepository>(),
-          analytics: context.read<JournalAnalytics>(),
-        )..add(const JournalEvent.loaded()),
+        create: (_) => GetIt.I<JournalBloc>()..add(const JournalEvent.loaded()),
       ),
       BlocProvider(
         // Eager: the answer has to be in hand before Start is tapped, and
         // a lazy provider would not read it until something looked, which
         // is the tap itself — one frame too late.
         lazy: false,
-        create: (context) => ConsentBloc(
-          repository: context.read<ConsentRepository>(),
-          analytics: context.read<ConsentAnalytics>(),
-          errors: context.read<ErrorReporter>(),
-        )..add(const ConsentEvent.loaded()),
+        create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
       ),
     ],
     child: const JournalView(),
@@ -251,7 +243,7 @@ class const _EntryTile({required final EntryRecord record})
       overflow: TextOverflow.ellipsis,
     ),
     onTap: () {
-      unawaited(context.read<JournalAnalytics>().entryOpened());
+      context.read<JournalBloc>().add(const JournalEvent.entryOpened());
       Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => EntryPage(record: record)),
       );
