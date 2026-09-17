@@ -7,6 +7,7 @@ import 'package:feature_session/src/view/session_page.dart';
 import 'package:feature_session/src/widgets/longtext_input.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -425,6 +426,64 @@ void main() {
         ]);
         expect(robot.analytics.events.last, event('session_failed'));
         expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('resuming a stored session', () {
+      const stored = OpenSession(
+        id: 's-open',
+        transcript: ['stored'],
+        signature: 'stored-sig',
+        questions: [rateQuestion],
+        pending: PendingQuestion(toolCallId: 'c1', question: rateQuestion),
+      );
+      final finished = completed(
+        summary: 'Done.',
+        answers: const {'q-rate': Answer.rating(7)},
+      );
+
+      testWidgets('puts the pending question back without a server round', (
+        tester,
+      ) async {
+        final agent = AgentStub()..script([finished]);
+        final robot = SessionRobot(tester, agent, resume: stored);
+        await robot.launch();
+        await robot.settle();
+
+        expect(robot.questionText, rateQuestion.question);
+        expect(find.text('Question 1'), findsOneWidget);
+        expect(agent.requests, isEmpty);
+        expect(robot.analytics.events, [event('session_resumed')]);
+
+        await robot.answerRating(7);
+
+        // The stored transcript and signature are what the round echoes.
+        expect(agent.lastRequest['transcript'], ['stored']);
+        expect(agent.lastRequest['signature'], 'stored-sig');
+        expect(robot.lastAnsweredToolCall, 'c1');
+        expect(robot.summary, findsOneWidget);
+      });
+
+      testWidgets('a session saved without its pending question is finished '
+          'by the agent', (tester) async {
+        final agent = AgentStub()..script([finished]);
+        final robot = SessionRobot(
+          tester,
+          agent,
+          resume: const OpenSession(
+            id: 's-open',
+            transcript: ['stored'],
+            signature: 'stored-sig',
+            questions: [rateQuestion],
+          ),
+        );
+        await robot.launch();
+        await robot.settle();
+
+        expect(agent.requests, hasLength(1));
+        expect(agent.lastRequest['transcript'], ['stored']);
+        expect(agent.lastRequest, isNot(contains('answer')));
+        expect(robot.summary, findsOneWidget);
       });
     });
 
