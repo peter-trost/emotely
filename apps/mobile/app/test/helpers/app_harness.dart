@@ -1,10 +1,8 @@
+import 'package:analytics/analytics.dart';
 import 'package:emotely/app/app.dart';
+import 'package:emotely/consent/consent_text.dart';
 import 'package:flutter/widgets.dart';
 import 'package:testing/testing.dart';
-
-import 'agent_stub.dart';
-import 'analytics_spy.dart';
-import 'config_stub.dart';
 
 /// The whole app, wired to the scripted agent, the scripted Supabase and the
 /// spied PostHog. The agent client forwards whatever token the Supabase
@@ -29,7 +27,10 @@ Widget appUnderTest({
     supabase: supabase.supabase,
     authAnalytics: analytics.authAnalytics,
     journalAnalytics: analytics.journalAnalytics,
-    consentAnalytics: analytics.consentAnalytics,
+    consentAnalytics: ConsentAnalytics(
+      posthog: analytics.posthog,
+      version: consentVersion,
+    ),
     errorReporter: analytics.errorReporter,
   );
 }

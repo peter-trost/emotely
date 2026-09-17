@@ -10,8 +10,12 @@ environment:
 
 workspace:
   - app
+  - packages/utility/agent_client
   - packages/utility/analysis
+  - packages/utility/analytics
+  - packages/utility/consent_repository
   - packages/utility/contract
+  - packages/utility/journal_repository
   - packages/utility/testing
 
 dev_dependencies:

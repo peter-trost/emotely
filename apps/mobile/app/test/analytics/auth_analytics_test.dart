@@ -1,4 +1,4 @@
-import 'package:emotely/analytics/auth_analytics.dart';
+import 'package:analytics/analytics.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 // gotrue has its own AuthState (the stream event); ours is the bloc state.

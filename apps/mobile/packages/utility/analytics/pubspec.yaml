@@ -1,0 +1,23 @@
+name: analytics
+description: PostHog product analytics and error tracking, content-free by construction (ADR 0004, ADR 0005).
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  agent_client: any
+  contract: any
+  flutter:
+    sdk: flutter
+  http: 1.6.0
+  meta: ^1.19.0
+  posthog_flutter: 5.39.0
+  supabase_flutter: 3.0.0-dev.4
+
+dev_dependencies:
+  analysis: any
+  flutter_test:
+    sdk: flutter
+  testing: any

@@ -1,10 +1,9 @@
 import 'dart:async';
 
-import 'package:emotely/analytics/journal_analytics.dart';
-import 'package:emotely/journal/journal_models.dart';
-import 'package:emotely/journal/journal_store.dart';
+import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:journal_repository/journal_repository.dart';
 
 part 'journal_bloc.freezed.dart';
 part 'journal_event.dart';
@@ -13,7 +12,7 @@ part 'journal_state.dart';
 /// The journal as the home screen shows it: every filed entry, and the
 /// session still in progress if there is one.
 class JournalBloc({
-  required final JournalStore _store,
+  required final JournalRepository _repository,
   required final JournalAnalytics _analytics,
 }) extends Bloc<JournalEvent, JournalState> {
   this : super(const JournalState.loading()) {
@@ -27,8 +26,8 @@ class JournalBloc({
   ) async {
     emit(const JournalState.loading());
     try {
-      final entries = await _store.entries();
-      final openSession = await _store.openSession();
+      final entries = await _repository.entries();
+      final openSession = await _repository.openSession();
       unawaited(
         _analytics.journalViewed(
           entries: entries.length,
@@ -48,7 +47,7 @@ class JournalBloc({
     if (state case JournalReady(openSession: final session?)) {
       emit(const JournalState.loading());
       try {
-        await _store.discardSession(session.id);
+        await _repository.discardSession(session.id);
         unawaited(_analytics.sessionDiscarded());
       } on Exception {
         emit(const JournalState.failure());

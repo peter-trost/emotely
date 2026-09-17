@@ -33,6 +33,9 @@ resolution: workspace
 dependencies:
   # Workspace packages resolve to the copy in apps/mobile/packages whatever
   # constraint is written here; `any` says exactly that.
+  agent_client: any
+  analytics: any
+  consent_repository: any
   contract: any
   # Cupertino Icons font for iOS-style icons.
   cupertino_icons: ^1.0.8
@@ -41,6 +44,7 @@ dependencies:
   flutter_bloc: ^9.1.1
   freezed_annotation: 3.1.0
   http: 1.6.0
+  journal_repository: any
   json_annotation: 4.12.0
   material_ui: ^1.1.0
   meta: ^1.19.0

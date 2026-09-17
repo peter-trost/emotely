@@ -1,6 +1,6 @@
+import 'package:agent_client/agent_client.dart';
 import 'package:contract/contract.dart';
 import 'package:emotely/journal/view/journal_page.dart';
-import 'package:emotely/session/agent/advance_response.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 

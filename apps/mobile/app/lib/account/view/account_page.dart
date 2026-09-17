@@ -1,8 +1,7 @@
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:emotely/account/bloc/account_bloc.dart';
-import 'package:emotely/analytics/auth_analytics.dart';
-import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/consent/bloc/consent_bloc.dart';
 import 'package:emotely/consent/consent_text.dart';

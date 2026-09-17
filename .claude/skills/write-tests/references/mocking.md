@@ -18,12 +18,13 @@
   scripted `MockClient`; sign in a test with `supabase.signedIn()`, script
   the data API per `METHOD /rest/v1/...` with `rest(...)`, defaults come
   from `journalWorks()`), platform
-  channels, and infrastructure like image caching. `SupabaseStub`, the a11y
-  check, the submit helpers and `UrlLauncherSpy` live in `package:testing`;
-  the stubs that know app classes (`AgentStub`, `ConfigStub`, `AnalyticsSpy`)
-  stay in the app's `test/helpers/`, and `appUnderTest(...)` in
-  `test/helpers/app_harness.dart` wires them together the way `main.dart`
-  does.
+  channels, and infrastructure like image caching. Every stub and spy —
+  `AgentStub`, `ConfigStub`, `SupabaseStub`, `AnalyticsSpy`, `UrlLauncherSpy`,
+  the journal row builders, the a11y check and the submit helpers — lives in
+  `package:testing`, which depends on the utilities it fakes (they dev-depend
+  on it in turn). `appUnderTest(...)` in the app's
+  `test/helpers/app_harness.dart` wires the stubs together the way `main.dart`
+  does; only that and `pumpApp` stay in the app.
   What may NOT be mocked: blocs, repositories with logic, widgets.
 - `SupabaseStub.script(otp:, verify:, password:, logout:)` queues the auth
   endpoints (`/auth/v1/otp`, `/verify`, `/token`, `/logout`). Rounds are

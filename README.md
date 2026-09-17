@@ -49,8 +49,9 @@ emotely/
 │  ├─ mobile/     a pub workspace (melos): the Flutter client and its packages
 │  │  ├─ app/               the glue: composes the features · iOS + Android
 │  │  └─ packages/
-│  │     ├─ utility/        depend only on utilities: analysis (the rule set),
-│  │     │                  contract (the tool-call shapes), testing (shared test support)
+│  │     ├─ utility/        depend only on utilities: analysis (the rule set), contract
+│  │     │                  (the tool-call shapes), agent_client, analytics, the two
+│  │     │                  repositories (journal, consent), testing (shared test support)
 │  │     └─ feature/        depend only on utilities, never on each other
 │  └─ web/        Jaspr (Dart) · getemotely.com landing page + waitlist · static, deploys to Vercel
 ├─ packages/

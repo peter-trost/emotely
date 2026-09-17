@@ -7,6 +7,11 @@ environment:
   sdk: ^3.13.0
 
 dependencies:
+  # The utilities whose test doubles live here. They dev-depend on this
+  # package in turn for their own tests; pub allows the cycle, and it never
+  # reaches a shipped build because this package is only ever a dev dependency.
+  agent_client: any
+  analytics: any
   contract: any
   flutter:
     sdk: flutter

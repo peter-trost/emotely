@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:emotely/analytics/consent_analytics.dart';
-import 'package:emotely/analytics/error_reporter.dart';
-import 'package:emotely/consent/consent_store.dart';
+import 'package:analytics/analytics.dart';
+import 'package:consent_repository/consent_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -13,7 +12,7 @@ part 'consent_state.dart';
 /// Whether the user has given the explicit consent (Art. 9 (2) (a) GDPR)
 /// that a session needs, and the two acts that change it.
 ///
-/// The answer always comes from the server ([ConsentStore]), never from a
+/// The answer always comes from the server ([ConsentRepository]), never from a
 /// flag on this device: a reinstall must not lose it and must not invent it.
 /// Every screen that can start a session asks this bloc first, and a session
 /// never starts on a consent that was not written down — if the write fails,
@@ -39,7 +38,7 @@ part 'consent_state.dart';
 /// the API would not be stopped by anything here. The trade is recorded in
 /// ADR 0014 rather than papered over.
 class ConsentBloc({
-  required final ConsentStore _store,
+  required final ConsentRepository _repository,
   required final ConsentAnalytics _analytics,
   required final ErrorReporter _errors,
 }) extends Bloc<ConsentEvent, ConsentState> {
@@ -56,7 +55,7 @@ class ConsentBloc({
   ) async {
     emit(const ConsentState.unknown());
     try {
-      emit(ConsentState.known(granted: await _store.isGranted()));
+      emit(ConsentState.known(granted: await _repository.isGranted()));
     } on Exception catch (error, stackTrace) {
       unawaited(_errors.consentLoadFailed(error, stackTrace));
       emit(const ConsentState.failure());
@@ -78,7 +77,7 @@ class ConsentBloc({
     }
     emit(const ConsentState.busy());
     try {
-      await _store.grant();
+      await _repository.grant();
     } on Exception catch (error, stackTrace) {
       unawaited(_errors.consentWriteFailed(error, stackTrace));
       emit(const ConsentState.writeFailure());
@@ -99,7 +98,7 @@ class ConsentBloc({
     }
     emit(const ConsentState.busy());
     try {
-      await _store.withdraw();
+      await _repository.withdraw();
     } on Exception catch (error, stackTrace) {
       unawaited(_errors.consentWriteFailed(error, stackTrace));
       emit(const ConsentState.withdrawFailure());
