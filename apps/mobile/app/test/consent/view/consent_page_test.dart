@@ -1,5 +1,6 @@
 import 'package:feature_account/feature_account.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../helpers/helpers.dart';

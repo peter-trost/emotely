@@ -1,5 +1,5 @@
-name: feature_account
-description: The account screen and the explicit consent it manages — asked before the first session, withdrawable in one tap, and account deletion.
+name: feature_auth
+description: Who is signed in, and the email-code sign-in that gets there (a password for the stores' review accounts).
 publish_to: none
 resolution: workspace
 
@@ -8,7 +8,6 @@ environment:
 
 dependencies:
   analytics: any
-  consent_repository: any
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1

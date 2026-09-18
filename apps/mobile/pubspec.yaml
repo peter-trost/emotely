@@ -17,8 +17,10 @@ workspace:
   - packages/utility/contract
   - packages/utility/design_system
   - packages/utility/journal_repository
+  - packages/utility/legal_links
   - packages/utility/testing
   - packages/feature/feature_account
+  - packages/feature/feature_auth
   - packages/feature/feature_session
 
 dev_dependencies:

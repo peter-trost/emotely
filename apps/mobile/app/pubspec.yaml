@@ -41,6 +41,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   design_system: any
   feature_account: any
+  feature_auth: any
   feature_session: any
   flutter:
     sdk: flutter
@@ -50,6 +51,7 @@ dependencies:
   http: 1.6.0
   journal_repository: any
   json_annotation: 4.12.0
+  legal_links: any
   material_ui: ^1.1.0
   meta: ^1.19.0
   package_info_plus: 10.2.1

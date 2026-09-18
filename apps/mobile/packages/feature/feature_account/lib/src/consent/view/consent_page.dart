@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:feature_account/src/consent/bloc/consent_bloc.dart';
 import 'package:feature_account/src/consent/consent_text.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Asks for the explicit consent (Art. 9 (2) (a) GDPR) a session needs, on
 /// its own route, before the first session and never again once it stands.
@@ -207,15 +207,3 @@ class const _WriteFailed() extends StatelessWidget {
     ],
   );
 }
-
-/// Opens the full notice in the browser. Fire-and-forget like the store
-/// link: if no browser can be opened there is nothing the screen can do,
-/// and the text on it already says the essentials.
-Future<void> openPrivacyNotice() => launchUrl(
-  Uri.parse(privacyNoticeUrl),
-  mode: LaunchMode.externalApplication,
-);
-
-/// Opens the imprint (§ 5 DDG), from the account screen.
-Future<void> openImprint() =>
-    launchUrl(Uri.parse(imprintUrl), mode: LaunchMode.externalApplication);

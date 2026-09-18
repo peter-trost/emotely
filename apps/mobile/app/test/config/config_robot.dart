@@ -1,6 +1,6 @@
-import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:emotely/config/view/config_gate.dart';
 import 'package:emotely/journal/view/journal_page.dart';
+import 'package:feature_auth/feature_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 

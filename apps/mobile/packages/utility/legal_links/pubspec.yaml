@@ -1,0 +1,18 @@
+name: legal_links
+description: The privacy notice and the imprint — where they live, how they are labelled, and how the app opens them.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  url_launcher: 6.3.2
+
+dev_dependencies:
+  analysis: any
+  flutter_test:
+    sdk: flutter
+  testing: any

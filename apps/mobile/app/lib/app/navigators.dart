@@ -1,5 +1,5 @@
-import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:feature_account/feature_account.dart';
+import 'package:feature_auth/feature_auth.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
