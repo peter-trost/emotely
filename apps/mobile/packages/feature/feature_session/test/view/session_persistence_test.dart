@@ -95,6 +95,70 @@ void main() {
       );
     });
 
+    testWidgets('marks the third entry once it is in the journal', (
+      tester,
+    ) async {
+      final supabase = SupabaseStub()
+        ..always('HEAD /rest/v1/entries', rowsCounted(3));
+      final agent = AgentStub()
+        ..script([
+          awaiting(toolCallId: 'c1', question: SessionRobot.rate),
+          completed(
+            summary: 'A seven.',
+            answers: const {'q-rate': Answer.rating(7)},
+          ),
+        ]);
+      final robot = SessionRobot(tester, agent, supabase: supabase);
+      await robot.launch();
+      await robot.settle();
+
+      await robot.answerRating(7);
+      await tester.pumpAndSettle();
+
+      // The count is read after the entry is filed, so the survey that
+      // this triggers can never interrupt the save.
+      expect(supabase.to('HEAD /rest/v1/entries'), hasLength(1));
+      // Fired once, and after the completion event — never before it.
+      final names = [
+        for (final captured in robot.analytics.events) captured['event'],
+      ];
+      expect(
+        names.where((name) => name == 'third_entry_written'),
+        hasLength(1),
+      );
+      expect(
+        names.indexOf('session_completed'),
+        lessThan(names.indexOf('third_entry_written')),
+      );
+    });
+
+    testWidgets('files the entry even when the milestone cannot be counted', (
+      tester,
+    ) async {
+      final supabase = SupabaseStub()
+        ..always('HEAD /rest/v1/entries', restRefused());
+      final agent = AgentStub()
+        ..script([
+          awaiting(toolCallId: 'c1', question: SessionRobot.rate),
+          completed(
+            summary: 'A seven.',
+            answers: const {'q-rate': Answer.rating(7)},
+          ),
+        ]);
+      final robot = SessionRobot(tester, agent, supabase: supabase);
+      await robot.launch();
+      await robot.settle();
+
+      await robot.answerRating(7);
+      await tester.pumpAndSettle();
+
+      // Counting is telemetry: it fails silently and the entry still shows.
+      expect(robot.summary, findsOneWidget);
+      expect([
+        for (final captured in robot.analytics.events) captured['event'],
+      ], isNot(contains('third_entry_written')));
+    });
+
     testWidgets('keeps going when a round cannot be saved', (tester) async {
       final agent = AgentStub()
         ..script([
