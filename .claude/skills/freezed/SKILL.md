@@ -6,9 +6,9 @@ description: Conventions for freezed / json_serializable data classes in apps/mo
 # freezed in apps/mobile/app
 
 Codegen defaults live in each package's `build.yaml` (snake_case fields and
-union values, `explicit_to_json`) — `apps/mobile/app/build.yaml` and
-`apps/mobile/packages/utility/contract/build.yaml` today; a new package that
-generates code copies the block. Never repeat the defaults per class; a
+union values, `explicit_to_json`) — the app, `contract`, `agent_client` and
+`journal_repository` under `apps/mobile` today; a new package that generates
+code copies the block. Never repeat the defaults per class; a
 per-class annotation carries only what genuinely differs, e.g.
 `@Freezed(unionKey: 'answer_type')`.
 

@@ -1,17 +1,11 @@
 // coverage:ignore-file
 // Composition root; behavior lives in EmotelyApp and is tested there.
 
-import 'package:emotely/analytics/auth_analytics.dart';
-import 'package:emotely/analytics/consent_analytics.dart';
-import 'package:emotely/analytics/error_reporter.dart';
-import 'package:emotely/analytics/error_tracking.dart';
-import 'package:emotely/analytics/journal_analytics.dart';
-import 'package:emotely/analytics/session_analytics.dart';
+import 'package:agent_client/agent_client.dart';
+import 'package:analytics/analytics.dart';
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
-import 'package:emotely/config/config_client.dart';
-import 'package:emotely/session/agent/agent_client.dart';
-
+import 'package:emotely/consent/consent_text.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
@@ -61,7 +55,10 @@ Future<void> main() async {
       supabase: supabase.client,
       authAnalytics: AuthAnalytics(posthog: posthog),
       journalAnalytics: JournalAnalytics(posthog: posthog),
-      consentAnalytics: ConsentAnalytics(posthog: posthog),
+      consentAnalytics: ConsentAnalytics(
+        posthog: posthog,
+        version: consentVersion,
+      ),
       errorReporter: ErrorReporter(posthog: posthog),
     ),
   );

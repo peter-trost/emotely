@@ -1,9 +1,7 @@
 import 'dart:async';
 
-import 'package:emotely/analytics/error_reporter.dart';
-import 'package:emotely/analytics/session_analytics.dart';
-import 'package:emotely/config/config_client.dart';
-import 'package:emotely/config/startup_config.dart';
+import 'package:agent_client/agent_client.dart';
+import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:pub_semver/pub_semver.dart';

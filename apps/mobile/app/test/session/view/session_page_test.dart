@@ -1,8 +1,8 @@
 import 'dart:async';
 
+import 'package:agent_client/agent_client.dart';
 import 'package:contract/contract.dart';
 import 'package:emotely/journal/view/journal_page.dart';
-import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:emotely/session/widgets/longtext_input.dart';

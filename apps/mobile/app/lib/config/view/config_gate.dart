@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:emotely/analytics/error_reporter.dart';
+import 'package:analytics/analytics.dart';
 import 'package:emotely/config/bloc/config_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';

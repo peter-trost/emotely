@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:emotely/analytics/auth_analytics.dart';
-import 'package:emotely/analytics/error_reporter.dart';
+import 'package:analytics/analytics.dart';
 import 'package:emotely/auth/review_accounts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';

@@ -1,13 +1,10 @@
-import 'package:emotely/analytics/error_reporter.dart';
-import 'package:emotely/analytics/session_analytics.dart';
-import 'package:emotely/journal/journal_models.dart';
-import 'package:emotely/journal/journal_store.dart';
-import 'package:emotely/session/agent/advance_response.dart';
-import 'package:emotely/session/agent/agent_client.dart';
+import 'package:agent_client/agent_client.dart';
+import 'package:analytics/analytics.dart';
 import 'package:emotely/session/bloc/session_bloc.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/widgets/answer_input.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Wires a [SessionBloc] to the [AgentClient] in scope and starts a session,
@@ -20,7 +17,7 @@ class const SessionPage({final OpenSession? resume, super.key})
       agentClient: context.read<AgentClient>(),
       analytics: context.read<SessionAnalytics>(),
       errors: context.read<ErrorReporter>(),
-      store: context.read<JournalStore>(),
+      repository: context.read<JournalRepository>(),
     )..add(SessionEvent.started(resume: resume)),
     child: const SessionView(),
   );

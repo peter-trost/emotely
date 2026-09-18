@@ -1,14 +1,11 @@
 import 'dart:async';
 
+import 'package:agent_client/agent_client.dart';
+import 'package:analytics/analytics.dart';
 import 'package:contract/contract.dart';
-import 'package:emotely/analytics/error_reporter.dart';
-import 'package:emotely/analytics/session_analytics.dart';
-import 'package:emotely/journal/journal_models.dart';
-import 'package:emotely/journal/journal_store.dart';
-import 'package:emotely/session/agent/advance_response.dart';
-import 'package:emotely/session/agent/agent_client.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:journal_repository/journal_repository.dart';
 
 part 'session_bloc.freezed.dart';
 part 'session_event.dart';
@@ -25,7 +22,7 @@ class SessionBloc({
   required final AgentClient _agentClient,
   required final SessionAnalytics _analytics,
   required final ErrorReporter _errors,
-  required final JournalStore _store,
+  required final JournalRepository _repository,
 }) extends Bloc<SessionEvent, SessionState> {
   this : super(const SessionState.initial()) {
     on<SessionStarted>(_onStarted);
@@ -155,7 +152,7 @@ class SessionBloc({
   /// latest; the entry is what must not be lost.
   Future<void> _save(PendingQuestion? pending) async {
     try {
-      _sessionId = await _store.saveRound(
+      _sessionId = await _repository.saveRound(
         sessionId: _sessionId,
         transcript: _transcript!,
         signature: _signature!,
@@ -178,7 +175,7 @@ class SessionBloc({
     _retry = (emit) => _file(entry, emit);
     emit(SessionState.loading(answered: _asked.length));
     try {
-      _sessionId ??= await _store.saveRound(
+      _sessionId ??= await _repository.saveRound(
         sessionId: null,
         transcript: _transcript!,
         signature: _signature!,
@@ -186,7 +183,7 @@ class SessionBloc({
         questions: _asked.values,
         appVersion: _agentClient.appVersion,
       );
-      await _store.completeSession(
+      await _repository.completeSession(
         sessionId: _sessionId!,
         entry: entry,
         questions: _asked.values,

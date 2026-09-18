@@ -1,0 +1,58 @@
+import 'package:consent_repository/consent_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:testing/testing.dart';
+
+void main() {
+  const version = '2026-09-15';
+
+  late SupabaseStub supabase;
+  late ConsentRepository repository;
+
+  setUp(() {
+    supabase = SupabaseStub();
+    repository = ConsentRepository(
+      supabase: supabase.supabase,
+      version: version,
+    );
+  });
+
+  group(ConsentRepository, () {
+    test('asks the server whether consent to this version stands', () async {
+      supabase.rest('POST /rest/v1/rpc/consent_stands', [rpcReturned(true)]);
+
+      expect(await repository.isGranted(), isTrue);
+      expect(supabase.bodies('/rest/v1/rpc/consent_stands').single, {
+        'version': version,
+      });
+    });
+
+    test(
+      'a consent that does not stand is false, whatever the reason',
+      () async {
+        supabase.rest('POST /rest/v1/rpc/consent_stands', [rpcReturned(false)]);
+
+        expect(await repository.isGranted(), isFalse);
+      },
+    );
+
+    test('records consent to this version', () async {
+      supabase.rest('POST /rest/v1/rpc/record_consent', [rpcReturned(null)]);
+
+      await repository.grant();
+
+      expect(supabase.bodies('/rest/v1/rpc/record_consent').single, {
+        'version': version,
+      });
+    });
+
+    test('withdraws consent to this version', () async {
+      supabase.rest('POST /rest/v1/rpc/withdraw_consent', [rpcReturned(null)]);
+
+      await repository.withdraw();
+
+      expect(supabase.bodies('/rest/v1/rpc/withdraw_consent').single, {
+        'version': version,
+      });
+    });
+  });
+}

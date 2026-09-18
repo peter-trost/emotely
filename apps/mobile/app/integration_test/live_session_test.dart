@@ -11,18 +11,13 @@
 // user (a password account like the store review accounts; everyone else
 // signs in with a code through the app's own screen).
 
-import 'package:emotely/analytics/auth_analytics.dart';
-import 'package:emotely/analytics/consent_analytics.dart';
-import 'package:emotely/analytics/error_reporter.dart';
-import 'package:emotely/analytics/journal_analytics.dart';
-import 'package:emotely/analytics/session_analytics.dart';
-
+import 'package:agent_client/agent_client.dart';
+import 'package:analytics/analytics.dart';
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/environment.dart';
-import 'package:emotely/config/config_client.dart';
+import 'package:emotely/consent/consent_text.dart';
 import 'package:emotely/consent/view/consent_page.dart';
 import 'package:emotely/journal/view/journal_page.dart';
-import 'package:emotely/session/agent/agent_client.dart';
 import 'package:emotely/session/view/entry_view.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:emotely/session/widgets/color_input.dart';
@@ -116,7 +111,10 @@ class LiveSessionRobot(final WidgetTester tester) {
         supabase: supabase.client,
         authAnalytics: AuthAnalytics(posthog: posthog),
         journalAnalytics: JournalAnalytics(posthog: posthog),
-        consentAnalytics: ConsentAnalytics(posthog: posthog),
+        consentAnalytics: ConsentAnalytics(
+          posthog: posthog,
+          version: consentVersion,
+        ),
         errorReporter: ErrorReporter(posthog: posthog),
       ),
     );

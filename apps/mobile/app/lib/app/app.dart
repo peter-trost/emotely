@@ -1,19 +1,15 @@
-import 'package:emotely/analytics/auth_analytics.dart';
-import 'package:emotely/analytics/consent_analytics.dart';
-import 'package:emotely/analytics/error_reporter.dart';
-import 'package:emotely/analytics/journal_analytics.dart';
-import 'package:emotely/analytics/session_analytics.dart';
+import 'package:agent_client/agent_client.dart';
+import 'package:analytics/analytics.dart';
+import 'package:consent_repository/consent_repository.dart';
 import 'package:emotely/app/theme.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:emotely/config/bloc/config_bloc.dart';
-import 'package:emotely/config/config_client.dart';
 import 'package:emotely/config/view/config_gate.dart';
-import 'package:emotely/consent/consent_store.dart';
-import 'package:emotely/journal/journal_store.dart';
+import 'package:emotely/consent/consent_text.dart';
 import 'package:emotely/journal/view/journal_page.dart';
-import 'package:emotely/session/agent/agent_client.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
@@ -38,8 +34,11 @@ class const EmotelyApp({
       RepositoryProvider.value(value: analytics),
       RepositoryProvider.value(value: supabase),
       RepositoryProvider.value(value: authAnalytics),
-      RepositoryProvider(create: (_) => JournalStore(supabase: supabase)),
-      RepositoryProvider(create: (_) => ConsentStore(supabase: supabase)),
+      RepositoryProvider(create: (_) => JournalRepository(supabase: supabase)),
+      RepositoryProvider(
+        create: (_) =>
+            ConsentRepository(supabase: supabase, version: consentVersion),
+      ),
       RepositoryProvider.value(value: journalAnalytics),
       RepositoryProvider.value(value: consentAnalytics),
       RepositoryProvider.value(value: errorReporter),

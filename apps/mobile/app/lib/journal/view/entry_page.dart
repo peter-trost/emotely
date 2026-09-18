@@ -1,5 +1,5 @@
-import 'package:emotely/journal/journal_models.dart';
 import 'package:emotely/session/view/entry_view.dart';
+import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// One filed entry, read back the way the session showed it.

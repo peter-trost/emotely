@@ -1,20 +1,17 @@
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
+import 'package:consent_repository/consent_repository.dart';
 import 'package:emotely/account/view/account_page.dart';
-import 'package:emotely/analytics/consent_analytics.dart';
-import 'package:emotely/analytics/error_reporter.dart';
-import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/consent/bloc/consent_bloc.dart';
-import 'package:emotely/consent/consent_store.dart';
 import 'package:emotely/consent/consent_text.dart';
 import 'package:emotely/consent/view/consent_page.dart';
 import 'package:emotely/journal/bloc/journal_bloc.dart';
-import 'package:emotely/journal/journal_models.dart';
-import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/journal/view/entry_page.dart';
 import 'package:emotely/session/view/session_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Home: the journal so far and the way into the next session.
@@ -29,7 +26,7 @@ class const JournalPage({super.key}) extends StatelessWidget {
     providers: [
       BlocProvider(
         create: (context) => JournalBloc(
-          store: context.read<JournalStore>(),
+          repository: context.read<JournalRepository>(),
           analytics: context.read<JournalAnalytics>(),
         )..add(const JournalEvent.loaded()),
       ),
@@ -39,7 +36,7 @@ class const JournalPage({super.key}) extends StatelessWidget {
         // is the tap itself — one frame too late.
         lazy: false,
         create: (context) => ConsentBloc(
-          store: context.read<ConsentStore>(),
+          repository: context.read<ConsentRepository>(),
           analytics: context.read<ConsentAnalytics>(),
           errors: context.read<ErrorReporter>(),
         )..add(const ConsentEvent.loaded()),

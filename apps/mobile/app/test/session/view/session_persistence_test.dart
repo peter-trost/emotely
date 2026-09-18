@@ -1,6 +1,6 @@
 import 'package:contract/contract.dart';
-import 'package:emotely/journal/journal_store.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:journal_repository/journal_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../helpers/helpers.dart';
@@ -9,7 +9,7 @@ import '../session_robot.dart';
 /// The session writes itself to the journal as it goes (ADR 0010): every
 /// round updates the user's session row, completion files the entry.
 void main() {
-  group(JournalStore, () {
+  group(JournalRepository, () {
     const sessions = 'POST /rest/v1/sessions';
     const updates = 'PATCH /rest/v1/sessions';
     const complete = 'POST /rest/v1/rpc/complete_session';
@@ -36,7 +36,7 @@ void main() {
       final created = supabase.to(sessions).single;
       expect(created.query['select'], 'id');
       expect(created.body, {
-        'question_set_id': JournalStore.questionSetId,
+        'question_set_id': JournalRepository.questionSetId,
         'transcript': AgentStub.transcript,
         'signature': AgentStub.signature,
         'pending': {

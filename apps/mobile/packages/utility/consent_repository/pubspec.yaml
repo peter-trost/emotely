@@ -1,0 +1,18 @@
+name: consent_repository
+description: The consent record — whether the user's explicit consent to the current notice stands, and the two writes that change it (ADR 0014).
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: 3.0.0-dev.4
+
+dev_dependencies:
+  analysis: any
+  flutter_test:
+    sdk: flutter
+  testing: any
