@@ -1,8 +1,8 @@
 import 'dart:async';
 
+import 'package:contract/contract.dart';
 import 'package:emotely/analytics/error_reporter.dart';
 import 'package:emotely/analytics/session_analytics.dart';
-import 'package:emotely/contract/contract.dart';
 import 'package:emotely/journal/journal_models.dart';
 import 'package:emotely/journal/journal_store.dart';
 import 'package:emotely/session/agent/advance_response.dart';

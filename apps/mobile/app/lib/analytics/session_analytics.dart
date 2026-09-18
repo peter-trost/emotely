@@ -1,4 +1,4 @@
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 
 /// Product analytics for the session, content-free by construction

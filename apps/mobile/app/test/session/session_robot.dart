@@ -1,4 +1,4 @@
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/bloc/session_bloc.dart';
 import 'package:emotely/session/view/entry_view.dart';

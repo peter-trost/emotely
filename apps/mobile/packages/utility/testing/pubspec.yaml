@@ -1,0 +1,25 @@
+name: testing
+description: Test support shared by every package — the a11y bar, scripted Supabase, spies and the generated mocks.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  contract: any
+  flutter:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+  http: 1.6.0
+  material_ui: ^1.1.0
+  mockito: 5.8.1
+  plugin_platform_interface: 2.1.8
+  posthog_flutter: 5.39.0
+  supabase_flutter: 3.0.0-dev.4
+  url_launcher_platform_interface: 2.3.2
+
+dev_dependencies:
+  analysis: any
+  build_runner: 2.16.1

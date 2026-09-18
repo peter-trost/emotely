@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:mockito/mockito.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../mocks.mocks.dart';
+import 'package:testing/src/mocks.mocks.dart';
 
 /// One scripted Supabase Auth response.
 typedef AuthRound = Future<http.Response> Function();

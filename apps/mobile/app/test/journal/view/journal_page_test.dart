@@ -1,4 +1,4 @@
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:flutter_test/flutter_test.dart';

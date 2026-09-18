@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

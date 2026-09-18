@@ -1,4 +1,4 @@
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'advance_response.freezed.dart';

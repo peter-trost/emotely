@@ -21,6 +21,8 @@
 #   Dart          apps/web/scripts/vercel-install.sh  (checksum-pinned there)
 #   Supabase CLI  .github/workflows/ci.yml  (supabase/setup-cli "version:")
 #   jaspr_cli     .github/workflows/ci.yml, cross-checked against Vercel's
+#   melos         .github/workflows/ci.yml  (the app job's activate line)
+#   very_good_cli .github/workflows/ci.yml  (the app job's activate line)
 # Bumping a pin means editing the file that owns it, and this script follows. A
 # tool pinned in two files must agree in both, or the script refuses to run:
 # Dart and jaspr_cli are each pinned twice, and a drift there would mean CI and
@@ -95,6 +97,8 @@ step. Every version comes from the repository, never from the script:
   Dart          apps/web/scripts/vercel-install.sh  (checksum-pinned there)
   Supabase CLI  .github/workflows/ci.yml
   jaspr_cli     .github/workflows/ci.yml, cross-checked against Vercel's
+  melos         .github/workflows/ci.yml
+  very_good_cli .github/workflows/ci.yml
 
 Options:
   --verify   After installing, run every CI job that needs no secret, and
@@ -576,8 +580,9 @@ step "Workspace dependencies"
 info "pnpm install (agent + contract)"
 (cd "$REPO_ROOT" && pnpm install --frozen-lockfile)
 
-info "apps/mobile/app: flutter pub get"
-(cd "$REPO_ROOT/apps/mobile/app" && flutter pub get)
+# A pub workspace: one resolution for the app and every package in it.
+info "apps/mobile: flutter pub get"
+(cd "$REPO_ROOT/apps/mobile" && flutter pub get)
 
 info "apps/web: dart pub get"
 (cd "$REPO_ROOT/apps/web" && dart pub get)
@@ -622,16 +627,23 @@ else
   dart pub global activate jaspr_cli "$JASPR_CLI_VERSION" >/dev/null
 fi
 
-# very_good_cli runs the app's coverage gate, against apps/mobile/app, so it belongs to
-# Flutter's bundled SDK. CI does not pin it and neither does this — it is a test
-# runner, not a build input.
+# melos runs the workspace's gates and very_good_cli its coverage gate, both
+# against apps/mobile, so they belong to Flutter's bundled SDK. CI pins both
+# (the app job's activate lines); take the same pins.
 flutter_dart_version=$(flutter-dart --version 2>&1 | sed -n 's/.*version: \([0-9][0-9.]*\).*/\1/p')
-if [ "$(activated_by very_good)" = "$flutter_dart_version" ]; then
-  skip "very_good_cli already activated against Flutter's Dart $flutter_dart_version"
-else
-  info "dart pub global activate very_good_cli (Flutter's Dart $flutter_dart_version)"
-  flutter-dart pub global activate very_good_cli >/dev/null
-fi
+for tool in melos very_good_cli; do
+  tool_version=$(pin "$tool" "$CI_WORKFLOW" "s/.*dart pub global activate $tool \([0-9][0-9.]*\).*/\1/p")
+  require_release_number "the $tool version" "$CI_WORKFLOW" "$tool_version"
+  # The shim is named after the executable, which for very_good_cli is very_good.
+  executable=${tool%_cli}
+  if [ "$(activated_by "$executable")" = "$flutter_dart_version" ] \
+     && flutter-dart pub global list 2>/dev/null | grep -q "^$tool $tool_version\b"; then
+    skip "$tool $tool_version already activated against Flutter's Dart $flutter_dart_version"
+  else
+    info "dart pub global activate $tool $tool_version (Flutter's Dart $flutter_dart_version)"
+    flutter-dart pub global activate "$tool" "$tool_version" >/dev/null
+  fi
+done
 chown -R root:root "$PUB_CACHE_DIR"
 ok "dependencies resolved"
 
@@ -656,13 +668,10 @@ if [ "$VERIFY" -eq 1 ]; then
     && git diff --exit-code packages/contract/contract.schema.json)
   SKIPPED+=("agent eval (needs AI_GATEWAY_API_KEY)")
 
-  info "app: codegen check, format, analyze, tests"
-  (cd "$REPO_ROOT/apps/mobile/app" \
-    && flutter-dart run build_runner build --only-check \
-    && flutter-dart format --set-exit-if-changed . \
-    && flutter analyze --fatal-infos \
-    && flutter-dart pub global run very_good_cli:very_good test --coverage --min-coverage 100 \
-         --exclude-coverage '**/*.{freezed,g,mocks}.dart')
+  # The same melos scripts CI runs, per package. Through flutter-dart so that
+  # every `dart` the scripts start is Flutter's, not the landing page's pin.
+  info "app: codegen check, format, analyze, tests — every package in apps/mobile"
+  (cd "$REPO_ROOT/apps/mobile" && flutter-dart pub global run melos:melos run ci)
 
   info "web: format, analyze, tests (VM + Chrome), build"
   (cd "$REPO_ROOT/apps/web" \
@@ -720,5 +729,5 @@ What this does NOT set up, on purpose:
   · Anything that runs the app on a device. No Android SDK, no JDK, no
     emulator, no Xcode: `flutter run`, `flutter build`, integration_test and
     the android half of app-release.yml are all out of reach on this machine.
-    apps/mobile/app's unit and widget tests do run.
+    apps/mobile's unit and widget tests do run, package by package.
 NOTES

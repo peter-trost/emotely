@@ -1,10 +1,10 @@
 import 'package:emotely/app/app.dart';
 import 'package:flutter/widgets.dart';
+import 'package:testing/testing.dart';
 
 import 'agent_stub.dart';
 import 'analytics_spy.dart';
 import 'config_stub.dart';
-import 'supabase_stub.dart';
 
 /// The whole app, wired to the scripted agent, the scripted Supabase and the
 /// spied PostHog. The agent client forwards whatever token the Supabase

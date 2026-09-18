@@ -7,8 +7,7 @@ import 'package:emotely/analytics/journal_analytics.dart';
 import 'package:emotely/analytics/session_analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-
-import '../mocks.mocks.dart';
+import 'package:testing/testing.dart';
 
 /// One captured PostHog event as `{'event': name, 'properties': {...}}` —
 /// a map, so `expect` compares it deeply (records would compare maps by

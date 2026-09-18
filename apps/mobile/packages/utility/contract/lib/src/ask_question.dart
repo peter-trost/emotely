@@ -1,4 +1,4 @@
-import 'package:emotely/contract/answer_type.dart';
+import 'package:contract/src/answer_type.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'ask_question.freezed.dart';

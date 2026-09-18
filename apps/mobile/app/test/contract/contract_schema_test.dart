@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:contract/contract.dart';
 import 'package:emotely/config/startup_config.dart';
-import 'package:emotely/contract/contract.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:flutter_test/flutter_test.dart';
 

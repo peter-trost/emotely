@@ -3,8 +3,7 @@ import 'dart:convert';
 import 'package:emotely/config/config_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:mockito/mockito.dart';
-
-import '../mocks.mocks.dart';
+import 'package:testing/testing.dart';
 
 /// One scripted answer to `GET /api/config`.
 typedef ConfigRound = Future<http.Response> Function();

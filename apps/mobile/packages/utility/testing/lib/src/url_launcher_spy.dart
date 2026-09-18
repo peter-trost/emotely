@@ -1,3 +1,8 @@
+// MockPlatformInterfaceMixin is marked visible-for-testing so that shipped
+// code cannot bypass the platform-interface token. This package *is* test
+// support — nothing in it ships — so the one thing the marker guards against
+// does not apply, and the analyzer only knows "lib/" versus "test/".
+// ignore_for_file: invalid_use_of_visible_for_testing_member
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';

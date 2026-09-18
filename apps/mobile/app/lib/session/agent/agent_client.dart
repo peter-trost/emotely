@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:emotely/contract/contract.dart';
+import 'package:contract/contract.dart';
 import 'package:emotely/session/agent/advance_response.dart';
 import 'package:http/http.dart' as http;
 
