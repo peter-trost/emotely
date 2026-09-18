@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../helpers/helpers.dart';
-import '../../session/session_robot.dart';
 import '../consent_robot.dart';
 
 /// Taking consent back, and giving it again, from the account screen.
@@ -29,7 +28,7 @@ void main() {
         ..rest(consentWithdraw, withdrawals)
         ..rest(consentGrant, grants);
       final agent = AgentStub()
-        ..script([awaiting(toolCallId: 'c1', question: SessionRobot.rate)]);
+        ..script([awaiting(toolCallId: 'c1', question: rateQuestion)]);
       return ConsentRobot(tester, supabase: supabase, agent: agent);
     }
 

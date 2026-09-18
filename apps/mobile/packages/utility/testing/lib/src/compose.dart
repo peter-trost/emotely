@@ -1,0 +1,60 @@
+import 'package:agent_client/agent_client.dart';
+import 'package:analytics/analytics.dart';
+import 'package:consent_repository/consent_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
+import 'package:journal_repository/journal_repository.dart';
+import 'package:testing/src/agent_stub.dart';
+import 'package:testing/src/analytics_spy.dart';
+import 'package:testing/src/config_stub.dart';
+import 'package:testing/src/supabase_stub.dart';
+
+/// The consent wording version a feature test registers. The app owns the
+/// real one; a feature only ever reports or records whatever it is given.
+const testConsentVersion = '2026-01-01';
+
+/// Registers every utility into [getIt] the way the app's `registerApp`
+/// does — the production registration functions, in the same order — over
+/// scripted leaves: the stubs' http clients, the scripted Supabase client
+/// and the spied PostHog. A feature package's tests compose on top of this
+/// with the feature's own registration function and, where it has one, a
+/// fake navigator; nothing else is registered from a test.
+///
+/// The container is emptied when the test ends. Composing twice in one
+/// test fails loudly — get_it refuses to re-register — unless the test
+/// resets in between and says why.
+void registerUtilitiesUnderTest(
+  GetIt getIt, {
+  required AgentStub agent,
+  required SupabaseStub supabase,
+  required AnalyticsSpy analytics,
+  ConfigStub? config,
+  String appVersion = AgentStub.appVersion,
+  String consentVersion = testConsentVersion,
+}) {
+  final configStub = config ?? (ConfigStub()..serves());
+  // A journal that accepts every write unless the test scripts otherwise.
+  supabase.journalWorks();
+  addTearDown(getIt.reset);
+  getIt.registerSingleton(supabase.supabase);
+  registerAgentClient(
+    getIt,
+    agentHttpClient: agent.client,
+    configHttpClient: configStub.client,
+    agentUrl: AgentStub.endpoint,
+    configUrl: ConfigStub.endpoint,
+    appVersion: appVersion,
+    accessToken: () => supabase.supabase.auth.currentSession?.accessToken,
+  );
+  registerAnalytics(
+    getIt,
+    posthog: analytics.posthog,
+    consentVersion: consentVersion,
+  );
+  registerJournalRepository(getIt, supabase: supabase.supabase);
+  registerConsentRepository(
+    getIt,
+    supabase: supabase.supabase,
+    version: consentVersion,
+  );
+}

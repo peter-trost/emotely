@@ -1,4 +1,4 @@
-import 'package:emotely/app/theme.dart';
+import 'package:design_system/design_system.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:emotely/config/bloc/config_bloc.dart';

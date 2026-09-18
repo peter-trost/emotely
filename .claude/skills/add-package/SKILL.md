@@ -1,0 +1,119 @@
+---
+name: add-package
+description: How to add a utility or feature package to the Flutter workspace (apps/mobile) — the lego layering of ADR 0015 — including its registration function, its tests, the workspace and CI wiring, and the navigator seam a feature needs to reach another feature's screen. Use whenever asked to add a package, extract a feature, split something out of apps/mobile/app, or wire a new package into get_it or melos.
+---
+
+# Adding a package to apps/mobile
+
+Three tiers (ADR 0015): **utilities** depend only on utilities, **features**
+only on utilities and never on each other, the **app** is glue. Every
+package carries its own gates, and CI runs only the packages a PR changed
+plus their dependents. Adding one is a checklist, not a design decision.
+
+## 1. Where it goes, what it may import
+
+| Kind | Path | May depend on |
+| --- | --- | --- |
+| utility | `apps/mobile/packages/utility/<name>` | other utilities |
+| feature | `apps/mobile/packages/feature/feature_<name>` | utilities |
+
+If a feature seems to need another feature (a widget, a bloc, a page),
+the shared thing is a utility (`design_system` for widgets and theme, a
+repository for data) or a navigator call (§ 5). Never an import.
+
+## 2. Files
+
+```
+<package>/
+├─ pubspec.yaml            resolution: workspace; every dep `any` for workspace
+│                          packages, pinned for pub.dev ones (research the pin)
+├─ analysis_options.yaml   the one line: include: package:analysis/analysis_options.yaml
+├─ build.yaml              only if it generates code — copy the block from
+│                          another package (see the freezed skill)
+├─ lib/<name>.dart         the barrel: what the app and other packages may see
+├─ lib/src/…               everything else; lib/src/register.dart holds the
+│                          registration function
+└─ test/…                  100% coverage of lib/, no exceptions
+```
+
+Dev-dependencies every package has: `analysis`, `flutter_test`, and
+`testing` (stubs, spies, `pumpApp`, `pageUnderTest`, the composition
+helper). Utilities that `testing` itself fakes may dev-depend on it in a
+cycle; pub allows it and melos terminates on it.
+
+Then add the path to the `workspace:` list in `apps/mobile/pubspec.yaml`
+and run `flutter pub get` anywhere under `apps/mobile`.
+
+## 3. The registration function
+
+One plain function per package, exported from the barrel, taking the
+container and the values the app owns (build-time config, leaves):
+
+```dart
+// utility: eager singletons, user-agnostic
+void registerFoo(GetIt getIt, {required Bar bar}) =>
+    getIt.registerSingleton<Foo>(Foo(bar: bar));
+
+// feature: its bloc as a factory, dependencies resolved from the container
+void registerBaz(GetIt getIt) => getIt.registerFactory(
+  () => BazBloc(foo: getIt(), analytics: getIt(), errors: getIt()),
+);
+```
+
+Spell out the type argument in a `void` arrow function
+(`registerSingleton<Foo>(…)`): inferred from the return context it becomes
+`void`, and get_it throws "You have to provide type" at runtime.
+
+The app calls it from `registerApp` in `apps/mobile/app/lib/app/dependencies.dart`,
+in dependency order, and nowhere else. Widgets touch the container only to
+create their bloc (`BlocProvider(create: (_) => GetIt.I<BazBloc>())`) and
+to resolve their feature's navigator. Nothing per-user is a singleton.
+
+## 4. Tests
+
+- A test for the registration function itself, against
+  `GetIt.asNewInstance()`: per-package coverage cannot see the app's tests.
+  Write it as a plain `test`, not `testWidgets`: closing a bloc under the
+  widget tester's fake clock without pumping never completes, and the test
+  sits there until its ten-minute timeout.
+- A feature's page tests compose in a robot the way the app does:
+
+  ```dart
+  registerUtilitiesUnderTest(GetIt.I, agent: agent, supabase: supabase, analytics: spy);
+  registerBaz(GetIt.I);
+  GetIt.I.registerSingleton<BazNavigator>(fakeNavigator);   // § 5, if any
+  await tester.pumpWidget(pageUnderTest(const BazPage()));
+  ```
+
+  Only the leaves and the feature's own navigator are ever replaced; see the
+  write-tests skill (mocking). The helper resets the container in teardown.
+- Utilities that other packages need in tests get their stub or spy in
+  `testing`, not in the consuming package.
+
+## 5. When a feature must reach another feature's screen
+
+Declare an abstract navigator in the feature, implement it in the app:
+
+```dart
+// feature_journal/lib/src/navigator.dart
+abstract interface class JournalNavigator {
+  Future<void> startSession(BuildContext context, {OpenSession? resume});
+}
+// app: implements it with the real pages, registers it as a singleton
+```
+
+This is the one sanctioned interface with a single production
+implementation, because it genuinely has two: the app's and the test fake.
+Everything else stays concrete.
+
+## 6. Verify
+
+```bash
+cd apps/mobile && melos run ci
+```
+
+Runs codegen check, format, analyze and the coverage gate in every package.
+A pull request's CI runs the same scripts scoped to what changed
+(`EMOTELY_SCOPE`); a change outside any package runs everything.
+
+Finish by adding the package to the tree in `README.md`.

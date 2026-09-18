@@ -283,6 +283,25 @@ void main() {
       expect(robot.signIn, findsOneWidget);
     });
 
+    testWidgets('opens the journal when a session arrives after launch', (
+      tester,
+    ) async {
+      // The SDK restores a persisted session on its own time; the app must
+      // follow its auth stream, not only the answer it read at launch.
+      final supabase = SupabaseStub();
+      final agent = AgentStub()..script([unreachable()]);
+      final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+      await robot.launch();
+      await robot.settle();
+
+      expect(robot.signIn, findsOneWidget);
+
+      await supabase.signedIn();
+      await robot.settle();
+
+      expect(robot.home, findsOneWidget);
+    });
+
     testWidgets('stays put when the SDK reports an auth error', (tester) async {
       final supabase = SupabaseStub()..script(logout: [signedOut()]);
       await supabase.signedIn();

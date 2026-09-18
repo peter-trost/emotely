@@ -1,0 +1,30 @@
+name: feature_session
+description: One journaling session — the agent asks, the user answers in the matching widget, the entry appears at the end.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  agent_client: any
+  analytics: any
+  contract: any
+  design_system: any
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  freezed_annotation: 3.1.0
+  get_it: 9.2.1
+  journal_repository: any
+  material_ui: ^1.1.0
+
+dev_dependencies:
+  analysis: any
+  build_runner: 2.16.1
+  flutter_test:
+    sdk: flutter
+  freezed: 4.0.1
+  http: 1.6.0
+  supabase_flutter: 3.0.0-dev.4
+  testing: any

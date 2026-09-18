@@ -39,6 +39,8 @@ dependencies:
   contract: any
   # Cupertino Icons font for iOS-style icons.
   cupertino_icons: ^1.0.8
+  design_system: any
+  feature_session: any
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1

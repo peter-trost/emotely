@@ -15,8 +15,10 @@ workspace:
   - packages/utility/analytics
   - packages/utility/consent_repository
   - packages/utility/contract
+  - packages/utility/design_system
   - packages/utility/journal_repository
   - packages/utility/testing
+  - packages/feature/feature_session
 
 dev_dependencies:
   # melos reads the workspace list above; it only recognises the workspace

@@ -1,8 +1,8 @@
+import 'package:design_system/design_system.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:emotely/journal/view/entry_page.dart';
 import 'package:emotely/journal/view/journal_page.dart';
-import 'package:emotely/session/view/entry_view.dart';
-import 'package:emotely/session/view/session_page.dart';
+import 'package:feature_session/feature_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 

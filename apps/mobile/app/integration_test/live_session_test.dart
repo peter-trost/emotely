@@ -11,18 +11,13 @@
 // user (a password account like the store review accounts; everyone else
 // signs in with a code through the app's own screen).
 
+import 'package:design_system/design_system.dart';
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/dependencies.dart';
 import 'package:emotely/app/environment.dart';
 import 'package:emotely/consent/view/consent_page.dart';
 import 'package:emotely/journal/view/journal_page.dart';
-import 'package:emotely/session/view/entry_view.dart';
-import 'package:emotely/session/view/session_page.dart';
-import 'package:emotely/session/widgets/color_input.dart';
-import 'package:emotely/session/widgets/emoji_input.dart';
-import 'package:emotely/session/widgets/longtext_input.dart';
-import 'package:emotely/session/widgets/rating_input.dart';
-import 'package:emotely/session/widgets/text_list_input.dart';
+import 'package:feature_session/feature_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
