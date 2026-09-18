@@ -41,8 +41,10 @@ Dev-dependencies every package has: `analysis`, `flutter_test`, and
 helper). Utilities that `testing` itself fakes may dev-depend on it in a
 cycle; pub allows it and melos terminates on it.
 
-Then add the path to the `workspace:` list in `apps/mobile/pubspec.yaml`
-and run `flutter pub get` anywhere under `apps/mobile`.
+The `workspace:` list in `apps/mobile/pubspec.yaml` is globs
+(`packages/utility/*`, `packages/feature/*`), so a new directory under
+either tier is a member the moment `flutter pub get` runs anywhere under
+`apps/mobile`; nothing to add to the list.
 
 ## 3. The registration function
 
