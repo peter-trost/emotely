@@ -108,6 +108,10 @@ class SessionRobot(
   /// The failure copy for anything that is not a server-refused round.
   static const unreachableMessage = 'Could not reach the journaling assistant.';
 
+  /// The failure copy when the server refused the round because the model
+  /// could not be reached.
+  static const unavailableMessage = SessionBloc.modelUnavailableMessage;
+
   /// The failure copy when the finished entry could not be filed.
   static const entrySaveFailedMessage = SessionBloc.entrySaveFailedMessage;
 

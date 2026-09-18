@@ -184,6 +184,63 @@ void main() {
       expect(robot.retry, findsOneWidget);
     });
 
+    testWidgets('a refused model says the assistant is unavailable', (
+      tester,
+    ) async {
+      final agent = AgentStub()..script([refused(502, 'model unavailable')]);
+      final robot = SessionRobot(tester, agent);
+      await robot.launch();
+      await robot.settle();
+
+      expect(find.text(SessionRobot.unavailableMessage), findsOneWidget);
+      // Neither the server's wording nor the connection story the user would
+      // otherwise act on: retrying now cannot work, and their entry is safe.
+      expect(find.text('model unavailable'), findsNothing);
+      expect(find.text(SessionRobot.unreachableMessage), findsNothing);
+      // The round never completed, so the same round is still the retry.
+      expect(robot.retry, findsOneWidget);
+    });
+
+    testWidgets('a refused model mid-session keeps the entry and retries', (
+      tester,
+    ) async {
+      final agent = AgentStub()
+        ..script([
+          awaiting(toolCallId: 'c1', question: SessionRobot.rate),
+          refused(502, 'model unavailable'),
+          awaiting(toolCallId: 'c2', question: SessionRobot.grateful),
+        ]);
+      final robot = SessionRobot(tester, agent);
+      await robot.launch();
+      await robot.settle();
+
+      await robot.answerRating(5);
+
+      expect(find.text(SessionRobot.unavailableMessage), findsOneWidget);
+
+      // The failed round left nothing behind: the retry resends it verbatim,
+      // and the session carries on from the answer the user already gave.
+      await robot.tapRetry();
+
+      expect(agent.requests, hasLength(3));
+      expect(agent.requests[2], agent.requests[1]);
+      expect(robot.questionText, SessionRobot.grateful.question);
+    });
+
+    testWidgets('a server error still shows the server message', (
+      tester,
+    ) async {
+      const serverMessage = 'boom';
+      final agent = AgentStub()..script([refused(500, serverMessage)]);
+      final robot = SessionRobot(tester, agent);
+      await robot.launch();
+      await robot.settle();
+
+      expect(find.text(serverMessage), findsOneWidget);
+      expect(find.text(SessionRobot.unavailableMessage), findsNothing);
+      expect(robot.retry, findsOneWidget);
+    });
+
     testWidgets('a hung round times out into the generic failure', (
       tester,
     ) async {
@@ -379,6 +436,34 @@ void main() {
               'Connection refused',
             ),
             {'step': 'session_round'},
+          ),
+        ]);
+      });
+
+      testWidgets('reports a refused model under its own status code', (
+        tester,
+      ) async {
+        final agent = AgentStub()..script([refused(502, 'model unavailable')]);
+        final robot = SessionRobot(tester, agent);
+        await robot.launch();
+        await robot.settle();
+
+        // Replacing the copy the user reads changes nothing we count: the
+        // status still travels, so a refused model is still one alarm.
+        expect(robot.analytics.events, [
+          event('session_started'),
+          event('session_failed', {'status_code': 502}),
+        ]);
+        expect(robot.analytics.exceptions, [
+          captured(
+            isA<AgentException>()
+                .having((error) => error.statusCode, 'statusCode', 502)
+                .having(
+                  (error) => error.message,
+                  'message',
+                  'model unavailable',
+                ),
+            {'step': 'session_round', 'status_code': 502},
           ),
         ]);
       });

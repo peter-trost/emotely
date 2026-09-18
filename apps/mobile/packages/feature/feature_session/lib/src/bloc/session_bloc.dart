@@ -34,6 +34,19 @@ class SessionBloc({
   static const entrySaveFailedMessage =
       'Your entry could not be saved. Please try again.';
 
+  /// What the server answers when the gateway refused the round: the model
+  /// could not be reached, so no amount of retrying now will help.
+  static const modelUnavailableStatus = 502;
+
+  /// The failure copy for [modelUnavailableStatus]. Says the three things
+  /// the user needs and nothing more: it is us and not their connection,
+  /// what they have written is safe, and waiting is the thing that helps.
+  /// The server's own message never reaches here — it names models and
+  /// providers the client has no business showing (#107).
+  static const modelUnavailableMessage =
+      'The journaling assistant is unavailable right now. This is not your '
+      'connection, and your entry is safe. Please try again later.';
+
   List<Object?>? _transcript;
   String? _signature;
   String? _sessionId;
@@ -126,7 +139,17 @@ class SessionBloc({
       unawaited(
         _errors.sessionFailed(error, stackTrace, statusCode: error.statusCode),
       );
-      emit(SessionState.failure(message: error.message));
+      // A refused model is the one refusal the user can act on differently:
+      // retrying now cannot succeed, so it gets copy of our own rather than
+      // the server's. Every other status keeps the server's message, which
+      // is written for the user (a rate limit, a bad request).
+      emit(
+        SessionState.failure(
+          message: error.statusCode == modelUnavailableStatus
+              ? modelUnavailableMessage
+              : error.message,
+        ),
+      );
     } on Exception catch (error, stackTrace) {
       unawaited(_analytics.sessionFailed());
       unawaited(_errors.sessionFailed(error, stackTrace));
