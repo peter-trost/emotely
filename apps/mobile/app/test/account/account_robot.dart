@@ -45,7 +45,11 @@ class AccountRobot(
 
   Future<void> settle() => tester.pumpAndSettle();
 
+  /// Scrolls to the target first: the account screen is a scroll view, and
+  /// with the feedback row it is taller than the test viewport, so the
+  /// delete button below it is off-screen until it is scrolled to.
   Future<void> tap(Finder finder) async {
+    await tester.ensureVisible(finder);
     await tester.tap(finder);
     await settle();
   }

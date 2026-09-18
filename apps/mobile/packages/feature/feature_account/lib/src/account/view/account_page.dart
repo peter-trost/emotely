@@ -5,6 +5,7 @@ import 'package:feature_account/src/consent/bloc/consent_bloc.dart';
 import 'package:feature_account/src/consent/consent_text.dart';
 import 'package:feature_account/src/consent/view/consent_page.dart';
 import 'package:feature_account/src/navigator.dart';
+import 'package:feedback_link/feedback_link.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:legal_links/legal_links.dart';
@@ -30,6 +31,7 @@ class const AccountView({super.key}) extends StatelessWidget {
   static const signOutKey = Key('account_view.sign_out');
   static const privacyNoticeKey = Key('account_view.privacy_notice');
   static const imprintKey = Key('account_view.imprint');
+  static const feedbackKey = Key('account_view.feedback');
   static const withdrawConsentKey = Key('account_view.withdraw_consent');
   static const restoreConsentKey = Key('account_view.restore_consent');
   static const consentRetryKey = Key('account_view.consent_retry');
@@ -39,6 +41,12 @@ class const AccountView({super.key}) extends StatelessWidget {
       'Deleting your account also deletes every journal entry you wrote. '
       'There is no way back.';
   static const confirmationMessage = 'Delete your account and every entry?';
+
+  /// Under the feedback row: says what the mail already contains, so
+  /// nobody has to wonder whether tapping it sends anything they wrote.
+  static const feedbackExplanation =
+      'Opens your mail app. Carries your app version and device, '
+      'nothing from your journal.';
   static const failureMessage = AccountBloc.failureMessage;
 
   @override
@@ -235,10 +243,12 @@ class const _ConsentFailed({
   );
 }
 
-/// The privacy notice and the imprint, reachable from inside the app: Apple
-/// guideline 5.1.1 (i) and Google Play's User Data policy both require the
-/// policy to be reachable here, not only from the store listing, and § 5 DDG
-/// asks the same of the imprint for a German provider.
+/// Every link that leaves the app. The privacy notice and the imprint are
+/// required to be reachable from inside the app — Apple guideline 5.1.1 (i)
+/// and Google Play's User Data policy for the notice, § 5 DDG for the
+/// imprint of a German provider — and the feedback mail sits with them
+/// because it is the same act: a labelled row that hands the user to
+/// another app.
 class const _Legal() extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
@@ -257,6 +267,19 @@ class const _Legal() extends StatelessWidget {
         title: const Text(imprintLabel),
         trailing: const Icon(Icons.open_in_new),
         onTap: () => unawaited(openImprint()),
+      ),
+      // Unlike the two above, the mail carries the build the user is
+      // running, which is a dependency — so it goes through the bloc
+      // rather than being launched from here (ADR 0015).
+      ListTile(
+        key: AccountView.feedbackKey,
+        contentPadding: EdgeInsets.zero,
+        title: const Text(feedbackLabel),
+        subtitle: const Text(AccountView.feedbackExplanation),
+        trailing: const Icon(Icons.mail_outline),
+        onTap: () => context.read<AccountBloc>().add(
+          const AccountEvent.feedbackRequested(),
+        ),
       ),
     ],
   );

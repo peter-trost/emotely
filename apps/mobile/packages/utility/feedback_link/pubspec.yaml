@@ -1,0 +1,19 @@
+name: feedback_link
+description: The prefilled feedback mail — where it goes, what the build footer says, and how the app opens it.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  get_it: 9.2.1
+  url_launcher: 6.3.2
+
+dev_dependencies:
+  analysis: any
+  flutter_test:
+    sdk: flutter
+  testing: any

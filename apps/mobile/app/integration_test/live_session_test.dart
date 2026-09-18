@@ -18,6 +18,7 @@ import 'package:emotely/app/environment.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_journal/feature_journal.dart';
 import 'package:feature_session/feature_session.dart';
+import 'package:feedback_link/feedback_link.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
@@ -87,13 +88,19 @@ class LiveSessionRobot(final WidgetTester tester) {
     // is unreadable or blocks this build, the app never reaches the journal
     // and this test says so.
     final httpClient = http.Client();
+    final packageInfo = await PackageInfo.fromPlatform();
     registerApp(
       GetIt.I,
       agentHttpClient: httpClient,
       configHttpClient: httpClient,
       supabase: supabase.client,
       posthog: posthog,
-      appVersion: (await PackageInfo.fromPlatform()).version,
+      appVersion: packageInfo.version,
+      // The real build, as `main` composes it: this runs on a device.
+      build: BuildInfo.ofPlatform(
+        version: packageInfo.version,
+        buildNumber: packageInfo.buildNumber,
+      ),
       agentUrl: urlFrom(agentUrl, define: 'EMOTELY_AGENT_URL'),
       configUrl: urlFrom(configUrl, define: 'EMOTELY_CONFIG_URL'),
     );

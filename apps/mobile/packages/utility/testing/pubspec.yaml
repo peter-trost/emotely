@@ -15,6 +15,7 @@ dependencies:
   consent_repository: any
   contract: any
   design_system: any
+  feedback_link: any
   flutter:
     sdk: flutter
   flutter_test:
