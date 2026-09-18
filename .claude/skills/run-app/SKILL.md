@@ -1,9 +1,9 @@
 ---
 name: run-app
-description: How to build, run, and drive the Flutter app (apps/app) on a simulator against the deployed or a local agent, and how to run the on-device acceptance session. Use whenever asked to run the app, see a screen, verify a change on a device, or run integration_test.
+description: How to build, run, and drive the Flutter app (apps/mobile/app) on a simulator against the deployed or a local agent, and how to run the on-device acceptance session. Use whenever asked to run the app, see a screen, verify a change on a device, or run integration_test.
 ---
 
-# Running apps/app
+# Running apps/mobile/app
 
 Everything below is agent-executable; the only human step is producing a
 PostHog project token, and one already exists locally.
@@ -37,8 +37,8 @@ http://127.0.0.1:54324 instead of a mailbox.
 
 ## Toolchain
 
-- Flutter is pinned by FVM (`apps/app/.fvmrc`); always call `fvm flutter` /
-  `fvm dart` from `apps/app`. The global Flutter also matches the pin so the
+- Flutter is pinned by FVM (`apps/mobile/app/.fvmrc`); always call `fvm flutter` /
+  `fvm dart` from `apps/mobile/app`. The global Flutter also matches the pin so the
   VGV plugin's MCP tools work, but FVM is the source of truth.
 - First native build after adding a CocoaPods plugin may need
   `pod repo update` (the error says "specs repository is too out-of-date").
@@ -51,7 +51,7 @@ http://127.0.0.1:54324 instead of a mailbox.
 3. Build the real app (not the test runner):
 
    ```bash
-   cd apps/app && fvm flutter build ios --simulator --dart-define=POSTHOG_KEY="$KEY"
+   cd apps/mobile/app && fvm flutter build ios --simulator --dart-define=POSTHOG_KEY="$KEY"
    ```
 
 4. Launch `build/ios/iphonesimulator/Runner.app` with the simulator tool's
@@ -71,7 +71,7 @@ nightly / pre-release by hand, never per PR:
 ```bash
 SMOKE_EMAIL=$(grep -E '^SMOKE_EMAIL=' apps/agent/.env.local | cut -d= -f2-)
 SMOKE_PASSWORD=$(grep -E '^SMOKE_PASSWORD=' apps/agent/.env.local | cut -d= -f2-)
-cd apps/app && fvm flutter test integration_test/live_session_test.dart -d <device udid> --dart-define=POSTHOG_KEY="$KEY" --dart-define=SMOKE_EMAIL="$SMOKE_EMAIL" --dart-define=SMOKE_PASSWORD="$SMOKE_PASSWORD"
+cd apps/mobile/app && fvm flutter test integration_test/live_session_test.dart -d <device udid> --dart-define=POSTHOG_KEY="$KEY" --dart-define=SMOKE_EMAIL="$SMOKE_EMAIL" --dart-define=SMOKE_PASSWORD="$SMOKE_PASSWORD"
 ```
 
 Expect ~25 s after the build (about ten live model rounds). Then verify the
@@ -105,5 +105,5 @@ the background: press HOME and give it ~45 s before querying.
 ## Unit gate (what CI runs)
 
 ```bash
-cd apps/app && fvm flutter analyze --fatal-infos && fvm dart format --set-exit-if-changed . && fvm dart run build_runner build --only-check && fvm dart pub global run very_good_cli:very_good test --coverage --min-coverage 100 --exclude-coverage '**/*.{freezed,g,mocks}.dart'
+cd apps/mobile/app && fvm flutter analyze --fatal-infos && fvm dart format --set-exit-if-changed . && fvm dart run build_runner build --only-check && fvm dart pub global run very_good_cli:very_good test --coverage --min-coverage 100 --exclude-coverage '**/*.{freezed,g,mocks}.dart'
 ```

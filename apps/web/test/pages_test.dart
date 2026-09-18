@@ -416,7 +416,7 @@ void main() {
     });
 
     // The suite above asserts that hedges are PRESENT. These assert that
-    // overclaims are ABSENT — the needle pattern from apps/app. Findings 1,
+    // overclaims are ABSENT — the needle pattern from apps/mobile/app. Findings 1,
     // 2 and 4 of the red-team review all survived a presence-only suite.
     group('claims nothing the code does not do', () {
       testComponents('does not deny sending the address to our own server', (

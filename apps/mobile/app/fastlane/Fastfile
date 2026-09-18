@@ -30,7 +30,7 @@ def dart_defines
   defines
 end
 
-# apps/app. Lanes run from here, but `sh` runs inside fastlane/, so the
+# apps/mobile/app. Lanes run from here, but `sh` runs inside fastlane/, so the
 # flutter command gets an explicit `cd`.
 APP_DIR = File.expand_path("..", FastlaneCore::FastlaneFolder.path)
 

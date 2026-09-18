@@ -22,9 +22,9 @@ A failing eval is a real signal about model behaviour, not a flake to re-run.
 Judged behaviour evals run nightly; the CI one is deterministic. If it fails
 only on a fork PR for a missing key, that is expected and not yours to fix.
 
-## `app` — `apps/app` (Flutter)
+## `app` — `apps/mobile/app` (Flutter)
 
-| Failing step | What it means | Reproduce (in `apps/app`) |
+| Failing step | What it means | Reproduce (in `apps/mobile/app`) |
 | --- | --- | --- |
 | `build_runner build --only-check` | committed generated code is stale | `dart run build_runner build --delete-conflicting-outputs`, commit |
 | `dart format --set-exit-if-changed .` | formatting | `dart format .` |

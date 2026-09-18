@@ -16,7 +16,7 @@ handling. If a step is only documented for humans, move it into a skill.
 - `main` is protected: all changes land via squash-merged PR, `ci-ok` green.
 - Agent guidance is `AGENTS.md`; every `CLAUDE.md` is a symlink to the
   `AGENTS.md` beside it, at the root and in each directory that carries its own
-  (`apps/app`, `apps/web`, `scripts`). Edit the `AGENTS.md`, and put a fact in
+  (`apps/mobile/app`, `apps/web`, `scripts`). Edit the `AGENTS.md`, and put a fact in
   the nearest one rather than here when it only matters in that directory.
 - Never point at a skill from an `AGENTS.md`: skill descriptions are already in
   context, so the pointer is noise. Put the fact itself here or in the skill.

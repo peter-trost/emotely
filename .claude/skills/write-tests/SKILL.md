@@ -1,9 +1,9 @@
 ---
 name: write-tests
-description: Flutter testing conventions for apps/app. Use whenever writing or reviewing Dart/Flutter tests — widget tests, bloc tests, integration tests, mocks, or the coverage gate.
+description: Flutter testing conventions for apps/mobile/app. Use whenever writing or reviewing Dart/Flutter tests — widget tests, bloc tests, integration tests, mocks, or the coverage gate.
 ---
 
-# Writing tests for apps/app
+# Writing tests for apps/mobile/app
 
 The philosophy: **drive tests through the UI with real blocs; mock the agent
 API at the http seam — never a bloc.** Error states are injected by making the

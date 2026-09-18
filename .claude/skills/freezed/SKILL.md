@@ -1,11 +1,11 @@
 ---
 name: freezed
-description: Conventions for freezed / json_serializable data classes in apps/app. Use whenever creating or editing a class annotated with @freezed or @Freezed, an enum that goes over the wire, a JsonConverter, or build.yaml codegen options.
+description: Conventions for freezed / json_serializable data classes in apps/mobile/app. Use whenever creating or editing a class annotated with @freezed or @Freezed, an enum that goes over the wire, a JsonConverter, or build.yaml codegen options.
 ---
 
-# freezed in apps/app
+# freezed in apps/mobile/app
 
-Codegen defaults live in `apps/app/build.yaml` (snake_case fields and union
+Codegen defaults live in `apps/mobile/app/build.yaml` (snake_case fields and union
 values, `explicit_to_json`). Never repeat them per class; a per-class
 annotation carries only what genuinely differs, e.g.
 `@Freezed(unionKey: 'answer_type')`.

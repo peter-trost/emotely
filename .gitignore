@@ -14,24 +14,24 @@ dist/
 # Flutter / Dart
 coverage/
 .fvm/
-apps/app/.dart_tool/
-apps/app/build/
-apps/app/.flutter-plugins
-apps/app/.flutter-plugins-dependencies
-apps/app/ios/Pods/
-apps/app/**/GeneratedPluginRegistrant.*
+apps/mobile/app/.dart_tool/
+apps/mobile/app/build/
+apps/mobile/app/.flutter-plugins
+apps/mobile/app/.flutter-plugins-dependencies
+apps/mobile/app/ios/Pods/
+apps/mobile/app/**/GeneratedPluginRegistrant.*
 
 # Release signing material — CI materialises these from secrets (ADR 0013)
-apps/app/android/key.properties
+apps/mobile/app/android/key.properties
 *.jks
 *.keystore
 *.p8
 *.mobileprovision
-apps/app/fastlane/report.xml
-apps/app/fastlane/README.md
-apps/app/fastlane/test_output/
-apps/app/vendor/
-apps/app/.bundle/
+apps/mobile/app/fastlane/report.xml
+apps/mobile/app/fastlane/README.md
+apps/mobile/app/fastlane/test_output/
+apps/mobile/app/vendor/
+apps/mobile/app/.bundle/
 
 # Agent worktrees (Claude Code isolation)
 .claude/worktrees/

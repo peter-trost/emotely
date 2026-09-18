@@ -41,7 +41,7 @@ into a VM compile and fails on `dart:js_interop`. Pass `platform: chrome`
 plus `paths: ["test/client"]` for the browser half. CI is unaffected — it
 runs the plain commands above.
 
-Rules the lints enforce beyond `apps/app`: `jaspr_lints` (HTML helpers over
+Rules the lints enforce beyond `apps/mobile/app`: `jaspr_lints` (HTML helpers over
 `Component.element`, children last, styles ordered). `@client` files must
 use classic constructors — `jaspr_builder` parses them with analyzer 12,
 which cannot read primary constructors; the per-file ignore in
