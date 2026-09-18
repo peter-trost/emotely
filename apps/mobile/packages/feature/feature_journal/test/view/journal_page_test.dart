@@ -1,10 +1,9 @@
 import 'package:agent_client/agent_client.dart';
 import 'package:contract/contract.dart';
-import 'package:emotely/journal/view/journal_page.dart';
+import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:testing/testing.dart';
 
-import '../../helpers/helpers.dart';
 import '../journal_robot.dart';
 
 void main() {
@@ -18,18 +17,17 @@ void main() {
       WidgetTester tester, {
       List<Map<String, Object?>> entries = const [],
       Map<String, Object?>? openSession,
-      AgentStub? agent,
+      bool consentGranted = true,
+      List<AuthRound> consentReads = const [],
     }) {
       final supabase = SupabaseStub()
         ..rest(entriesEndpoint, [rows(entries)])
         ..rest(sessionsEndpoint, [
           rows([?openSession]),
-        ]);
-      return JournalRobot(
-        tester,
-        supabase: supabase,
-        agent: agent ?? AgentStub(),
-      );
+        ])
+        ..rest(consentRead, consentReads)
+        ..always(consentRead, consentStands(granted: consentGranted));
+      return JournalRobot(tester, supabase: supabase, agent: AgentStub());
     }
 
     testWidgets('lists filed entries newest first with date and summary', (
@@ -62,9 +60,7 @@ void main() {
     testWidgets('an empty journal explains itself and starts a session', (
       tester,
     ) async {
-      final agent = AgentStub()
-        ..script([awaiting(toolCallId: 'c1', question: rateQuestion)]);
-      final robot = robotWith(tester, agent: agent);
+      final robot = robotWith(tester);
       await robot.launch();
 
       expect(robot.empty, findsOneWidget);
@@ -73,26 +69,20 @@ void main() {
 
       await robot.tap(robot.start);
 
-      expect(robot.session, findsOneWidget);
-      expect(robot.question, findsOneWidget);
-      expect(agent.requests, hasLength(1));
-
-      await robot.back();
-
-      // The journal reads itself again when the session comes back.
-      expect(robot.home, findsOneWidget);
+      // Consent stood, so the session ran; the journal read itself again
+      // when the session came back.
+      expect(robot.navigator.consentRequests, 0);
+      expect(robot.navigator.sessions, [null]);
       expect(robot.supabase.to(entriesEndpoint), hasLength(2));
     });
 
-    testWidgets('continues an unfinished session without a server round', (
+    testWidgets('continues an unfinished session where it left off', (
       tester,
     ) async {
       const pending = PendingQuestion(
         toolCallId: 'c2',
         question: gratefulQuestion,
       );
-      final agent = AgentStub()
-        ..script([awaiting(toolCallId: 'c3', question: bestQuestion)]);
       final robot = robotWith(
         tester,
         openSession: sessionRow(
@@ -100,7 +90,6 @@ void main() {
           pending: pending,
           questions: [rateQuestion, gratefulQuestion],
         ),
-        agent: agent,
       );
       await robot.launch();
 
@@ -113,63 +102,91 @@ void main() {
 
       await robot.tap(robot.continueSession);
 
-      expect(robot.session, findsOneWidget);
-      expect(find.text('Question 2'), findsOneWidget);
-      expect(find.text(gratefulQuestion.question), findsOneWidget);
-      expect(agent.requests, isEmpty);
-      expect(robot.analytics.events.last, event('session_resumed'));
-
-      await tester.enterText(
-        find.byType(TextField),
-        'the journal that remembers',
-      );
-      await tester.pump();
-      await tester.tap(
-        find.descendant(
-          of: find.byType(FilledButton),
-          matching: find.text('Submit'),
-        ),
-      );
-      await robot.settle();
-
-      // The stored transcript, not a fresh one, and the stored row updated.
-      expect(agent.lastRequest['transcript'], ['stored', 'stored']);
-      expect(agent.lastRequest['signature'], 'stored-sig');
-      expect(
-        (agent.lastRequest['answer'] as Map<String, dynamic>)['tool_call_id'],
-        'c2',
-      );
-      final saved = robot.supabase.to('PATCH /rest/v1/sessions').single;
-      expect(saved.query['id'], 'eq.${SupabaseStub.sessionId}');
-      expect(find.text('Question 3'), findsOneWidget);
+      final resumed = robot.navigator.sessions.single!;
+      expect(resumed.id, SupabaseStub.sessionId);
+      expect(resumed.transcript, ['stored', 'stored']);
+      expect(resumed.signature, 'stored-sig');
+      expect(resumed.pending, pending);
+      expect(resumed.questions, [rateQuestion, gratefulQuestion]);
     });
 
-    testWidgets(
-      'finishes a session that was saved without a pending question',
-      (tester) async {
-        final agent = AgentStub()
-          ..script([
-            completed(summary: 'Finished after all.', answers: const {}),
-          ]);
+    group('the consent gate', () {
+      testWidgets('asks the server before every session, never a local flag', (
+        tester,
+      ) async {
+        // Stands the first time, withdrawn elsewhere by the second.
+        final robot = robotWith(
+          tester,
+          consentGranted: false,
+          consentReads: [consentStands()],
+        );
+        await robot.launch();
+
+        expect(robot.supabase.to(consentRead), isEmpty);
+
+        await robot.tap(robot.start);
+
+        expect(robot.supabase.to(consentRead), hasLength(1));
+        expect(robot.navigator.consentRequests, 0);
+        expect(robot.navigator.sessions, [null]);
+
+        await robot.tap(robot.start);
+
+        expect(robot.supabase.to(consentRead), hasLength(2));
+        expect(robot.navigator.consentRequests, 1);
+        expect(robot.navigator.sessions, [null]);
+      });
+
+      testWidgets('starts the session once consent is given', (tester) async {
+        final robot = robotWith(tester, consentGranted: false);
+        robot.navigator.consentGiven = true;
+        await robot.launch();
+
+        await robot.tap(robot.start);
+
+        expect(robot.navigator.consentRequests, 1);
+        expect(robot.navigator.sessions, [null]);
+      });
+
+      testWidgets('starts nothing when consent is not given', (tester) async {
+        final robot = robotWith(tester, consentGranted: false);
+        await robot.launch();
+
+        await robot.tap(robot.start);
+
+        expect(robot.navigator.consentRequests, 1);
+        expect(robot.navigator.sessions, isEmpty);
+        expect(robot.home, findsOneWidget);
+      });
+
+      testWidgets('continuing an unfinished session is gated too', (
+        tester,
+      ) async {
         final robot = robotWith(
           tester,
           openSession: sessionRow(questions: [rateQuestion]),
-          agent: agent,
+          consentGranted: false,
         );
         await robot.launch();
 
         await robot.tap(robot.continueSession);
 
-        expect(agent.lastRequest['transcript'], ['stored']);
-        expect(agent.lastRequest['signature'], 'stored-sig');
-        expect(agent.lastRequest.containsKey('answer'), isFalse);
-        expect(robot.summary, findsOneWidget);
-        expect(
-          robot.supabase.to('POST /rest/v1/rpc/complete_session').single.body,
-          containsPair('session_id', SupabaseStub.sessionId),
-        );
-      },
-    );
+        expect(robot.navigator.consentRequests, 1);
+        expect(robot.navigator.sessions, isEmpty);
+      });
+
+      testWidgets('a consent that cannot be read is asked for', (tester) async {
+        // Not knowing is not knowing the user consented: the gate stays
+        // shut, and the consent screen (which reads again) says why.
+        final robot = robotWith(tester, consentReads: [restRefused()]);
+        await robot.launch();
+
+        await robot.tap(robot.start);
+
+        expect(robot.navigator.consentRequests, 1);
+        expect(robot.navigator.sessions, isEmpty);
+      });
+    });
 
     testWidgets('discards an unfinished session', (tester) async {
       final robot = robotWith(tester, openSession: sessionRow());
@@ -248,7 +265,7 @@ void main() {
       expect(robot.entryPage, findsOneWidget);
       expect(find.text('A seven kind of day.'), findsOneWidget);
       expect(find.text(rateQuestion.question), findsOneWidget);
-      expect(find.text('7 / 10'), findsOneWidget);
+      expect(find.text('7 / $ratingMax'), findsOneWidget);
       expect(robot.analytics.events.last, event('entry_opened'));
 
       await robot.back();
@@ -256,28 +273,17 @@ void main() {
       expect(robot.home, findsOneWidget);
     });
 
-    testWidgets('signs out and forgets the user', (tester) async {
-      final robot = robotWith(tester);
-      robot.supabase.script(logout: [signedOut()]);
-      await robot.launch();
-
-      await robot.tap(robot.signOut);
-
-      expect(robot.signIn, findsOneWidget);
-      expect(robot.analytics.events.last, event('signed_out'));
-      expect(robot.analytics.resets, 1);
-    });
-
-    testWidgets('signs out even when the server cannot be told', (
+    testWidgets('opens the account screen and signs out through the app', (
       tester,
     ) async {
       final robot = robotWith(tester);
-      robot.supabase.script(logout: [authUnreachable()]);
       await robot.launch();
 
+      await robot.tap(robot.account);
       await robot.tap(robot.signOut);
 
-      expect(robot.signIn, findsOneWidget);
+      expect(robot.navigator.accountOpens, 1);
+      expect(robot.navigator.signOuts, 1);
     });
 
     testWidgets('meets accessibility guidelines', (tester) async {

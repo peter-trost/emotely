@@ -1,8 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:emotely/config/bloc/config_bloc.dart';
 import 'package:emotely/config/view/config_gate.dart';
-import 'package:emotely/journal/view/journal_page.dart';
 import 'package:feature_auth/feature_auth.dart';
+import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:material_ui/material_ui.dart';

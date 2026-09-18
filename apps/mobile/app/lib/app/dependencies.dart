@@ -3,9 +3,9 @@ import 'package:analytics/analytics.dart';
 import 'package:consent_repository/consent_repository.dart';
 import 'package:emotely/app/navigators.dart';
 import 'package:emotely/config/config_dependencies.dart';
-import 'package:emotely/journal/journal_dependencies.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
+import 'package:feature_journal/feature_journal.dart';
 import 'package:feature_session/feature_session.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
@@ -54,6 +54,8 @@ void registerApp(
   registerJournal(getIt);
   registerSession(getIt);
   // The app's side of each feature's navigator, next to the feature.
-  getIt.registerSingleton<AccountNavigator>(const AppAccountNavigator());
+  getIt
+    ..registerSingleton<AccountNavigator>(const AppAccountNavigator())
+    ..registerSingleton<JournalNavigator>(const AppJournalNavigator());
   registerAccount(getIt);
 }

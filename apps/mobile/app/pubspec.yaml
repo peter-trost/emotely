@@ -42,6 +42,7 @@ dependencies:
   design_system: any
   feature_account: any
   feature_auth: any
+  feature_journal: any
   feature_session: any
   flutter:
     sdk: flutter
