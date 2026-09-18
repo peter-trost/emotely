@@ -1,42 +1,52 @@
 import 'package:design_system/design_system.dart';
-import 'package:emotely/journal/view/entry_page.dart';
-import 'package:emotely/journal/view/journal_page.dart';
-import 'package:feature_auth/feature_auth.dart';
-import 'package:feature_session/feature_session.dart';
+import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:testing/testing.dart';
 
-import '../helpers/helpers.dart';
+import 'fake_journal_navigator.dart';
 
-/// Drives the journal home through the real app against a scripted
-/// Supabase and agent.
+/// Drives the journal on its own page, composed the way the app composes
+/// it, against a scripted Supabase; what it asks of the app is recorded by
+/// the fake navigator.
 class JournalRobot(
   final WidgetTester tester, {
   required final SupabaseStub supabase,
   required final AgentStub agent,
 }) {
   final analytics = AnalyticsSpy();
+  final navigator = FakeJournalNavigator();
 
   Finder get home => find.byType(JournalPage);
-  Finder get session => find.byType(SessionPage);
   Finder get entryPage => find.byType(EntryPage);
-  Finder get signIn => find.byType(SignInPage);
   Finder get start => find.byKey(JournalView.startKey);
   Finder get continueSession => find.byKey(JournalView.continueKey);
   Finder get discard => find.byKey(JournalView.discardKey);
+  Finder get account => find.byKey(JournalView.accountKey);
   Finder get signOut => find.byKey(JournalView.signOutKey);
   Finder get retry => find.byKey(JournalView.retryKey);
   Finder get empty => find.byKey(JournalView.emptyKey);
   Finder get entries => find.byType(ListTile);
   Finder get summary => find.byKey(EntryView.summaryKey);
-  Finder get question => find.byKey(SessionView.questionKey);
 
   Finder entry(String id) => find.byKey(JournalView.entryKey(id));
 
-  Widget get app =>
-      appUnderTest(agent: agent, supabase: supabase, analytics: analytics);
+  /// The journal page as the app would show it. Reading this composes the
+  /// container, so read it once per test.
+  Widget get app {
+    registerUtilitiesUnderTest(
+      GetIt.I,
+      agent: agent,
+      supabase: supabase,
+      analytics: analytics,
+    );
+    registerJournal(GetIt.I);
+    GetIt.I.registerSingleton<JournalNavigator>(navigator);
+    return pageUnderTest(const JournalPage());
+  }
 
-  /// Launches the app signed in and lets the journal load.
+  /// Signed in, with the journal loaded.
   Future<void> launch() async {
     await supabase.signedIn();
     await tester.pumpWidget(app);

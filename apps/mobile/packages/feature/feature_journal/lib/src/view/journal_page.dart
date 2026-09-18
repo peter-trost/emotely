@@ -1,10 +1,8 @@
 import 'dart:async';
 
-import 'package:emotely/journal/bloc/journal_bloc.dart';
-import 'package:emotely/journal/view/entry_page.dart';
-import 'package:feature_account/feature_account.dart';
-import 'package:feature_auth/feature_auth.dart';
-import 'package:feature_session/feature_session.dart';
+import 'package:feature_journal/src/bloc/journal_bloc.dart';
+import 'package:feature_journal/src/navigator.dart';
+import 'package:feature_journal/src/view/entry_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:journal_repository/journal_repository.dart';
@@ -12,25 +10,13 @@ import 'package:material_ui/material_ui.dart';
 
 /// Home: the journal so far and the way into the next session.
 ///
-/// Owns the [ConsentBloc] as well as the journal's own, because the two
-/// screens that care whether consent stands — this one, which will not start
-/// a session without it, and the account screen, which can take it back —
-/// both live under this route. One bloc, one answer, read from the server.
+/// Everything it leads to — the session, the consent screen, the account
+/// screen, signing out — belongs to another feature, so it asks the app
+/// for them through [JournalNavigator] (ADR 0015).
 class const JournalPage({super.key}) extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => MultiBlocProvider(
-    providers: [
-      BlocProvider(
-        create: (_) => GetIt.I<JournalBloc>()..add(const JournalEvent.loaded()),
-      ),
-      BlocProvider(
-        // Eager: the answer has to be in hand before Start is tapped, and
-        // a lazy provider would not read it until something looked, which
-        // is the tap itself — one frame too late.
-        lazy: false,
-        create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
-      ),
-    ],
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) => GetIt.I<JournalBloc>()..add(const JournalEvent.loaded()),
     child: const JournalView(),
   );
 }
@@ -57,27 +43,16 @@ class const JournalView({super.key}) extends StatelessWidget {
           key: accountKey,
           tooltip: 'Account',
           icon: const Icon(Icons.manage_accounts_outlined),
-          // The account screen is a route of its own, so it is outside this
-          // one's providers; it is handed the same consent bloc, because
-          // withdrawing there has to change what Start does back here.
-          onPressed: () {
-            final consent = context.read<ConsentBloc>();
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => BlocProvider.value(
-                  value: consent,
-                  child: const AccountPage(),
-                ),
-              ),
-            );
-          },
+          // Resolving the navigator is one of the two container calls a
+          // widget may make (ADR 0015).
+          onPressed: () =>
+              GetIt.I<JournalNavigator>().openAccount(Navigator.of(context)),
         ),
         IconButton(
           key: signOutKey,
           tooltip: 'Sign out',
           icon: const Icon(Icons.logout),
-          onPressed: () =>
-              context.read<AuthBloc>().add(const AuthEvent.signOutRequested()),
+          onPressed: () => GetIt.I<JournalNavigator>().signOut(context),
         ),
       ],
     ),
@@ -164,64 +139,21 @@ class const _SessionCard({required final OpenSession? openSession})
   /// Nothing starts before consent stands. A user who signed up before this
   /// shipped has entries but no consent row, so they are asked here, on the
   /// way into their next session — which is why the question reads as the
-  /// app asking rather than as an error.
+  /// app asking rather than as an error. The answer comes from the server
+  /// before every session, never from what this device read at launch.
   static Future<void> _open(
     BuildContext context, {
     required OpenSession? resume,
   }) async {
     final journal = context.read<JournalBloc>();
-    final consent = context.read<ConsentBloc>();
     final navigator = Navigator.of(context);
-    // Ask the server before every session, never the answer this device
-    // happened to read at launch: a withdrawal made on another device must
-    // stop this one, which is what the consent screen promises.
-    await consent.refresh();
-    if (!consent.state.allowsSession) {
-      await navigator.push<bool>(
-        MaterialPageRoute<bool>(
-          builder: (_) =>
-              BlocProvider.value(value: consent, child: const ConsentPage()),
-        ),
-      );
-      // The bloc's state is the authority, not the route's result: it says
-      // `granted` only after the server recorded it. A decline, a failed
-      // write, a dismissed route and a bloc closed mid-request all leave it
-      // shut, and the journal is where the user lands in every one of them —
-      // but they are not the same thing to say, so the message is chosen by
-      // what actually happened rather than always reading as a refusal.
-      if (!consent.state.allowsSession) {
-        _saySoFar(navigator, consent.state);
-        return;
-      }
-    }
-    await navigator.push(
-      MaterialPageRoute<void>(builder: (_) => SessionPage(resume: resume)),
-    );
-    journal.add(const JournalEvent.loaded());
-  }
-
-  /// Tells the user, back on the journal, why no session started.
-  ///
-  /// A refusal and a failed write both leave the gate shut, but they are not
-  /// the same news: telling someone who ticked the box and hit a network
-  /// error that they chose "Not now" is untrue, and it is the app's own
-  /// account of what just happened. Dismissing the screen says nothing at
-  /// all — the user left, and knows it.
-  static void _saySoFar(NavigatorState navigator, ConsentState state) {
-    final message = switch (state) {
-      ConsentWriteFailure() => consentFailureMessage,
-      ConsentKnown(justDeclined: true) => consentDeclinedMessage,
-      // Everything else: a dismissed screen, a failed read, a withdrawal
-      // that did not land. The user left, or the screen they left already
-      // said its piece; inventing a refusal they did not make would be the
-      // app misreporting its own history.
-      _ => null,
-    };
-    if (message == null) {
+    final app = GetIt.I<JournalNavigator>();
+    if (!await journal.consentStands() &&
+        !await app.requestConsent(navigator)) {
       return;
     }
-    ScaffoldMessenger.maybeOf(navigator.context)
-        ?.showSnackBar(SnackBar(content: Text(message)));
+    await app.startSession(navigator, resume: resume);
+    journal.add(const JournalEvent.loaded());
   }
 }
 

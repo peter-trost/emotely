@@ -98,16 +98,16 @@ void main() {
         final robot = robotWith(tester, granted: true);
         await robot.launch();
 
-        // Read once at launch, and asked again on the way into the session:
-        // a reinstall cannot lose the answer and cannot invent one, and a
+        // Nothing is read at launch and nothing is remembered: the question
+        // is asked of the server on the way into every session, so a
+        // reinstall cannot lose the answer and cannot invent one, and a
         // withdrawal made elsewhere is seen before anything is sent.
-        expect(robot.supabase.to(consentRead), hasLength(1));
+        expect(robot.supabase.to(consentRead), isEmpty);
 
         await robot.startSession();
 
-        expect(robot.supabase.to(consentRead), hasLength(2));
+        expect(robot.supabase.to(consentRead), hasLength(1));
         expect(robot.supabase.bodies('/rest/v1/rpc/consent_stands'), [
-          {'version': consentVersion},
           {'version': consentVersion},
         ]);
         expect(robot.session, findsOneWidget);
@@ -117,12 +117,17 @@ void main() {
     testWidgets('a withdrawal made on another device stops this one', (
       tester,
     ) async {
-      // Consent stood when this device launched; by the time Start is
-      // tapped the server says otherwise, because the user withdrew it on
-      // their phone. The stale yes must not be what decides.
+      // Consent stood for the first session; by the time Start is tapped
+      // again the server says otherwise, because the user withdrew it on
+      // their phone. The yes from a minute ago must not be what decides.
       final robot = robotWith(tester, reads: [consentStands()]);
       await robot.launch();
 
+      await robot.startSession();
+
+      expect(robot.session, findsOneWidget);
+
+      await robot.back();
       await robot.startSession();
 
       expect(robot.consent, findsOneWidget);
@@ -266,8 +271,9 @@ void main() {
     testWidgets('a consent that cannot be read starts no session', (
       tester,
     ) async {
-      // Both reads fail — the one at launch and the one the gate makes on
-      // the way in — so the screen is reached without an answer.
+      // Both reads fail — the journal's on the way in, which then defers
+      // to the screen, and the screen's own — so it is reached without an
+      // answer.
       final robot = robotWith(tester, reads: [restRefused(), restRefused()]);
       await robot.launch();
 
@@ -282,11 +288,13 @@ void main() {
       // people to tick boxes without reading them.
       expect(robot.checkbox, findsNothing);
       expect(find.text(consentUnknownMessage), findsOneWidget);
-      // Both failed reads are reported, content-free, as their own step.
-      expect(robot.analytics.exceptions, hasLength(2));
-      for (final reported in robot.analytics.exceptions) {
-        expect(reported.properties, {'step': 'consent_load'});
-      }
+      // The screen's failed read is reported, content-free, as its own
+      // step; the journal's only defers to the screen, so it is not counted
+      // twice.
+      expect(robot.analytics.exceptions, hasLength(1));
+      expect(robot.analytics.exceptions.single.properties, {
+        'step': 'consent_load',
+      });
 
       // Looking again is offered, and works.
       await robot.tap(robot.retry);

@@ -50,11 +50,15 @@ handful, and the same tooling holds.
   hand (`dart pub global run flutter_launcher_icons` from `app`).
 - Reaching another feature needs a seam, since features cannot import each
   other: one abstract navigator per feature, implemented by the app and
-  registered as a singleton (`AccountNavigator.signOut` is the first: the
-  account screen asks to be signed out, the app's implementation tells the
-  auth bloc). It is the one sanctioned interface with a single production
+  registered as a singleton. `AccountNavigator` asks to be signed out;
+  `JournalNavigator` asks for the session, the consent screen, the account
+  screen and sign-out, and the app's implementation is where the consent
+  bloc is created for the gate and where the user is told why no session
+  started. It is the one sanctioned interface with a single production
   implementation, because it genuinely has two — the app's and the test
-  fake — and everything else stays concrete.
+  fake — and everything else stays concrete. The journal no longer shares
+  a consent bloc with the screens it opens: it asks the consent repository
+  before every session, which is what it always had to do anyway.
 
 Decided on #39 (design comment of 2026-09-17), implemented as a stack of
 pull requests starting with the move to `apps/mobile`.

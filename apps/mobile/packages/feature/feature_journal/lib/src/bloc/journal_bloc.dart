@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:consent_repository/consent_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:journal_repository/journal_repository.dart';
@@ -13,6 +14,7 @@ part 'journal_state.dart';
 /// session still in progress if there is one.
 class JournalBloc({
   required final JournalRepository _repository,
+  required final ConsentRepository _consent,
   required final JournalAnalytics _analytics,
 }) extends Bloc<JournalEvent, JournalState> {
   this : super(const JournalState.loading()) {
@@ -38,6 +40,19 @@ class JournalBloc({
       emit(JournalState.ready(entries: entries, openSession: openSession));
     } on Exception {
       emit(const JournalState.failure());
+    }
+  }
+
+  /// Whether consent stands right now, read from the server and never from
+  /// the answer this device happened to read earlier: a withdrawal made on
+  /// another device must stop this one before anything is sent (ADR 0014).
+  /// A read that fails counts as not standing — the gate stays shut, and
+  /// the consent screen, which reads again, says what happened.
+  Future<bool> consentStands() async {
+    try {
+      return await _consent.isGranted();
+    } on Exception {
+      return false;
     }
   }
 

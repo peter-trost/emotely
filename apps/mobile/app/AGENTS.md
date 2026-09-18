@@ -18,9 +18,13 @@ hand-rolled widgets.
   popped on sign-out — not into a singleton.
 - Widgets touch the container in exactly two places:
   `BlocProvider(create: (_) => GetIt.I<SomeBloc>())`, and a page resolving
-  its own feature's navigator (once features are packages). Nothing else in
-  a widget reads a dependency; a side effect that needs one (analytics, a
+  its own feature's navigator (`GetIt.I<JournalNavigator>()`). Nothing else
+  in a widget reads a dependency; a side effect that needs one (analytics, a
   launcher) is an event the bloc handles.
+- Every feature's navigator is implemented in `lib/app/navigators.dart` and
+  registered next to the feature in `registerApp`. The app is the only
+  place that knows two features' pages and blocs together, so cross-feature
+  routes, and what the user is told about their outcome, live there.
 - Build-time values (`--dart-define`s) are read and validated in the app
   only (`lib/app/environment.dart`, `urlFrom`) and passed into registration
   functions. No package calls `String.fromEnvironment`.

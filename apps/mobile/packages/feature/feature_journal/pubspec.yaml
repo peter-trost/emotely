@@ -1,0 +1,29 @@
+name: feature_journal
+description: Home — the journal so far, the way into the next session, and the entries read back.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  analytics: any
+  consent_repository: any
+  design_system: any
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  freezed_annotation: 3.1.0
+  get_it: 9.2.1
+  journal_repository: any
+  material_ui: ^1.1.0
+
+dev_dependencies:
+  agent_client: any
+  analysis: any
+  build_runner: 2.16.1
+  contract: any
+  flutter_test:
+    sdk: flutter
+  freezed: 4.0.1
+  testing: any

@@ -21,6 +21,7 @@ workspace:
   - packages/utility/testing
   - packages/feature/feature_account
   - packages/feature/feature_auth
+  - packages/feature/feature_journal
   - packages/feature/feature_session
 
 dev_dependencies:
