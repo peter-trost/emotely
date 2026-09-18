@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:emotely/consent/bloc/consent_bloc.dart';
-import 'package:emotely/consent/consent_text.dart';
+import 'package:feature_account/src/consent/bloc/consent_bloc.dart';
+import 'package:feature_account/src/consent/consent_text.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';

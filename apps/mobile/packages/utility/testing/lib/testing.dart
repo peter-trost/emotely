@@ -9,6 +9,7 @@ export 'src/agent_stub.dart';
 export 'src/analytics_spy.dart';
 export 'src/compose.dart';
 export 'src/config_stub.dart';
+export 'src/consent_rounds.dart';
 export 'src/journal_rows.dart';
 export 'src/mocks.dart';
 export 'src/pump_app.dart';

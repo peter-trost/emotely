@@ -18,6 +18,7 @@ workspace:
   - packages/utility/design_system
   - packages/utility/journal_repository
   - packages/utility/testing
+  - packages/feature/feature_account
   - packages/feature/feature_session
 
 dev_dependencies:

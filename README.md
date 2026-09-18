@@ -53,7 +53,8 @@ emotely/
 │  │     │                  (the tool-call shapes), agent_client, analytics, the two
 │  │     │                  repositories (journal, consent), design_system (theme and
 │  │     │                  shared widgets), testing (shared test support)
-│  │     └─ feature/        depend only on utilities, never on each other: feature_session
+│  │     └─ feature/        depend only on utilities, never on each other:
+│  │                        feature_session, feature_account (with the consent gate)
 │  └─ web/        Jaspr (Dart) · getemotely.com landing page + waitlist · static, deploys to Vercel
 ├─ packages/
 │  └─ contract/   the tool-call schema — single source of truth for both sides
