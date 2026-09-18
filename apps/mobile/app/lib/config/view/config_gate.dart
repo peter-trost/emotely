@@ -1,10 +1,6 @@
-import 'dart:async';
-
-import 'package:analytics/analytics.dart';
 import 'package:emotely/config/bloc/config_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// The startup gate: nothing below it is built until the server has said this
 /// build may run (#49).
@@ -26,8 +22,9 @@ class const ConfigGate({required final Widget child, super.key})
     builder: (context, state) => switch (state) {
       ConfigReady() => child,
       ConfigUnknown() => const _Checking(),
-      ConfigUpdateRequired(:final minAppVersion, :final storeUrl) =>
-        _UpdateRequired(minAppVersion: minAppVersion, storeUrl: storeUrl),
+      ConfigUpdateRequired(:final minAppVersion) => _UpdateRequired(
+        minAppVersion: minAppVersion,
+      ),
       ConfigFailure(:final message) => _Failure(message: message),
     },
   );
@@ -67,10 +64,8 @@ class const _Checking() extends StatelessWidget {
 
 /// The force-update screen: no retry, no way around it. This is what lets the
 /// server delete deprecated wire shapes instead of keeping them (#37).
-class const _UpdateRequired({
-  required final String minAppVersion,
-  required final String storeUrl,
-}) extends StatelessWidget {
+class const _UpdateRequired({required final String minAppVersion})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _GateScaffold(
     contentKey: ConfigGate.updateRequiredKey,
@@ -82,10 +77,8 @@ class const _UpdateRequired({
       ),
       FilledButton(
         key: ConfigGate.updateKey,
-        // The screen stays blocking whether or not the store opens — there is
-        // nothing else it could show. But a failure here strands the user on
-        // their only way out, so it is reported rather than swallowed.
-        onPressed: () => unawaited(_openStore(context, storeUrl)),
+        onPressed: () =>
+            context.read<ConfigBloc>().add(const ConfigEvent.updateRequested()),
         child: const Text('Update'),
       ),
     ],
@@ -96,16 +89,6 @@ class const _UpdateRequired({
 /// and blocks with a retry. Not "allowed by default": the version gate is the
 /// one thing that must fail shut, or a build the server has stopped serving
 /// walks straight past it whenever the network is down.
-/// Opens [storeUrl], reporting a failure instead of dropping it.
-Future<void> _openStore(BuildContext context, String storeUrl) async {
-  final errors = context.read<ErrorReporter>();
-  try {
-    await launchUrl(Uri.parse(storeUrl), mode: LaunchMode.externalApplication);
-  } on Exception catch (error, stackTrace) {
-    unawaited(errors.storeLaunchFailed(error, stackTrace));
-  }
-}
-
 class const _Failure({required final String message}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _GateScaffold(

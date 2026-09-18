@@ -6,3 +6,4 @@ library;
 
 export 'src/journal_models.dart';
 export 'src/journal_repository.dart';
+export 'src/register.dart';

@@ -11,11 +11,9 @@
 // user (a password account like the store review accounts; everyone else
 // signs in with a code through the app's own screen).
 
-import 'package:agent_client/agent_client.dart';
-import 'package:analytics/analytics.dart';
 import 'package:emotely/app/app.dart';
+import 'package:emotely/app/dependencies.dart';
 import 'package:emotely/app/environment.dart';
-import 'package:emotely/consent/consent_text.dart';
 import 'package:emotely/consent/view/consent_page.dart';
 import 'package:emotely/journal/view/journal_page.dart';
 import 'package:emotely/session/view/entry_view.dart';
@@ -26,6 +24,7 @@ import 'package:emotely/session/widgets/longtext_input.dart';
 import 'package:emotely/session/widgets/rating_input.dart';
 import 'package:emotely/session/widgets/text_list_input.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -93,31 +92,17 @@ class LiveSessionRobot(final WidgetTester tester) {
     // is unreadable or blocks this build, the app never reaches the journal
     // and this test says so.
     final httpClient = http.Client();
-    final appVersion = (await PackageInfo.fromPlatform()).version;
-    await tester.pumpWidget(
-      EmotelyApp(
-        appVersion: appVersion,
-        configClient: ConfigClient(
-          httpClient: httpClient,
-          endpoint: Uri.parse(configUrl),
-        ),
-        agentClient: AgentClient(
-          httpClient: httpClient,
-          endpoint: Uri.parse(agentUrl),
-          appVersion: appVersion,
-          accessToken: () => supabase.client.auth.currentSession?.accessToken,
-        ),
-        analytics: SessionAnalytics(posthog: posthog),
-        supabase: supabase.client,
-        authAnalytics: AuthAnalytics(posthog: posthog),
-        journalAnalytics: JournalAnalytics(posthog: posthog),
-        consentAnalytics: ConsentAnalytics(
-          posthog: posthog,
-          version: consentVersion,
-        ),
-        errorReporter: ErrorReporter(posthog: posthog),
-      ),
+    registerApp(
+      GetIt.I,
+      agentHttpClient: httpClient,
+      configHttpClient: httpClient,
+      supabase: supabase.client,
+      posthog: posthog,
+      appVersion: (await PackageInfo.fromPlatform()).version,
+      agentUrl: urlFrom(agentUrl, define: 'EMOTELY_AGENT_URL'),
+      configUrl: urlFrom(configUrl, define: 'EMOTELY_CONFIG_URL'),
     );
+    await tester.pumpWidget(const EmotelyApp());
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(JournalView.startKey));
     await tester.pumpAndSettle();

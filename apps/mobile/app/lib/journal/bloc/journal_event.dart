@@ -8,4 +8,7 @@ sealed class JournalEvent with _$JournalEvent {
 
   /// Drop the unfinished session.
   const factory sessionDiscarded() = JournalSessionDiscarded;
+
+  /// The user opened a filed entry.
+  const factory entryOpened() = JournalEntryOpened;
 }

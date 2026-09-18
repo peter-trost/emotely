@@ -56,12 +56,13 @@ extension JournalEventPatterns on JournalEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( JournalLoaded value)?  loaded,TResult Function( JournalSessionDiscarded value)?  sessionDiscarded,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( JournalLoaded value)?  loaded,TResult Function( JournalSessionDiscarded value)?  sessionDiscarded,TResult Function( JournalEntryOpened value)?  entryOpened,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case JournalLoaded() when loaded != null:
 return loaded(_that);case JournalSessionDiscarded() when sessionDiscarded != null:
-return sessionDiscarded(_that);case _:
+return sessionDiscarded(_that);case JournalEntryOpened() when entryOpened != null:
+return entryOpened(_that);case _:
   return orElse();
 
 }
@@ -79,12 +80,13 @@ return sessionDiscarded(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( JournalLoaded value)  loaded,required TResult Function( JournalSessionDiscarded value)  sessionDiscarded,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( JournalLoaded value)  loaded,required TResult Function( JournalSessionDiscarded value)  sessionDiscarded,required TResult Function( JournalEntryOpened value)  entryOpened,}){
 final _that = this;
 switch (_that) {
 case JournalLoaded():
 return loaded(_that);case JournalSessionDiscarded():
-return sessionDiscarded(_that);}
+return sessionDiscarded(_that);case JournalEntryOpened():
+return entryOpened(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -98,12 +100,13 @@ return sessionDiscarded(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( JournalLoaded value)?  loaded,TResult? Function( JournalSessionDiscarded value)?  sessionDiscarded,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( JournalLoaded value)?  loaded,TResult? Function( JournalSessionDiscarded value)?  sessionDiscarded,TResult? Function( JournalEntryOpened value)?  entryOpened,}){
 final _that = this;
 switch (_that) {
 case JournalLoaded() when loaded != null:
 return loaded(_that);case JournalSessionDiscarded() when sessionDiscarded != null:
-return sessionDiscarded(_that);case _:
+return sessionDiscarded(_that);case JournalEntryOpened() when entryOpened != null:
+return entryOpened(_that);case _:
   return null;
 
 }
@@ -120,11 +123,12 @@ return sessionDiscarded(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  loaded,TResult Function()?  sessionDiscarded,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  loaded,TResult Function()?  sessionDiscarded,TResult Function()?  entryOpened,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case JournalLoaded() when loaded != null:
 return loaded();case JournalSessionDiscarded() when sessionDiscarded != null:
-return sessionDiscarded();case _:
+return sessionDiscarded();case JournalEntryOpened() when entryOpened != null:
+return entryOpened();case _:
   return orElse();
 
 }
@@ -142,11 +146,12 @@ return sessionDiscarded();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  loaded,required TResult Function()  sessionDiscarded,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  loaded,required TResult Function()  sessionDiscarded,required TResult Function()  entryOpened,}) {final _that = this;
 switch (_that) {
 case JournalLoaded():
 return loaded();case JournalSessionDiscarded():
-return sessionDiscarded();}
+return sessionDiscarded();case JournalEntryOpened():
+return entryOpened();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -160,11 +165,12 @@ return sessionDiscarded();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  loaded,TResult? Function()?  sessionDiscarded,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  loaded,TResult? Function()?  sessionDiscarded,TResult? Function()?  entryOpened,}) {final _that = this;
 switch (_that) {
 case JournalLoaded() when loaded != null:
 return loaded();case JournalSessionDiscarded() when sessionDiscarded != null:
-return sessionDiscarded();case _:
+return sessionDiscarded();case JournalEntryOpened() when entryOpened != null:
+return entryOpened();case _:
   return null;
 
 }
@@ -228,6 +234,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
     return 'JournalEvent.sessionDiscarded()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class JournalEntryOpened implements JournalEvent {
+  const JournalEntryOpened();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is JournalEntryOpened);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'JournalEvent.entryOpened()';
 }
 
 

@@ -10,4 +10,5 @@ export 'src/consent_analytics.dart';
 export 'src/error_reporter.dart';
 export 'src/error_tracking.dart';
 export 'src/journal_analytics.dart';
+export 'src/register.dart';
 export 'src/session_analytics.dart';

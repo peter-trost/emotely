@@ -49,9 +49,50 @@ handful, and the same tooling holds.
   a `cli_util` that cannot resolve next to melos, and it is only ever run by
   hand (`dart pub global run flutter_launcher_icons` from `app`).
 - Cross-feature navigation needs a seam, since features cannot import each
-  other: one abstract navigator per feature, implemented by the app. That and
-  the dependency-injection container that lets a feature package register
-  itself are the second half of this decision, recorded when they land.
+  other: one abstract navigator per feature, implemented by the app. That is
+  the last piece of this decision and is recorded when the first feature
+  package lands.
 
 Decided on #39 (design comment of 2026-09-17), implemented as a stack of
 pull requests starting with the move to `apps/mobile`.
+
+## Dependency injection
+
+A package can only register itself into a container that is not the widget
+tree, so the container is get_it (9.2.1): bare, no injectable codegen, no
+wrapper package. That is a deliberate departure from Tide, which generates
+its registrations with injectable and hides get_it behind a `tide_di`
+package; at a dozen packages both are ceremony. `RepositoryProvider` and
+`context.read` for services are gone — they were service location scoped to
+the tree, which was never the defect, but a feature package cannot reach a
+tree the app builds.
+
+The rules, in the app's `AGENTS.md` and enforced by review:
+
+- **One composition root.** `registerApp` in the app calls one plain
+  `registerX(GetIt, {...})` function per utility and per feature, in
+  dependency order. No package registers anything on its own.
+- **Blocs are factories; everything else is an eager, user-agnostic
+  singleton.** Sign-out drops all state because no per-user object outlives
+  a screen. Should one ever need to, it goes into a get_it scope pushed on
+  sign-in and popped on sign-out, never into a singleton.
+- **Widgets touch the container in exactly two places:** creating their
+  bloc, and resolving their feature's navigator. A widget-side effect that
+  needs a dependency (an analytics call, a store launch) becomes an event
+  the bloc handles — two such reads moved into blocs when this landed.
+- **The app owns configuration.** Build-time values are read and validated
+  in the app (`urlFrom` fails the launch on a malformed define, naming it)
+  and passed into registration functions; no package reads the environment.
+  Tide reads defines inside a utility's DI module; we chose the app so there
+  is one inventory of defines and one fail-fast point.
+- **Tests compose with the production `registerApp`** and replace only the
+  leaves — the http clients, the Supabase client, the PostHog instance —
+  so a test exercises the production graph with fake edges. This is
+  stricter than Tide, whose tests register a separate test container
+  wholesale. The container is reset in teardown and `allowReassignment`
+  stays off, so a double registration is a loud failure.
+- **Async initialization stays in `main`,** awaited behind the native launch
+  screen; no async registrations, no Flutter splash. The known cost — the
+  Supabase SDK awaits a network token refresh with backoff for up to ten
+  seconds when the persisted token is expired and the device is offline —
+  is a follow-up about starting on the persisted session, not a DI concern.

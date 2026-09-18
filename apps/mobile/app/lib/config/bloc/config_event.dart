@@ -5,4 +5,7 @@ part of 'config_bloc.dart';
 sealed class ConfigEvent with _$ConfigEvent {
   /// Read the config. Also the retry: the screen re-adds it after a failure.
   const factory loaded() = ConfigLoaded;
+
+  /// Open the store the update screen names.
+  const factory updateRequested() = ConfigUpdateRequested;
 }

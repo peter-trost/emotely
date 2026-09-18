@@ -4,3 +4,4 @@
 library;
 
 export 'src/consent_repository.dart';
+export 'src/register.dart';

@@ -1,76 +1,35 @@
-import 'package:agent_client/agent_client.dart';
-import 'package:analytics/analytics.dart';
-import 'package:consent_repository/consent_repository.dart';
 import 'package:emotely/app/theme.dart';
 import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/auth/view/sign_in_page.dart';
 import 'package:emotely/config/bloc/config_bloc.dart';
 import 'package:emotely/config/view/config_gate.dart';
-import 'package:emotely/consent/consent_text.dart';
 import 'package:emotely/journal/view/journal_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:journal_repository/journal_repository.dart';
+import 'package:get_it/get_it.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
-/// Root of the emotely client: theme, the services every screen may need,
-/// and the one decision above every screen — signed in or not.
-class const EmotelyApp({
-  required final AgentClient agentClient,
-  required final ConfigClient configClient,
-  required final String appVersion,
-  required final SessionAnalytics analytics,
-  required final SupabaseClient supabase,
-  required final AuthAnalytics authAnalytics,
-  required final JournalAnalytics journalAnalytics,
-  required final ConsentAnalytics consentAnalytics,
-  required final ErrorReporter errorReporter,
-  super.key,
-}) extends StatelessWidget {
+/// Root of the emotely client: theme, the two blocs that sit above every
+/// screen, and the one decision above every screen — signed in or not.
+///
+/// Every dependency comes out of the container `registerApp` filled
+/// (ADR 0015); the widget itself is handed nothing.
+class const EmotelyApp({super.key}) extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => MultiRepositoryProvider(
+  Widget build(BuildContext context) => MultiBlocProvider(
     providers: [
-      RepositoryProvider.value(value: agentClient),
-      RepositoryProvider.value(value: analytics),
-      RepositoryProvider.value(value: supabase),
-      RepositoryProvider.value(value: authAnalytics),
-      RepositoryProvider(create: (_) => JournalRepository(supabase: supabase)),
-      RepositoryProvider(
-        create: (_) =>
-            ConsentRepository(supabase: supabase, version: consentVersion),
+      BlocProvider(create: (_) => GetIt.I<AuthBloc>()),
+      // Not lazy: the gate must ask before the first frame the user could
+      // act on, not when something happens to read it.
+      BlocProvider(
+        lazy: false,
+        create: (_) => GetIt.I<ConfigBloc>()..add(const ConfigEvent.loaded()),
       ),
-      RepositoryProvider.value(value: journalAnalytics),
-      RepositoryProvider.value(value: consentAnalytics),
-      RepositoryProvider.value(value: errorReporter),
-      RepositoryProvider.value(value: configClient),
     ],
-    child: MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) => AuthBloc(
-            supabase: supabase,
-            analytics: authAnalytics,
-            errors: errorReporter,
-          ),
-        ),
-        // Not lazy: the gate must ask before the first frame the user could
-        // act on, not when something happens to read it.
-        BlocProvider(
-          lazy: false,
-          create: (_) => ConfigBloc(
-            client: configClient,
-            appVersion: appVersion,
-            analytics: analytics,
-            errors: errorReporter,
-          )..add(const ConfigEvent.loaded()),
-        ),
-      ],
-      child: MaterialApp(
-        title: 'emotely',
-        theme: lightTheme,
-        darkTheme: darkTheme,
-        home: const ConfigGate(child: _Root()),
-      ),
+    child: MaterialApp(
+      title: 'emotely',
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      home: const ConfigGate(child: _Root()),
     ),
   );
 }
