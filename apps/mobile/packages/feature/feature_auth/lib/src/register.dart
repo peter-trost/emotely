@@ -1,4 +1,4 @@
-import 'package:emotely/auth/bloc/auth_bloc.dart';
+import 'package:feature_auth/src/bloc/auth_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 /// The auth feature's registrations: its bloc. A factory like every bloc;

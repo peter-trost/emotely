@@ -1,41 +1,13 @@
-import 'package:analytics/analytics.dart';
-import 'package:emotely/auth/bloc/auth_bloc.dart';
+import 'package:feature_auth/src/bloc/auth_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 // gotrue has its own AuthState (the stream event); ours is the bloc state.
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+import 'package:testing/testing.dart';
 
-import '../auth/sign_in_robot.dart';
-import '../helpers/helpers.dart';
+import 'sign_in_robot.dart';
 
 void main() {
-  group(AuthAnalytics, () {
-    test('identifies the user by id and reports sign-in milestones', () async {
-      final spy = AnalyticsSpy();
-      final analytics = spy.authAnalytics;
-
-      await analytics.codeRequested();
-      await analytics.codeRequestFailed();
-      await analytics.codeRejected();
-      await analytics.passwordFailed();
-      await analytics.identify(userId: 'user-1');
-      await analytics.signedIn();
-      await analytics.signedOut();
-      await analytics.accountDeleted();
-
-      expect(spy.identified, ['user-1']);
-      expect(spy.events, [
-        event('sign_in_code_requested'),
-        event('sign_in_code_request_failed'),
-        event('sign_in_code_rejected'),
-        event('sign_in_password_failed'),
-        event('signed_in'),
-        event('signed_out'),
-        event('account_deleted'),
-      ]);
-      // Signing out and deleting the account each make PostHog forget.
-      expect(spy.resets, 2);
-    });
-
+  group(AuthBloc, () {
     testWidgets('never sends the email or the code (ADR 0005)', (tester) async {
       const needleEmail = 'needle.person@example.com';
       const needleCode = '918273';
@@ -160,7 +132,6 @@ void main() {
         event('sign_in_password_failed'),
         event('sign_in_password_failed'),
         event('signed_in'),
-        event('journal_viewed', {'entries': 0, 'open_session': false}),
       ]);
       final outgoing = robot.analytics.outgoingStrings.toList();
       expect(outgoing, isNotEmpty);

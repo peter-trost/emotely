@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
-import 'package:emotely/auth/review_accounts.dart';
+import 'package:feature_auth/src/review_accounts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 // gotrue has its own AuthState (the stream event); ours is the bloc state.

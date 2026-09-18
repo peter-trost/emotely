@@ -153,7 +153,7 @@ the Resend quota (100 mails/day, shared with the website's waitlist). Both
 stores accept a demo account as "username + password"; Google's guidance for
 apps with one-time-PIN sign-in is to provide reusable sign-in details that do
 not expire. So two accounts sign in with a **password, not a code**, and never
-trigger an email (`apps/mobile/app/lib/auth/review_accounts.dart`):
+trigger an email (`apps/mobile/packages/feature/feature_auth/lib/src/review_accounts.dart`):
 
 - `google-play-review@getemotely.com`
 - `app-store-review@getemotely.com`

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:emotely/auth/bloc/auth_bloc.dart';
 import 'package:emotely/journal/bloc/journal_bloc.dart';
 import 'package:emotely/journal/view/entry_page.dart';
 import 'package:feature_account/feature_account.dart';
+import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_session/feature_session.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';

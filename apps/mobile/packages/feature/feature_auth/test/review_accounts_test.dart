@@ -1,4 +1,4 @@
-import 'package:emotely/auth/review_accounts.dart';
+import 'package:feature_auth/src/review_accounts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

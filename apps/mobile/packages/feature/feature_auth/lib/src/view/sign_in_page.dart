@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:emotely/auth/bloc/auth_bloc.dart';
-import 'package:feature_account/feature_account.dart';
+import 'package:feature_auth/src/bloc/auth_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Email code sign-in in two steps: the email, then the six-digit code

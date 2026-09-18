@@ -1,13 +1,15 @@
-import 'package:emotely/auth/bloc/auth_bloc.dart';
-import 'package:emotely/auth/view/sign_in_page.dart';
+import 'package:feature_auth/src/bloc/auth_bloc.dart';
+import 'package:feature_auth/src/view/sign_in_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     show AuthApiException, AuthException, AuthRetryableFetchException;
 
-import '../../helpers/helpers.dart';
+import 'package:testing/testing.dart';
+
 import '../sign_in_robot.dart';
 
 void main() {
@@ -51,8 +53,6 @@ void main() {
       expect(verify['type'], 'email');
       expect(robot.home, findsOneWidget);
       expect(robot.signIn, findsNothing);
-      // The journal was read as the user who just signed in.
-      expect(supabase.to('GET /rest/v1/entries').single.query['select'], '*');
     });
 
     testWidgets('shows progress while Supabase answers', (tester) async {
@@ -321,6 +321,73 @@ void main() {
       expect(robot.signIn, findsOneWidget);
     });
 
+    group('signing out', () {
+      testWidgets('forgets the user and returns to sign-in', (tester) async {
+        final supabase = SupabaseStub()..script(logout: [signedOut()]);
+        await supabase.signedIn();
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+        await robot.launch();
+
+        expect(robot.home, findsOneWidget);
+
+        tester
+            .element(robot.home)
+            .read<AuthBloc>()
+            .add(const AuthEvent.signOutRequested());
+        await robot.settle();
+
+        expect(robot.signIn, findsOneWidget);
+        expect(supabase.to('POST /auth/v1/logout'), hasLength(1));
+        expect(robot.analytics.events.last, event('signed_out'));
+        expect(robot.analytics.resets, 1);
+      });
+
+      testWidgets('signs out even when the server cannot be told', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub()..script(logout: [authUnreachable()]);
+        await supabase.signedIn();
+        final robot = SignInRobot(
+          tester,
+          supabase: supabase,
+          agent: AgentStub(),
+        );
+        await robot.launch();
+
+        tester
+            .element(robot.home)
+            .read<AuthBloc>()
+            .add(const AuthEvent.signOutRequested());
+        await robot.settle();
+
+        expect(robot.signIn, findsOneWidget);
+        expect(robot.analytics.resets, 1);
+      });
+    });
+
+    testWidgets('links the privacy notice before an account exists', (
+      tester,
+    ) async {
+      // Play expects the policy to be findable without signing in; this is
+      // the first screen anyone sees, so the link lives here too.
+      final launcher = UrlLauncherSpy.setup();
+      final robot = SignInRobot(
+        tester,
+        supabase: SupabaseStub(),
+        agent: AgentStub(),
+      );
+      await robot.launch();
+
+      await tester.tap(find.byKey(SignInPage.privacyNoticeKey));
+      await robot.settle();
+
+      expect(launcher.launched, [privacyNoticeUrl]);
+    });
+
     testWidgets('renders nothing once signed in; the root swaps the screen', (
       tester,
     ) async {
@@ -386,7 +453,7 @@ void main() {
         expect(supabase.to('POST /auth/v1/signup'), isEmpty);
         expect(robot.home, findsOneWidget);
         expect(robot.signIn, findsNothing);
-        // No code was requested; the journal's own event follows sign-in.
+        // No code was requested.
         expect(robot.analytics.events.first, event('signed_in'));
         expect(
           robot.analytics.events.map((captured) => captured['event']),

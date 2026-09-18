@@ -7,6 +7,7 @@ import 'package:feature_account/src/consent/view/consent_page.dart';
 import 'package:feature_account/src/navigator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Wires an [AccountBloc] to the Supabase client in scope.

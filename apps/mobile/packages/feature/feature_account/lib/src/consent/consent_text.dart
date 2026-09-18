@@ -31,13 +31,6 @@ library;
 /// thought about whether the meaning moved (see ADR 0014).
 const consentVersion = '2026-09-15';
 
-/// Where the full notice lives. The consent screen links it, and so does the
-/// account screen.
-const privacyNoticeUrl = 'https://getemotely.com/app-privacy';
-
-/// The imprint § 5 DDG asks for; linked next to the notice.
-const imprintUrl = 'https://getemotely.com/imprint';
-
 /// The heading of the consent screen. Names the moment rather than asking a
 /// question, and stays true when the screen is shown again after a wording
 /// change or after a withdrawal — neither of which is a "first" session.
@@ -142,12 +135,6 @@ const consentWithdrawnExplanation =
 
 /// The account screen's button to consent again after a withdrawal.
 const restoreConsentLabel = 'Consent again';
-
-/// The account screen's link to the notice.
-const privacyNoticeLabel = 'Privacy notice';
-
-/// The account screen's link to the imprint.
-const imprintLabel = 'Imprint';
 
 /// Shown when the consent could not be recorded. The session does not start
 /// on a consent that was never written down, so this says what happened
