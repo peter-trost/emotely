@@ -9,20 +9,12 @@ environment:
   sdk: ^3.13.0
 
 workspace:
+  # Every package under the two tiers, picked up by glob (pub supports
+  # them since Dart 3.11; melos matches its workspace by the same globs),
+  # so adding a package is a directory, not a list entry.
   - app
-  - packages/utility/agent_client
-  - packages/utility/analysis
-  - packages/utility/analytics
-  - packages/utility/consent_repository
-  - packages/utility/contract
-  - packages/utility/design_system
-  - packages/utility/journal_repository
-  - packages/utility/legal_links
-  - packages/utility/testing
-  - packages/feature/feature_account
-  - packages/feature/feature_auth
-  - packages/feature/feature_journal
-  - packages/feature/feature_session
+  - packages/utility/*
+  - packages/feature/*
 
 dev_dependencies:
   # melos reads the workspace list above; it only recognises the workspace
