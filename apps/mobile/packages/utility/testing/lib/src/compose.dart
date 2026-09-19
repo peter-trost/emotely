@@ -1,6 +1,7 @@
 import 'package:agent_client/agent_client.dart';
 import 'package:analytics/analytics.dart';
 import 'package:consent_repository/consent_repository.dart';
+import 'package:feedback_link/feedback_link.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:journal_repository/journal_repository.dart';
@@ -12,6 +13,16 @@ import 'package:testing/src/supabase_stub.dart';
 /// The consent wording version a feature test registers. The app owns the
 /// real one; a feature only ever reports or records whatever it is given.
 const testConsentVersion = '2026-01-01';
+
+/// The build a feature test runs as. Fixed rather than read from the host,
+/// so what a feedback mail says is the same on every machine; the app hands
+/// in the real one, read from `package_info_plus` and the platform.
+const testBuildInfo = BuildInfo(
+  version: '1.0.0',
+  buildNumber: '1',
+  platform: 'iOS',
+  operatingSystemVersion: '18.0',
+);
 
 /// Registers every utility into [getIt] the way the app's `registerApp`
 /// does — the production registration functions, in the same order — over
@@ -31,6 +42,7 @@ void registerUtilitiesUnderTest(
   ConfigStub? config,
   String appVersion = AgentStub.appVersion,
   String consentVersion = testConsentVersion,
+  BuildInfo build = testBuildInfo,
 }) {
   final configStub = config ?? (ConfigStub()..serves());
   // A journal that accepts every write unless the test scripts otherwise.
@@ -57,4 +69,5 @@ void registerUtilitiesUnderTest(
     supabase: supabase.supabase,
     version: consentVersion,
   );
+  registerFeedbackLink(getIt, build: build);
 }

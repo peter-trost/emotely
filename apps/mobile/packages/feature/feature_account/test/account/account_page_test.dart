@@ -1,4 +1,6 @@
 import 'package:feature_account/feature_account.dart';
+import 'package:feedback_link/feedback_link.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -37,6 +39,7 @@ class _AccountRobot(
   Finder get consentRetry => find.byKey(AccountView.consentRetryKey);
   Finder get notice => find.byKey(AccountView.privacyNoticeKey);
   Finder get imprint => find.byKey(AccountView.imprintKey);
+  Finder get feedback => find.byKey(AccountView.feedbackKey);
   Finder get consent => find.byType(ConsentPage);
 
   /// A launcher route that pushes the account screen with the consent bloc
@@ -412,6 +415,61 @@ void main() {
       await robot.tap(robot.imprint);
 
       expect(launcher.launched, [privacyNoticeUrl, imprintUrl]);
+    });
+
+    testWidgets('opens a prefilled feedback mail beside the legal links', (
+      tester,
+    ) async {
+      final launcher = UrlLauncherSpy.setup();
+      final robot = robotWith(tester);
+      await robot.launch();
+
+      await robot.tap(robot.feedback);
+
+      final mail = Uri.parse(launcher.launched.single);
+      expect(mail.scheme, 'mailto');
+      expect(mail.path, feedbackAddress);
+      expect(
+        mail.queryParameters['subject'],
+        allOf(
+          contains(testBuildInfo.versionAndBuild),
+          contains(testBuildInfo.platform),
+        ),
+      );
+    });
+
+    testWidgets('reports a device with no mail app, and says nothing', (
+      tester,
+    ) async {
+      UrlLauncherSpy.setup().fails = true;
+      final robot = robotWith(tester);
+      await robot.launch();
+
+      await robot.tap(robot.feedback);
+
+      // The screen is unchanged: there is nothing useful to say, and the
+      // beta's one feedback channel dead-ending is ours to notice, not the
+      // user's to work around.
+      expect(robot.feedback, findsOneWidget);
+      expect(robot.analytics.exceptions, [
+        captured(withheld(PlatformException), {'step': 'feedback_mail'}),
+      ]);
+    });
+
+    testWidgets('tells the mail nothing about the user or their journal', (
+      tester,
+    ) async {
+      final launcher = UrlLauncherSpy.setup();
+      final robot = robotWith(tester);
+      await robot.launch();
+
+      await robot.tap(robot.feedback);
+
+      // The signed-in user's id and address are what this screen holds and
+      // the mail must not carry; the mail itself already says who sent it.
+      final user = robot.supabase.supabase.auth.currentUser!;
+      expect(launcher.launched.single, isNot(contains(user.id)));
+      expect(launcher.launched.single, isNot(contains(user.email)));
     });
 
     testWidgets('meets accessibility guidelines in every state', (

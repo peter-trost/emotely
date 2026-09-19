@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:feedback_link/feedback_link.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,9 +19,28 @@ class AccountBloc({
   required final SupabaseClient _supabase,
   required final AuthAnalytics _analytics,
   required final ErrorReporter _errors,
+  required final BuildInfo _build,
 }) extends Bloc<AccountEvent, AccountState> {
   this : super(const AccountState.idle()) {
     on<AccountDeletionRequested>(_onDeletionRequested);
+    on<AccountFeedbackRequested>(_onFeedbackRequested);
+  }
+
+  /// Hands the platform's mail app a message addressed to us, prefilled
+  /// with the build the user is running. Emits nothing: the screen does not
+  /// change, and whether a mail app exists is not this screen's to answer.
+  Future<void> _onFeedbackRequested(
+    AccountFeedbackRequested event,
+    Emitter<AccountState> emit,
+  ) async {
+    try {
+      await openFeedbackMail(_build);
+    } on Exception catch (error, stackTrace) {
+      // No mail app is set up, or the platform refused. Nothing to say on
+      // screen, but worth knowing about: it makes the beta's one feedback
+      // channel a dead end for whoever hit it.
+      unawaited(_errors.feedbackMailFailed(error, stackTrace));
+    }
   }
 
   Future<void> _onDeletionRequested(

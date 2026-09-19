@@ -7,6 +7,7 @@ import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
 import 'package:feature_session/feature_session.dart';
+import 'package:feedback_link/feedback_link.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:journal_repository/journal_repository.dart';
@@ -32,6 +33,7 @@ void registerApp(
   required SupabaseClient supabase,
   required Posthog posthog,
   required String appVersion,
+  required BuildInfo build,
   required Uri agentUrl,
   required Uri configUrl,
 }) {
@@ -49,6 +51,7 @@ void registerApp(
   registerAnalytics(getIt, posthog: posthog, consentVersion: consentVersion);
   registerJournalRepository(getIt, supabase: supabase);
   registerConsentRepository(getIt, supabase: supabase, version: consentVersion);
+  registerFeedbackLink(getIt, build: build);
   registerConfig(getIt, appVersion: appVersion);
   registerAuth(getIt);
   registerJournal(getIt);

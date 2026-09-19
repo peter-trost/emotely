@@ -11,7 +11,12 @@ import 'package:get_it/get_it.dart';
 /// app's to provide, not this feature's.
 void registerAccount(GetIt getIt) => getIt
   ..registerFactory(
-    () => AccountBloc(supabase: getIt(), analytics: getIt(), errors: getIt()),
+    () => AccountBloc(
+      supabase: getIt(),
+      analytics: getIt(),
+      errors: getIt(),
+      build: getIt(),
+    ),
   )
   ..registerFactory(
     () => ConsentBloc(repository: getIt(), analytics: getIt(), errors: getIt()),

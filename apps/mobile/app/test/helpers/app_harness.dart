@@ -34,6 +34,7 @@ Widget appUnderTest({
     supabase: supabase.supabase,
     posthog: analytics.posthog,
     appVersion: AgentStub.appVersion,
+    build: testBuildInfo,
     agentUrl: AgentStub.endpoint,
     configUrl: ConfigStub.endpoint,
   );

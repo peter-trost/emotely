@@ -86,6 +86,13 @@ class const ErrorReporter({required final Posthog posthog}) {
   Future<void> storeLaunchFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'store_launch');
 
+  /// The mail app could not be opened from the account screen. Nothing is
+  /// shown — the screen is unchanged and the user can write to us by other
+  /// means — but during the beta this is the one channel every qualitative
+  /// signal comes through, so a device where it dead-ends is worth knowing.
+  Future<void> feedbackMailFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'feedback_mail');
+
   /// Whether consent stands could not be read. The gate stays shut on this,
   /// so it is worth knowing how often it happens.
   Future<void> consentLoadFailed(Exception error, StackTrace stackTrace) =>
