@@ -267,6 +267,66 @@ void main() {
       ]);
     });
 
+    group("PostHog's internal-user flag", () {
+      const internalEmail = 'test@getemotely.com';
+
+      testWidgets('is set on a session restored for an internal address', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub();
+        await supabase.signedIn(email: internalEmail);
+        final agent = AgentStub()..script([unreachable()]);
+        final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+        await robot.launch();
+        await robot.settle();
+
+        expect(robot.home, findsOneWidget);
+        expect(robot.analytics.identities, [
+          identity(SupabaseStub.userId, {r'$internal_or_test_user': true}),
+        ]);
+      });
+
+      testWidgets('is cleared for an outside address signing in with a code', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub()
+          ..script(otp: [codeSent()], verify: [sessionGranted()]);
+        final agent = AgentStub()..script([unreachable()]);
+        final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+        await robot.launch();
+
+        await robot.requestCode();
+        await robot.enterCode(code);
+        await robot.tapSignIn();
+        await robot.settle();
+
+        expect(robot.home, findsOneWidget);
+        expect(robot.analytics.identities, [
+          identity(SupabaseStub.userId, {r'$internal_or_test_user': false}),
+        ]);
+      });
+
+      testWidgets('is set when a session for an internal address arrives', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub();
+        final agent = AgentStub()..script([unreachable()]);
+        final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+        await robot.launch();
+        await robot.settle();
+
+        expect(robot.signIn, findsOneWidget);
+
+        await supabase.signedIn(email: internalEmail);
+        await robot.settle();
+
+        expect(robot.home, findsOneWidget);
+        expect(robot.analytics.identities, [
+          identity(SupabaseStub.userId, {r'$internal_or_test_user': true}),
+        ]);
+      });
+    });
+
     testWidgets('returns to sign-in when the session ends', (tester) async {
       final supabase = SupabaseStub()..script(logout: [signedOut()]);
       await supabase.signedIn();

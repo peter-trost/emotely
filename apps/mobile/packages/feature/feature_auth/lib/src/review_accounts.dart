@@ -13,3 +13,21 @@ const reviewAccounts = {
 /// into the code flow (which would cost an email) by a stray capital.
 bool isReviewAccount(String email) =>
     reviewAccounts.contains(email.trim().toLowerCase());
+
+/// The domain every internal address sits on.
+const internalDomain = '@getemotely.com';
+
+/// Whether [email] is one of the founder's own accounts, normalised the same
+/// way as [isReviewAccount].
+///
+/// The rule is the domain, not a list: `getemotely.com` is a Google Workspace
+/// alias domain only the founder controls, so every address on it is his —
+/// his test alias, the two [reviewAccounts] (a subset of this, along with the
+/// crawler that signs in as one of them), and any alias he adds later without
+/// touching this code. Anyone who signs up with an address anywhere else is a
+/// real user.
+///
+/// Ends-with, never contains: `x@getemotely.com.evil.org` is a different
+/// domain and an ordinary user.
+bool isInternalAccount(String email) =>
+    email.trim().toLowerCase().endsWith(internalDomain);

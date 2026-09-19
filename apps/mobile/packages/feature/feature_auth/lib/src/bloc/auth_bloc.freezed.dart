@@ -128,7 +128,7 @@ return sessionChanged(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String email)?  emailSubmitted,TResult Function( String code)?  codeSubmitted,TResult Function( String password)?  passwordSubmitted,TResult Function()?  emailChangeRequested,TResult Function()?  signOutRequested,TResult Function( String? userId)?  sessionChanged,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String email)?  emailSubmitted,TResult Function( String code)?  codeSubmitted,TResult Function( String password)?  passwordSubmitted,TResult Function()?  emailChangeRequested,TResult Function()?  signOutRequested,TResult Function( String? userId,  String? email)?  sessionChanged,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AuthEmailSubmitted() when emailSubmitted != null:
 return emailSubmitted(_that.email);case AuthCodeSubmitted() when codeSubmitted != null:
@@ -136,7 +136,7 @@ return codeSubmitted(_that.code);case AuthPasswordSubmitted() when passwordSubmi
 return passwordSubmitted(_that.password);case AuthEmailChangeRequested() when emailChangeRequested != null:
 return emailChangeRequested();case AuthSignOutRequested() when signOutRequested != null:
 return signOutRequested();case AuthSessionChanged() when sessionChanged != null:
-return sessionChanged(_that.userId);case _:
+return sessionChanged(_that.userId,_that.email);case _:
   return orElse();
 
 }
@@ -154,7 +154,7 @@ return sessionChanged(_that.userId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String email)  emailSubmitted,required TResult Function( String code)  codeSubmitted,required TResult Function( String password)  passwordSubmitted,required TResult Function()  emailChangeRequested,required TResult Function()  signOutRequested,required TResult Function( String? userId)  sessionChanged,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String email)  emailSubmitted,required TResult Function( String code)  codeSubmitted,required TResult Function( String password)  passwordSubmitted,required TResult Function()  emailChangeRequested,required TResult Function()  signOutRequested,required TResult Function( String? userId,  String? email)  sessionChanged,}) {final _that = this;
 switch (_that) {
 case AuthEmailSubmitted():
 return emailSubmitted(_that.email);case AuthCodeSubmitted():
@@ -162,7 +162,7 @@ return codeSubmitted(_that.code);case AuthPasswordSubmitted():
 return passwordSubmitted(_that.password);case AuthEmailChangeRequested():
 return emailChangeRequested();case AuthSignOutRequested():
 return signOutRequested();case AuthSessionChanged():
-return sessionChanged(_that.userId);}
+return sessionChanged(_that.userId,_that.email);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -176,7 +176,7 @@ return sessionChanged(_that.userId);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String email)?  emailSubmitted,TResult? Function( String code)?  codeSubmitted,TResult? Function( String password)?  passwordSubmitted,TResult? Function()?  emailChangeRequested,TResult? Function()?  signOutRequested,TResult? Function( String? userId)?  sessionChanged,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String email)?  emailSubmitted,TResult? Function( String code)?  codeSubmitted,TResult? Function( String password)?  passwordSubmitted,TResult? Function()?  emailChangeRequested,TResult? Function()?  signOutRequested,TResult? Function( String? userId,  String? email)?  sessionChanged,}) {final _that = this;
 switch (_that) {
 case AuthEmailSubmitted() when emailSubmitted != null:
 return emailSubmitted(_that.email);case AuthCodeSubmitted() when codeSubmitted != null:
@@ -184,7 +184,7 @@ return codeSubmitted(_that.code);case AuthPasswordSubmitted() when passwordSubmi
 return passwordSubmitted(_that.password);case AuthEmailChangeRequested() when emailChangeRequested != null:
 return emailChangeRequested();case AuthSignOutRequested() when signOutRequested != null:
 return signOutRequested();case AuthSessionChanged() when sessionChanged != null:
-return sessionChanged(_that.userId);case _:
+return sessionChanged(_that.userId,_that.email);case _:
   return null;
 
 }
@@ -444,10 +444,11 @@ int get hashCode => runtimeType.hashCode;
 
 
 class AuthSessionChanged implements AuthEvent {
-  const AuthSessionChanged(this.userId);
+  const AuthSessionChanged(this.userId, this.email);
   
 
  final  String? userId;
+ final  String? email;
 
 /// Create a copy of AuthEvent
 /// with the given fields replaced by the non-null parameter values.
@@ -459,13 +460,13 @@ $AuthSessionChangedCopyWith<AuthSessionChanged> get copyWith => _$AuthSessionCha
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthSessionChanged&&(identical(other.userId, userId) || other.userId == userId));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthSessionChanged&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.email, email) || other.email == email));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,userId);
+    return Object.hash(runtimeType,userId,email);
 }
 
 
@@ -477,7 +478,7 @@ abstract mixin class $AuthSessionChangedCopyWith<$Res> implements $AuthEventCopy
   factory $AuthSessionChangedCopyWith(AuthSessionChanged value, $Res Function(AuthSessionChanged) _then) = _$AuthSessionChangedCopyWithImpl;
 @useResult
 $Res call({
- String? userId
+ String? userId, String? email
 });
 
 
@@ -494,9 +495,10 @@ class _$AuthSessionChangedCopyWithImpl<$Res>
 
 /// Create a copy of AuthEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? userId = freezed,}) {
+@pragma('vm:prefer-inline') $Res call({Object? userId = freezed,Object? email = freezed,}) {
   return _then(AuthSessionChanged(
 freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String?,freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
