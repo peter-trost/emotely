@@ -35,6 +35,24 @@ deploy key of the certificates repo), `ANDROID_KEYSTORE_BASE64`,
 The human-readable copies live in the login keychain on the dev Mac
 (`emotely_*` items) — never in the repo, never in chat.
 
+## Amendment 2026-09-19: every build reaches the beta testers
+
+The lanes now distribute, not just upload (#127). `ios beta` hands each build
+to the TestFlight groups `Team` (internal) and `Beta` (external); `android
+beta` uploads to `internal` and then promotes that same version code to the
+closed track `alpha`. Outside testers were the reason: an external TestFlight
+group and a closed Play track are the only ways to reach someone who is not
+in the App Store Connect team or on an internal list, and assigning each
+build by hand in two consoles is exactly the human step this ADR removes.
+
+It costs time, not reliability. `distribute_external` cannot skip Apple's
+build processing, so the macos-26 job now waits the 10–30 min it used to
+return before; the first build of a version additionally waits for Beta App
+Review, and Google reviews every closed-testing release. All three happen
+after the workflow is green. Android takes two `upload_to_play_store` calls
+rather than one, because supply ignores `track_promote_to` on any run that
+uploaded a binary — the promotion has to be its own, binary-free edit.
+
 ## What we rejected
 
 - **Xcode cloud-managed signing** (`-allowProvisioningUpdates` with the API
