@@ -67,8 +67,9 @@ pinned 5.39.0, so the app shell is the whole change. **Session replay stays
 deferred** — enabling surveys does not enable it.
 
 ADR 0005 is untouched: a survey carries only what the user types into it,
-the survey wording asks people not to paste journal entries, and no journal
-text passes through the survey path.
+and no journal text passes through the survey path. The privacy notice says
+so plainly — the app occasionally asks for feedback, and an answer, if one
+is given, goes to PostHog.
 
 ## The web site (added 2026-09-12)
 

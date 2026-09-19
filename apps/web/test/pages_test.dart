@@ -305,10 +305,7 @@ void main() {
       // rather than left to be discovered.
       expect(find.textContaining('survey'), findsComponents);
       expect(find.textContaining('Answering is optional'), findsComponents);
-      expect(
-        find.textContaining('not to paste journal entries'),
-        findsComponents,
-      );
+      expect(find.textContaining('sent to PostHog'), findsComponents);
       // Surveys do not make replay true.
       expect(
         find.textContaining('No session replay and no screen recording'),

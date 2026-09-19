@@ -324,14 +324,9 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
     ]),
     p([
       .text(
-        'There is one exception, and it is one you control: the app '
-        'occasionally shows a short survey — for example after an entry, or '
-        'once you have written a few. What you type into a survey is sent to '
-        'PostHog as your answer to it, because that is the point of asking. '
-        'Answering is optional, every survey can be dismissed, and the '
-        'surveys ask you not to paste journal entries into them. What you '
-        'write there is the only free text the app sends; your journal '
-        'itself still never goes.',
+        'There is one exception: the app occasionally asks you for feedback '
+        'in a short survey. Answering is optional, and if you do answer, '
+        'what you write is sent to PostHog.',
       ),
     ]),
     ul([
@@ -461,8 +456,7 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
           ' — the counting and crash reports described above, on EU servers. '
           'Never receives journal content or your email address. The one '
           'free text it does receive is what you type into an in-app '
-          'survey, if you choose to answer one; that is your words about '
-          'the app, not your journal.',
+          'survey, if you choose to answer one.',
         ),
       ]),
       li([

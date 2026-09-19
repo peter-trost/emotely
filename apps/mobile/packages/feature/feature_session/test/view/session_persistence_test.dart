@@ -152,11 +152,20 @@ void main() {
       await robot.answerRating(7);
       await tester.pumpAndSettle();
 
-      // Counting is telemetry: it fails silently and the entry still shows.
+      // Counting is telemetry: it costs the user nothing and the entry
+      // still shows — but it is reported, because a milestone that stops
+      // being counted is a bug we want to hear about.
       expect(robot.summary, findsOneWidget);
       expect([
         for (final captured in robot.analytics.events) captured['event'],
       ], isNot(contains('third_entry_written')));
+      // No SQLSTATE: the count is a HEAD request and postgrest never reads
+      // a HEAD response's body, so the refusal arrives as its status alone.
+      expect(robot.analytics.exceptions, [
+        captured(withheld(PostgrestApiException, statusCode: 409), {
+          'step': 'entry_milestone',
+        }),
+      ]);
     });
 
     testWidgets('keeps going when a round cannot be saved', (tester) async {
