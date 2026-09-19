@@ -8,7 +8,12 @@
 #                                           into the match repo (needs the
 #                                           ASC API key + MATCH_PASSWORD)
 #   bundle exec fastlane ios beta           build the IPA, upload to TestFlight
-#   bundle exec fastlane android beta       build the AAB, upload to Play internal
+#                                           and distribute it to the `Team`
+#                                           (internal) and `Beta` (external)
+#                                           groups
+#   bundle exec fastlane android beta       build the AAB, upload it to Play
+#                                           `internal` and promote it to the
+#                                           closed `alpha` track
 #
 # Inputs, all environment variables (secrets of the `release` environment):
 #   APP_STORE_CONNECT_API_KEY_ID / _ISSUER_ID / _API_KEY_P8   the ASC API key
@@ -85,22 +90,51 @@ platform :ios do
     lane_context[:IPA_OUTPUT_PATH] = ipa
   end
 
-  desc "Build the release IPA and upload it to TestFlight"
+  # Shown to testers as "What to Test". Static: every build is the same ask.
+  BETA_CHANGELOG = <<~TEXT.strip
+    emotely is an evening journaling assistant. Please write an entry on a
+    few evenings — ideally on different days, so you see how it picks up
+    where you left off. Anything that felt off, confusing or slow is worth
+    reporting: tap "Send feedback" on the account screen.
+  TEXT
+
+  desc "Build the release IPA, upload it to TestFlight and distribute it to the Team and Beta groups"
   lane :beta do
     build
     upload_to_testflight(
       api_key: asc_api_key,
       ipa: lane_context[:IPA_OUTPUT_PATH],
       app_identifier: "de.emotely.emotely",
-      # Processing takes Apple a while; the build shows up in TestFlight on
-      # its own. Tester groups are assigned in App Store Connect for now.
-      skip_waiting_for_build_processing: true
+      # External distribution means pilot has to wait for Apple to finish
+      # processing: with skip_waiting_for_build_processing it returns before
+      # distribute_build and nothing reaches a group (pilot/build_manager.rb,
+      # `return if !build.ready_for_internal_testing? && skip_waiting...`).
+      # That makes this job take Apple's 10-30 min; accepted, it is the only
+      # way to hand a build to external testers unattended.
+      skip_waiting_for_build_processing: false,
+      distribute_external: true,
+      # Both groups by exact name: internal `Team` keeps dogfooding, external
+      # `Beta` is the outside testers. `distribute_external` without `groups`
+      # is a hard error in pilot, and a changelog is required with it.
+      groups: ["Team", "Beta"],
+      changelog: BETA_CHANGELOG,
+      notify_external_testers: true,
+      # submit_beta_review defaults to true and pilot only posts a submission
+      # when the build is `ready_for_beta_submission?`, so the first build of
+      # a version goes to Beta App Review and later ones are a no-op.
+      #
+      # Deliberately not set: `beta_app_review_info` (contact + demo account
+      # already live in App Store Connect, and passing it would overwrite
+      # them on every run), `uses_non_exempt_encryption` (Info.plist already
+      # carries ITSAppUsesNonExemptEncryption=false) and
+      # `expire_previous_builds` (testers keep the older build until they
+      # update).
     )
   end
 end
 
 platform :android do
-  desc "Build the release App Bundle and upload it to the Play internal track"
+  desc "Build the release App Bundle, upload it to Play internal and promote it to the closed alpha track"
   lane :beta do
     flutter(
       "build", "appbundle", "--release",
@@ -108,15 +142,42 @@ platform :android do
       *dart_defines
     )
 
-    upload_to_play_store(
+    play_store_defaults = {
       package_name: "de.emotely.emotely",
-      track: "internal",
-      aab: File.join(APP_DIR, "build/app/outputs/bundle/release/app-release.aab"),
       json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON"),
       skip_upload_metadata: true,
       skip_upload_changelogs: true,
       skip_upload_images: true,
       skip_upload_screenshots: true
+    }
+
+    # 1. The AAB, to `internal` — instant dogfood, no Google review.
+    upload_to_play_store(
+      **play_store_defaults,
+      track: "internal",
+      aab: File.join(APP_DIR, "build/app/outputs/bundle/release/app-release.aab")
+    )
+
+    # 2. The same version code, promoted to the closed track `alpha` ("Closed
+    # testing - Alpha" in the console, testers = the "emotely beta" list).
+    #
+    # This has to be a second call. supply ignores `track_promote_to` whenever
+    # it uploaded a binary in the same edit: perform_upload only reaches
+    # promote_track in the `else` of `if uploading_new_binaries`
+    # (supply/lib/supply/uploader.rb), so `track: "internal"` +
+    # `track_promote_to: "alpha"` in one call would upload to internal and
+    # silently never touch alpha. skip_upload_aab keeps this edit binary-free
+    # so the promote branch runs; version_code pins it to the build we just
+    # uploaded rather than whatever else sits on internal.
+    #
+    # Google reviews closed-testing releases, so this one does not go live
+    # for testers immediately.
+    upload_to_play_store(
+      **play_store_defaults,
+      skip_upload_aab: true,
+      track: "internal",
+      track_promote_to: "alpha",
+      version_code: Integer(build_number)
     )
   end
 end
