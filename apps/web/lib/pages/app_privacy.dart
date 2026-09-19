@@ -322,6 +322,13 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         'went, never what was said.',
       ),
     ]),
+    p([
+      .text(
+        'There is one exception: the app occasionally asks you for feedback '
+        'in a short survey. Answering is optional, and if you do answer, '
+        'what you write is sent to PostHog.',
+      ),
+    ]),
     ul([
       li([
         strong([.text('Sessions')]),
@@ -447,7 +454,9 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         strong([.text('PostHog')]),
         .text(
           ' — the counting and crash reports described above, on EU servers. '
-          'Never receives journal content or your email address.',
+          'Never receives journal content or your email address. The one '
+          'free text it does receive is what you type into an in-app '
+          'survey, if you choose to answer one.',
         ),
       ]),
       li([

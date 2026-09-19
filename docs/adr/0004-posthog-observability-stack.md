@@ -19,8 +19,9 @@ Adopted day one (all within PostHog's free tier at our scale):
   user and session-completion and pings on drift instead of us dashboard-staring.
 
 Deferred: session replay (only with mask-all-text, given sensitive journal content)
-and surveys. Skipped for now: the data warehouse (Supabase is our source of truth;
-revisit only to join Stripe subscription data).
+and surveys — **surveys undeferred 2026-09-18, see below**. Skipped for now: the
+data warehouse (Supabase is our source of truth; revisit only to join Stripe
+subscription data).
 
 Set billing limits / spike protection per product on day one so an agent retry
 storm cannot surprise-bill.
@@ -30,6 +31,45 @@ storm cannot surprise-bill.
 PostHog flag hands the agent `{model, prompt}` → `@posthog/ai` emits cost/latency
 per variant → LLM prompt experiment attributes cost + quality per variant → Max AI
 / anomaly alerts flag drift. The product tunes its own model choice.
+
+## Surveys, for the beta (added 2026-09-18)
+
+Surveys are on for the beta's structured questions, **event-triggered and
+popover-presentation only**. Two channels, deliberately split: the mailto
+"Send feedback" row is the *human* channel — open-ended, unprompted, and it
+reaches a person — while a survey is the *structured, timed* one. A survey
+asks one question at the moment it is about, and the answer lands as an
+event next to that person's funnel, so "who bounced after two entries" and
+"what they said about it" are the same query rather than an inbox to
+correlate by hand. Neither replaces the other; the mailto exit stays.
+
+Two surveys exist as drafts, each with its trigger:
+
+- **"Would you miss emotely?"** — triggered by `third_entry_written`, shown
+  once. The habit question, asked when there is just enough habit to have an
+  opinion about.
+- **"How was that entry?"** — triggered by `session_completed`, repeated, at
+  most every 7 days.
+
+`third_entry_written` exists because PostHog's survey targeting does not
+accept a behavioural cohort as a trigger: the milestone has to *be* an
+event. The app captures it exactly once, when the count of filed entries
+reaches three, read after the entry is persisted and after
+`session_completed` — so a survey popping on either trigger can never
+interrupt a save.
+
+Mechanically, the Flutter SDK has no "show survey now" API: popover surveys
+render on their own for users who fired the trigger and match the targeting,
+but only if the app mounts `PostHogWidget` and `PosthogObserver` (the
+observer is what the SDK reads a `BuildContext` from; without it it logs that
+it cannot show the survey). `config.surveys` already defaults to true in the
+pinned 5.39.0, so the app shell is the whole change. **Session replay stays
+deferred** — enabling surveys does not enable it.
+
+ADR 0005 is untouched: a survey carries only what the user types into it,
+and no journal text passes through the survey path. The privacy notice says
+so plainly — the app occasionally asks for feedback, and an answer, if one
+is given, goes to PostHog.
 
 ## The web site (added 2026-09-12)
 

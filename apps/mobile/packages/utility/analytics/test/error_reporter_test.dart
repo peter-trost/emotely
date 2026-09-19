@@ -49,6 +49,7 @@ void main() {
       await reporter.configLoadFailed(unreachable, trace);
       await reporter.storeLaunchFailed(unreachable, trace);
       await reporter.feedbackMailFailed(unreachable, trace);
+      await reporter.entryMilestoneFailed(saveRefused, trace);
       await reporter.consentLoadFailed(saveRefused, trace);
       await reporter.consentWriteFailed(saveRefused, trace);
 
@@ -94,6 +95,10 @@ void main() {
         captured(unreachable, {'step': 'config_load'}),
         captured(unreachable, {'step': 'store_launch'}),
         captured(unreachable, {'step': 'feedback_mail'}),
+        captured(
+          withheld(PostgrestApiException, code: '42501', statusCode: 403),
+          {'step': 'entry_milestone'},
+        ),
         captured(
           withheld(PostgrestApiException, code: '42501', statusCode: 403),
           {'step': 'consent_load'},

@@ -1,5 +1,6 @@
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/dependencies.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -21,6 +22,15 @@ Widget appUnderTest({
   required AnalyticsSpy analytics,
   ConfigStub? config,
 }) {
+  // `PosthogObserver`, mounted so surveys can find a context, calls the
+  // native SDK directly on every route change rather than through the
+  // injected instance. There is no native side here, so answer its channel
+  // with nothing; what a test asserts on still goes through the spy.
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+        const MethodChannel('posthog_flutter'),
+        (call) async => null,
+      );
   // A journal that accepts every write unless the test scripts otherwise.
   supabase.journalWorks();
   // A startup gate that opens unless the test scripts otherwise; without it

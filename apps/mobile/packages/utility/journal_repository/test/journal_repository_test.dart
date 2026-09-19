@@ -89,6 +89,16 @@ void main() {
       expect(request.query['order'], 'created_at.desc.nullslast');
     });
 
+    test('counts the entries without fetching any', () async {
+      supabase.rest('HEAD /rest/v1/entries', [rowsCounted(3)]);
+
+      expect(await repository.countEntries(), 3);
+
+      // A count-only request: the server counts, no row travels.
+      final request = supabase.to('HEAD /rest/v1/entries').single;
+      expect(request.body, isNull);
+    });
+
     test('discards a session by id', () async {
       supabase.rest('DELETE /rest/v1/sessions', [rowsChanged()]);
 

@@ -35,6 +35,11 @@ class const JournalRepository({required final SupabaseClient supabase}) {
     return [for (final row in rows) EntryRecord.fromJson(row)];
   }
 
+  /// How many entries the user has filed. Asked for the count alone — the
+  /// server counts and no row travels — because the one caller wants a
+  /// milestone, not the journal.
+  Future<int> countEntries() => supabase.from(_entries).count();
+
   /// Drops the unfinished session [sessionId]; the next one starts fresh.
   Future<void> discardSession(String sessionId) =>
       supabase.from(_sessions).delete().eq('id', sessionId);

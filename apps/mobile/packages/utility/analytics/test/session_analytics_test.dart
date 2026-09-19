@@ -62,5 +62,16 @@ void main() {
         }),
       ]);
     });
+
+    test('marks the third written entry once, and only the third', () async {
+      final spy = AnalyticsSpy();
+      final analytics = spy.analytics;
+
+      for (final entries in [1, 2, 3, 4, 5]) {
+        await analytics.entryWritten(entries: entries);
+      }
+
+      expect(spy.events, [event('third_entry_written')]);
+    });
   });
 }

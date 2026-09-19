@@ -29,6 +29,19 @@ class const SessionAnalytics({required final Posthog posthog}) {
     properties: {'answers': answers},
   );
 
+  /// An entry was filed and the user now has [entries] of them. Captures
+  /// `third_entry_written` on the third and on no other, because that is
+  /// the moment the "would you miss emotely?" survey asks about: enough of
+  /// a habit to have an opinion, early enough that the answer is still
+  /// about starting. PostHog survey targeting cannot take a behavioural
+  /// cohort, so the trigger has to be an event of its own; the count is
+  /// the caller's, and nothing about the entry itself travels with it.
+  Future<void> entryWritten({required int entries}) async {
+    if (entries == 3) {
+      await posthog.capture(eventName: 'third_entry_written');
+    }
+  }
+
   /// A round failed; [statusCode] is absent when the server was unreachable.
   Future<void> sessionFailed({int? statusCode}) => posthog.capture(
     eventName: 'session_failed',

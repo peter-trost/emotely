@@ -93,6 +93,15 @@ class const ErrorReporter({required final Posthog posthog}) {
   Future<void> feedbackMailFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'feedback_mail');
 
+  /// The journal could not be counted after an entry was filed, so the
+  /// `third_entry_written` milestone (and the survey it triggers) was
+  /// missed. Costs the user nothing — the entry is already in the journal
+  /// and the screen never hears about it — but a milestone that silently
+  /// stops firing is a bug that would otherwise look like nobody reaching
+  /// three entries.
+  Future<void> entryMilestoneFailed(Exception error, StackTrace stackTrace) =>
+      _report(error, stackTrace, step: 'entry_milestone');
+
   /// Whether consent stands could not be read. The gate stays shut on this,
   /// so it is worth knowing how often it happens.
   Future<void> consentLoadFailed(Exception error, StackTrace stackTrace) =>

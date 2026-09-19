@@ -132,6 +132,9 @@ class SupabaseStub() {
   /// that *are* about the gate (`test/consent/`) simply say so.
   void journalWorks({String sessionId = SupabaseStub.sessionId}) {
     unless('GET /rest/v1/entries', rows(const []));
+    // The milestone count after an entry is filed; a test that cares about
+    // `third_entry_written` scripts the number it wants instead.
+    unless('HEAD /rest/v1/entries', rowsCounted(1));
     unless('GET /rest/v1/sessions', rows(const []));
     unless('DELETE /rest/v1/sessions', rowsChanged());
     unless('POST /rest/v1/sessions', rowCreated(sessionId));
@@ -271,6 +274,12 @@ AuthRound rpcReturned(Object? value) =>
 /// eat several scripted rounds for one failure.
 AuthRound restRefused({int statusCode = 409, String message = 'refused'}) =>
     () async => _json({'code': 'XX000', 'message': message}, statusCode);
+
+/// The data API answered a count-only select (`.count()`, a HEAD request)
+/// with [total]. postgrest reads the total off `content-range`, never the
+/// body, so the body stays empty exactly as the server sends it.
+AuthRound rowsCounted(int total) =>
+    () async => http.Response('', 200, headers: {'content-range': '*/$total'});
 
 /// The data API answered a select with [rowsFound].
 AuthRound rows(List<Map<String, Object?>> rowsFound) =>

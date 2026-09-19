@@ -296,6 +296,23 @@ void main() {
       expect(find.textContaining('not currently switched on'), findsNothing);
     });
 
+    testComponents('names surveys as the one free text PostHog receives', (
+      tester,
+    ) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // Content-free is still the rule, so the one exception is stated
+      // rather than left to be discovered.
+      expect(find.textContaining('survey'), findsComponents);
+      expect(find.textContaining('Answering is optional'), findsComponents);
+      expect(find.textContaining('sent to PostHog'), findsComponents);
+      // Surveys do not make replay true.
+      expect(
+        find.textContaining('No session replay and no screen recording'),
+        findsComponents,
+      );
+    });
+
     testComponents('describes analytics by their real event names', (tester) {
       tester.pumpComponent(const AppPrivacy());
 

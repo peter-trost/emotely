@@ -191,6 +191,22 @@ class SessionBloc({
     }
   }
 
+  /// Counts the journal now that this entry is in it, so the third one can
+  /// be marked (the survey trigger `third_entry_written`). Runs after the
+  /// entry is persisted and after `session_completed`, and swallows its own
+  /// failure: a milestone that cannot be counted is not worth a session.
+  ///
+  /// Swallowed towards the user, not towards us — the failure is reported,
+  /// because the alternative is a milestone that stops firing and looks
+  /// exactly like nobody reaching three entries.
+  Future<void> _markMilestone() async {
+    try {
+      await _analytics.entryWritten(entries: await _repository.countEntries());
+    } on Exception catch (error, stackTrace) {
+      unawaited(_errors.entryMilestoneFailed(error, stackTrace));
+    }
+  }
+
   /// Files the finished [entry]; the session is only over once it is in the
   /// journal, so a failure here is a failure with a retry, not an entry
   /// shown once and gone.
@@ -220,6 +236,7 @@ class SessionBloc({
       return;
     }
     unawaited(_analytics.sessionCompleted(answers: entry.answers.length));
+    unawaited(_markMilestone());
     emit(
       SessionState.completed(
         entry: entry,
