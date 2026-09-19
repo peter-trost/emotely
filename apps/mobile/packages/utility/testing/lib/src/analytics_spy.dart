@@ -10,6 +10,10 @@ import 'package:testing/testing.dart';
 /// identity).
 typedef CapturedEvent = Map<String, Object>;
 
+/// One `identify` call as `{'userId': id, 'properties': {...}}` — a map for
+/// the same reason [CapturedEvent] is one.
+typedef CapturedIdentity = Map<String, Object>;
+
 /// One exception the app would send to PostHog error tracking.
 class const CapturedException({
   required final Object error,
@@ -59,7 +63,13 @@ class AnalyticsSpy() {
         userPropertiesSetOnce: anyNamed('userPropertiesSetOnce'),
       ),
     ).thenAnswer((invocation) {
-      identified.add(invocation.namedArguments[#userId] as String);
+      identities.add({
+        'userId': invocation.namedArguments[#userId] as String,
+        'properties':
+            invocation.namedArguments[#userProperties]
+                as Map<String, Object>? ??
+            const <String, Object>{},
+      });
       return Future<void>.value();
     });
     when(posthog.reset()).thenAnswer((_) {
@@ -74,8 +84,14 @@ class AnalyticsSpy() {
   /// The exceptions the app reported, in order.
   final exceptions = <CapturedException>[];
 
+  /// Every `identify` the app made, in order, as
+  /// `{'userId': id, 'properties': {...}}` — a map so `expect` compares it
+  /// deeply, like [CapturedEvent].
+  final identities = <CapturedIdentity>[];
+
   /// The user ids the app identified PostHog with, in order.
-  final identified = <String>[];
+  Iterable<String> get identified =>
+      identities.map((identity) => identity['userId']! as String);
 
   /// How often the app told PostHog to forget the user.
   var resets = 0;
@@ -96,7 +112,10 @@ class AnalyticsSpy() {
   /// identities, and each reported exception's type, text, causes,
   /// properties and stack trace.
   Iterable<String> get outgoingStrings sync* {
-    yield* identified;
+    for (final identity in identities) {
+      yield identity['userId']! as String;
+      yield* _strings(identity['properties']! as Map<String, Object>);
+    }
     for (final event in events) {
       yield event['event']! as String;
       yield* _strings(event['properties']! as Map<String, Object>);
@@ -157,6 +176,12 @@ class AnalyticsSpy() {
 /// A captured event literal, for readable expectations.
 CapturedEvent event(String name, [Map<String, Object> properties = const {}]) =>
     {'event': name, 'properties': properties};
+
+/// A captured `identify` literal, for readable expectations.
+CapturedIdentity identity(
+  String userId, [
+  Map<String, Object> properties = const {},
+]) => {'userId': userId, 'properties': properties};
 
 /// Matches a reported exception: [error] itself (or its content-free
 /// stand-in), with exactly [properties] and a stack trace attached.
