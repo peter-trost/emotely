@@ -1,5 +1,7 @@
+import 'package:emotely_web/beta_links.dart';
 import 'package:emotely_web/environment.dart';
 import 'package:emotely_web/pages/app_privacy.dart';
+import 'package:emotely_web/pages/beta.dart';
 import 'package:emotely_web/pages/confirm.dart';
 import 'package:emotely_web/pages/delete_account.dart';
 import 'package:emotely_web/pages/home.dart';
@@ -57,6 +59,14 @@ class const App({super.key}) extends StatelessComponent {
           path: '/imprint',
           title: 'Imprint — emotely',
           builder: (_, _) => const Imprint(),
+        ),
+        // Unlisted: the route exists so the page builds and resolves, but
+        // nothing links to it and `--sitemap-exclude` keeps it out of
+        // sitemap.xml. The page itself carries `noindex, nofollow`.
+        Route(
+          path: betaPath,
+          title: 'emotely beta',
+          builder: (_, _) => const Beta(),
         ),
       ],
     ),

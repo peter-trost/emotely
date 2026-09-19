@@ -162,7 +162,9 @@ jobs:
       - run: dart analyze --fatal-infos
       - run: dart test
       - run: dart test -p chrome test/client
-      - run: jaspr build --sitemap-domain https://getemotely.com
+      # --sitemap-exclude matches scripts/vercel-build.sh: /beta is unlisted
+      # and must not reach sitemap.xml.
+      - run: jaspr build --sitemap-domain https://getemotely.com --sitemap-exclude '^/beta$'
       - run: git diff --exit-code -- lib
 
   # The machine-setup script bootstraps every other job, so it is the one file

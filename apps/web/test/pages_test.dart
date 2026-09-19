@@ -1,13 +1,16 @@
 import 'package:emotely_web/app.dart';
+import 'package:emotely_web/beta_links.dart';
 import 'package:emotely_web/components/confirm_waitlist.dart';
 import 'package:emotely_web/components/delete_account_form.dart';
 import 'package:emotely_web/components/waitlist_form.dart';
 import 'package:emotely_web/pages/app_privacy.dart';
+import 'package:emotely_web/pages/beta.dart';
 import 'package:emotely_web/pages/confirm.dart';
 import 'package:emotely_web/pages/delete_account.dart';
 import 'package:emotely_web/pages/home.dart';
 import 'package:emotely_web/pages/imprint.dart';
 import 'package:emotely_web/pages/privacy.dart';
+import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
 void main() {
@@ -520,6 +523,105 @@ void main() {
     });
   });
 
+  group('Beta', () {
+    testComponents('says it is an invitation and asks not to share it', (
+      tester,
+    ) {
+      tester.pumpComponent(const Beta());
+
+      expect(find.text('emotely beta'), findsOneComponent);
+      expect(find.textContaining('invited'), findsComponents);
+      expect(find.textContaining('by invitation only'), findsComponents);
+      expect(find.textContaining('not to share'), findsComponents);
+    });
+
+    // The page is linked from nothing: not the header, not the footer, not
+    // the sitemap. robots.txt stays untouched on purpose — a Disallow line
+    // would advertise the path — so the meta tag is the only instruction a
+    // crawler that found the URL anyway ever gets.
+    testComponents('tells crawlers not to index or follow it', (tester) {
+      tester.pumpComponent(const Beta());
+
+      // Document.head renders each meta entry as a real <meta> element, so
+      // the assertion is on what ships rather than on the wrapper type.
+      expect(
+        find.byComponentPredicate((component) {
+          if (component is! DomComponent || component.tag != 'meta') {
+            return false;
+          }
+          final attributes = component.attributes;
+          return attributes?['name'] == 'robots' &&
+              attributes?['content'] == 'noindex, nofollow';
+        }),
+        findsOneComponent,
+      );
+    });
+
+    testComponents('gives iPhone the TestFlight link and the two steps', (
+      tester,
+    ) {
+      tester.pumpComponent(const Beta());
+
+      expect(find.text('iPhone'), findsOneComponent);
+      expect(find.text('Join on TestFlight'), findsOneComponent);
+      expect(find.textContaining('TestFlight app'), findsComponents);
+      expect(find.textContaining('on the iPhone'), findsComponents);
+    });
+
+    testComponents('gives Android the Play link and the account caveat', (
+      tester,
+    ) {
+      tester.pumpComponent(const Beta());
+
+      expect(find.text('Android'), findsOneComponent);
+      expect(find.text('Join on Google Play'), findsOneComponent);
+      // A closed track only admits the address we added, so the page says
+      // so before the tester hits a page they cannot make sense of.
+      expect(find.textContaining('Google account we invited'), findsComponents);
+      expect(find.textContaining('reply to the invitation'), findsComponents);
+    });
+
+    testComponents('sets expectations for a beta rather than a release', (
+      tester,
+    ) {
+      tester.pumpComponent(const Beta());
+
+      expect(find.text('What to expect'), findsOneComponent);
+      expect(find.textContaining('may break'), findsComponents);
+      expect(find.textContaining('new build'), findsComponents);
+      expect(find.textContaining('private'), findsComponents);
+      expect(find.textContaining('survey'), findsComponents);
+    });
+
+    testComponents('gives both feedback channels and asks for the version', (
+      tester,
+    ) {
+      tester.pumpComponent(const Beta());
+
+      expect(find.text('Feedback'), findsOneComponent);
+      expect(find.textContaining('Send feedback'), findsComponents);
+      expect(find.textContaining('account screen'), findsComponents);
+      expect(find.textContaining('hello@getemotely.com'), findsComponents);
+      expect(find.textContaining('app version'), findsComponents);
+    });
+
+    // The two links are the whole point of the page, and a placeholder that
+    // ships silently is the failure mode worth its own test.
+    test('the Play link opts in to the real package', () {
+      expect(
+        playTestingUrl,
+        'https://play.google.com/apps/testing/de.emotely.emotely',
+      );
+    });
+
+    test('the TestFlight link is a public join link', () {
+      expect(
+        testFlightJoinUrl,
+        startsWith('https://testflight.apple.com/join/'),
+      );
+    });
+  });
+
   group('Routing', () {
     // jaspr build generates sitemap.xml from the router's routes, so a page
     // that is not registered is a page the stores cannot fetch — which is
@@ -533,6 +635,25 @@ void main() {
       tester.pumpComponent(const App());
 
       expect(find.text('App privacy'), findsOneComponent);
+    });
+
+    // /beta is unlisted: it reaches a tester through one invitation mail and
+    // nowhere else. A link in the header or the footer would put it in front
+    // of every visitor and every crawler, which is the one thing the page
+    // must not be. The sitemap is kept clear of it by --sitemap-exclude in
+    // the build, and robots.txt is deliberately left alone.
+    testComponents('nothing on the site links to the beta page', (tester) {
+      tester.pumpComponent(const App());
+
+      expect(
+        find.byComponentPredicate(
+          (component) =>
+              component is DomComponent &&
+              component.attributes?['href'] == betaPath,
+        ),
+        findsNothing,
+      );
+      expect(find.textContaining('beta'), findsNothing);
     });
   });
 }
