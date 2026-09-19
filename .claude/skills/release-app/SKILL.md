@@ -1,6 +1,6 @@
 ---
 name: release-app
-description: How to ship the Flutter app (apps/mobile/app) to TestFlight and the Play internal track with fastlane and the app-release workflow, how signing works (match, the ASC API key, the Android upload keystore), and how to rotate any of it. Use whenever asked to release, ship a beta, upload a build, fix signing, or touch apps/mobile/app/fastlane or .github/workflows/app-release.yml.
+description: How to ship the Flutter app (apps/mobile/app) to the TestFlight Team and Beta groups and the Play internal and closed alpha tracks with fastlane and the app-release workflow, how signing works (match, the ASC API key, the Android upload keystore), and how to rotate any of it. Use whenever asked to release, ship a beta, upload a build, fix signing, or touch apps/mobile/app/fastlane or .github/workflows/app-release.yml.
 ---
 
 # Releasing the app (apps/mobile/app)
@@ -22,18 +22,29 @@ gh run watch
 ```
 
 The workflow runs `fastlane ios beta` (macos-26, Xcode 26) and `fastlane
-android beta` (Linux) with `BUILD_NUMBER = 1000 + run_number`. The IPA lands
-in TestFlight and processes on Apple's side for 10–30 min; the AAB lands on
-the Play **internal** track immediately.
+android beta` (Linux) with `BUILD_NUMBER = 1000 + run_number`.
 
-After the build shows up:
+**Where builds land — no console step.** Every build is distributed to
+testers by the lanes themselves: on iOS to the TestFlight groups **`Team`**
+(internal, dogfood) and **`Beta`** (external, the outside testers), on
+Android to the Play **`internal`** track and then the closed **`alpha`**
+track ("Closed testing - Alpha", testers = the "emotely beta" list). The
+only reason to open a console is to change who is in a group.
 
-- **TestFlight**: App Store Connect → TestFlight → add the build to a group.
-  Internal testers (App Store Connect users) need no review; an **external**
-  group needs Beta App Review once per version, which reads Test Information
-  (kept current by the `asc` prep, see below).
-- **Play**: Play Console → Testing → Internal testing → the release is live
-  for the tester email list defined there.
+Three waits, and none of them fails the workflow. The first happens *inside*
+it; the other two continue after it is green:
+
+- **Apple's processing, 10–30 min — during the run.** External distribution
+  cannot skip it, so the macos-26 job now blocks on it instead of returning
+  early. This is why the iOS job is slower than the build alone, and why a
+  green run already means the build reached its groups.
+- **Beta App Review, once per version.** The first build of a new version
+  goes to review before external testers see it; later builds of the same
+  version are distributed without it. Review reads Test Information (kept
+  current by the `asc` prep, see below) and the beta review contact already
+  in App Store Connect — the lane deliberately does not re-send either.
+- **Google's review of every closed-testing release.** The `internal` copy is
+  live immediately for dogfooding; the `alpha` copy waits for review.
 
 ## Signing
 

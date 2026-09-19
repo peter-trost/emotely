@@ -1,8 +1,17 @@
 name: App release
 
-# Ships the Flutter app to TestFlight and to the Play internal track (ADR 0013).
+# Ships the Flutter app to TestFlight and to Play (ADR 0013). Every build goes
+# to the TestFlight groups `Team` (internal) and `Beta` (external), and to the
+# Play `internal` track plus the closed `alpha` track — so outside beta testers
+# get every build without a human touching a console.
 # Continuous delivery: every merge to main that touches the app, plus manual
 # runs. Both jobs share one monotonic build number.
+#
+# The iOS job waits for App Store Connect to finish processing (external
+# distribution cannot skip it), so it runs 10-30 min longer than the build.
+# The first build of a new version also goes through Beta App Review, and
+# Play reviews every closed-testing release; both are expected waits that
+# happen after this workflow is green.
 on:
   workflow_dispatch:
   push:
