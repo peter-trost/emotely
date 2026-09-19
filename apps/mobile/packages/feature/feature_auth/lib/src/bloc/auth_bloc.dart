@@ -30,10 +30,15 @@ class AuthBloc({
     on<AuthSignOutRequested>(_onSignOutRequested);
     on<AuthSessionChanged>(_onSessionChanged);
     if (state case AuthSignedIn(:final userId)) {
-      unawaited(_analytics.identify(userId: userId));
+      _identify(userId, _supabase.auth.currentSession?.user.email);
     }
     _sessionChanges = _supabase.auth.onAuthStateChange.listen(
-      (change) => add(AuthEvent.sessionChanged(change.session?.user.id)),
+      (change) => add(
+        AuthEvent.sessionChanged(
+          change.session?.user.id,
+          change.session?.user.email,
+        ),
+      ),
       // A failed background refresh is reported here; the SDK keeps the
       // session until it really expires and signs out through the stream
       // then, so there is nothing to do with the error itself.
@@ -90,7 +95,7 @@ class AuthBloc({
         // code did not sign anyone in.
         if (response.session case final session?) {
           unawaited(_analytics.signedIn());
-          _signedIn(session.user.id, emit);
+          _signedIn(session.user.id, session.user.email, emit);
         } else {
           _rejected(email, wrongCodeMessage, emit);
         }
@@ -117,7 +122,7 @@ class AuthBloc({
         );
         if (response.session case final session?) {
           unawaited(_analytics.signedIn());
-          _signedIn(session.user.id, emit);
+          _signedIn(session.user.id, session.user.email, emit);
         } else {
           _passwordRefused(email, wrongPasswordMessage, emit);
         }
@@ -162,7 +167,7 @@ class AuthBloc({
         }
       case final userId:
         if (state != AuthState.signedIn(userId: userId)) {
-          _signedIn(userId, emit);
+          _signedIn(userId, event.email, emit);
         }
     }
   }
@@ -177,10 +182,23 @@ class AuthBloc({
     emit(AuthState.passwordRequired(email: email, error: error));
   }
 
-  void _signedIn(String userId, Emitter<AuthState> emit) {
-    unawaited(_analytics.identify(userId: userId));
+  void _signedIn(String userId, String? email, Emitter<AuthState> emit) {
+    _identify(userId, email);
     emit(AuthState.signedIn(userId: userId));
   }
+
+  /// Tells PostHog who this device belongs to, and whether that is one of
+  /// our own accounts. [email] is the sign-in address Supabase holds; it
+  /// goes no further than [isInternalAccount], which turns it into the one
+  /// boolean PostHog gets — the address itself never leaves (ADR 0005).
+  /// An account without one (Supabase never issues one here) is an ordinary
+  /// user, not an internal one.
+  void _identify(String userId, String? email) => unawaited(
+    _analytics.identify(
+      userId: userId,
+      internal: email != null && isInternalAccount(email),
+    ),
+  );
 
   /// User-facing copy for the failures a sign-in can hit; the raw message
   /// never reaches the screen. Anything Supabase refused that is not a rate

@@ -146,8 +146,8 @@ class SupabaseStub() {
   }
 
   /// Starts the client with a live session, as after a restored sign-in.
-  Future<void> signedIn() =>
-      supabase.auth.recoverSession(jsonEncode(session()));
+  Future<void> signedIn({String email = SupabaseStub.email}) =>
+      supabase.auth.recoverSession(jsonEncode(session(email: email)));
 
   /// The requests the app made to `METHOD /path`, in order.
   List<RecordedRequest> to(String endpoint) => [
@@ -163,7 +163,10 @@ class SupabaseStub() {
   ];
 
   /// A session as Supabase Auth returns it after a verified code.
-  static Map<String, Object?> session({String sub = userId}) => {
+  static Map<String, Object?> session({
+    String sub = userId,
+    String email = SupabaseStub.email,
+  }) => {
     'access_token': jwt(sub: sub),
     'token_type': 'bearer',
     'expires_in': 3600,
