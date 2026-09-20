@@ -1,5 +1,6 @@
 import 'package:contract/contract.dart';
 import 'package:feature_session/src/widgets/color_input.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -13,68 +14,123 @@ void main() {
       return submitted;
     }
 
-    String fieldText(WidgetTester tester) => tester
-        .widget<TextField>(find.byKey(ColorInput.fieldKey))
-        .controller!
-        .text;
+    final dialog = find.byType(AlertDialog);
 
-    Future<void> type(WidgetTester tester, String text) async {
-      await tester.enterText(find.byKey(ColorInput.fieldKey), text);
+    Future<void> openSlot(WidgetTester tester, int index) async {
+      await tester.tap(find.byKey(ColorInput.slotKey(index)));
+      await tester.pumpAndSettle();
+    }
+
+    /// Taps [color] on the picker's Material swatch page.
+    Future<void> choose(WidgetTester tester, Color color) async {
+      await tester.tap(
+        find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is ColorIndicator &&
+                  widget.color.toARGB32() == color.toARGB32(),
+            )
+            .first,
+      );
       await tester.pump();
     }
 
-    testWidgets('offers the whole palette, each announced by name', (
+    Future<void> tapInDialog(WidgetTester tester, Key key) async {
+      await tester.tap(find.byKey(key));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> pick(WidgetTester tester, int slot, Color color) async {
+      await openSlot(tester, slot);
+      await choose(tester, color);
+      await tapInDialog(tester, ColorInput.selectKey);
+    }
+
+    testWidgets('starts with one empty slot and submit disabled', (
       tester,
     ) async {
       await pumpTestWidget(tester);
 
-      expect(find.byType(IconButton), findsNWidgets(colorPalette.length));
-      expect(find.byTooltip('teal'), findsOneWidget);
+      expect(find.byKey(ColorInput.slotKey(0)), findsOneWidget);
+      expect(find.byKey(ColorInput.slotKey(1)), findsNothing);
+      expect(find.bySemanticsLabel(ColorInput.pickLabel), findsOneWidget);
+      expect(isSubmitEnabled(tester, ColorInput.submitKey), isFalse);
     });
 
-    testWidgets('submit is disabled until the text holds a color', (
+    testWidgets('picking a color fills the slot and opens the next', (
       tester,
     ) async {
       await pumpTestWidget(tester);
 
-      expect(isSubmitEnabled(tester, ColorInput.submitKey), isFalse);
+      await pick(tester, 0, Colors.red);
 
-      await type(tester, 'no color yet');
-
-      expect(isSubmitEnabled(tester, ColorInput.submitKey), isFalse);
-
-      await type(tester, 'a #ff8800 day');
-
+      expect(dialog, findsNothing);
+      expect(find.byKey(ColorInput.slotKey(1)), findsOneWidget);
+      expect(find.bySemanticsLabel('#F44336'), findsOneWidget);
       expect(isSubmitEnabled(tester, ColorInput.submitKey), isTrue);
     });
 
-    testWidgets('a palette tap inserts its code at the caret', (tester) async {
+    testWidgets('cancelling the picker leaves the slot empty', (tester) async {
       await pumpTestWidget(tester);
-      await type(tester, 'today felt ');
+      await openSlot(tester, 0);
+      await choose(tester, Colors.red);
 
-      await tester.tap(find.byKey(ColorInput.paletteKey('red')));
-      await tester.pump();
+      await tapInDialog(tester, ColorInput.cancelKey);
 
-      expect(fieldText(tester), 'today felt #E53935 ');
-      expect(isSubmitEnabled(tester, ColorInput.submitKey), isTrue);
+      expect(dialog, findsNothing);
+      expect(find.byKey(ColorInput.slotKey(1)), findsNothing);
+      expect(isSubmitEnabled(tester, ColorInput.submitKey), isFalse);
     });
 
-    testWidgets('submits every color in order of appearance', (tester) async {
+    testWidgets('a filled slot can be given another color', (tester) async {
       final submitted = await pumpTestWidget(tester);
-      await type(tester, 'mostly #00ff00, then #ABCDEF and #12345');
+      await pick(tester, 0, Colors.red);
+
+      await pick(tester, 0, Colors.green);
+
+      expect(find.bySemanticsLabel('#4CAF50'), findsOneWidget);
+      expect(find.bySemanticsLabel('#F44336'), findsNothing);
+      await tapSubmit(tester, ColorInput.submitKey);
+      // The picker hands back plain colors, not the swatch it took them from.
+      expect(submitted.single, const Answer.color([Color(0xFF4CAF50)]));
+    });
+
+    testWidgets('a filled slot can be cleared, and the empty one is not', (
+      tester,
+    ) async {
+      await pumpTestWidget(tester);
+      await pick(tester, 0, Colors.red);
+      await pick(tester, 1, Colors.green);
+
+      await openSlot(tester, 0);
+      await tapInDialog(tester, ColorInput.clearKey);
+
+      expect(find.bySemanticsLabel('#F44336'), findsNothing);
+      expect(find.bySemanticsLabel('#4CAF50'), findsOneWidget);
+      expect(find.byKey(ColorInput.slotKey(2)), findsNothing);
+
+      await openSlot(tester, 1);
+
+      expect(find.byKey(ColorInput.clearKey), findsNothing);
+    });
+
+    testWidgets('submits the colors in slot order', (tester) async {
+      final submitted = await pumpTestWidget(tester);
+      await pick(tester, 0, Colors.red);
+      await pick(tester, 1, Colors.green);
 
       await tapSubmit(tester, ColorInput.submitKey);
 
       expect(
         submitted.single,
-        const Answer.color([Color(0xFF00FF00), Color(0xFFABCDEF)]),
+        const Answer.color([Color(0xFFF44336), Color(0xFF4CAF50)]),
       );
     });
 
     testWidgets('meets accessibility guidelines', (tester) async {
       await tester.expectMeetsAccessibilityGuidelines(
         appWrapper(const ColorInput(onSubmit: ignoreAnswer)),
-        prepare: (tester) => type(tester, 'a #FF8800 day'),
+        prepare: (tester) => pick(tester, 0, Colors.red),
       );
     });
   });

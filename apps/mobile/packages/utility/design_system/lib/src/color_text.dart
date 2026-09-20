@@ -1,13 +1,15 @@
 import 'package:contract/contract.dart';
-import 'package:design_system/src/color_text_editing_controller.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Text with every `#RRGGBB` code replaced by a colored box.
 ///
-/// Ported from the original emotely app; the read-only counterpart of
-/// [ColorTextEditingController].
+/// Ported from the original emotely app, where it read back what its
+/// color-aware text field had written.
 class const ColorText(final String text, {final TextStyle? style, super.key})
     extends StatelessWidget {
+  /// Matches hex-encoded color strings in the format `#RRGGBB`.
+  static final hexColorRegex = RegExp(r'#[0-9a-fA-F]{6}\b');
+
   static const _converter = HexColorConverter();
 
   @override
@@ -20,9 +22,7 @@ class const ColorText(final String text, {final TextStyle? style, super.key})
   List<InlineSpan> _spans() {
     final spans = <InlineSpan>[];
     var start = 0;
-    for (final match in ColorTextEditingController.hexColorRegex.allMatches(
-      text,
-    )) {
+    for (final match in hexColorRegex.allMatches(text)) {
       if (match.start > start) {
         spans.add(TextSpan(text: text.substring(start, match.start)));
       }
