@@ -25,8 +25,10 @@ The workflow runs `fastlane ios beta` (macos-26, Xcode 26) and `fastlane
 android beta` (Linux) with `BUILD_NUMBER = 1000 + run_number`.
 
 **Where builds land — no console step.** Every build is distributed to
-testers by the lanes themselves: on iOS to the TestFlight groups **`Team`**
-(internal, dogfood) and **`Beta`** (external, the outside testers), on
+testers by the lanes themselves: on iOS to the external TestFlight group
+**`Beta`** (the outside testers; the internal **`Team`** group has "access to
+all builds" in App Store Connect and must not be named in the lane, Apple
+rejects that), on
 Android to the Play **`internal`** track and then the closed **`alpha`**
 track ("Closed testing - Alpha", testers = the "emotely beta" list). The
 only reason to open a console is to change who is in a group.
