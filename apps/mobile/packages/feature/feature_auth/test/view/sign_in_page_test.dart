@@ -6,7 +6,11 @@ import 'package:get_it/get_it.dart';
 import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
-    show AuthApiException, AuthException, AuthRetryableFetchException;
+    show
+        AuthApiException,
+        AuthException,
+        AuthRetryableFetchException,
+        UserAttributes;
 
 import 'package:testing/testing.dart';
 
@@ -322,6 +326,30 @@ void main() {
 
         expect(robot.home, findsOneWidget);
         expect(robot.analytics.identities, [
+          identity(SupabaseStub.userId, {r'$internal_or_test_user': true}),
+        ]);
+      });
+
+      testWidgets('is refreshed when the same user changes address', (
+        tester,
+      ) async {
+        final supabase = SupabaseStub();
+        await supabase.signedIn();
+        final agent = AgentStub()..script([unreachable()]);
+        final robot = SignInRobot(tester, supabase: supabase, agent: agent);
+        await robot.launch();
+        await robot.settle();
+
+        // An email change: same user, new address, no new sign-in.
+        supabase.rest('PUT /auth/v1/user', [userUpdated(email: internalEmail)]);
+        await supabase.supabase.auth.updateUser(
+          UserAttributes(email: internalEmail),
+        );
+        await robot.settle();
+
+        expect(robot.home, findsOneWidget);
+        expect(robot.analytics.identities, [
+          identity(SupabaseStub.userId, {r'$internal_or_test_user': false}),
           identity(SupabaseStub.userId, {r'$internal_or_test_user': true}),
         ]);
       });

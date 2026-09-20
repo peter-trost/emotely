@@ -168,6 +168,10 @@ class AuthBloc({
       case final userId:
         if (state != AuthState.signedIn(userId: userId)) {
           _signedIn(userId, event.email, emit);
+        } else if (_isInternal(event.email) != _internal) {
+          // The same user with a new address (a confirmed email change):
+          // no new sign-in, but the flag may have flipped.
+          _identify(userId, event.email);
         }
     }
   }
@@ -187,16 +191,23 @@ class AuthBloc({
     emit(AuthState.signedIn(userId: userId));
   }
 
+  /// The flag last sent to PostHog, so a session change can tell whether
+  /// it needs sending again; null until the first identify.
+  bool? _internal;
+
+  /// [email] goes no further than [isInternalAccount], which turns it into
+  /// the one boolean PostHog gets — the address itself never leaves
+  /// (ADR 0005). An account without one (Supabase never issues one here) is
+  /// an ordinary user, not an internal one.
+  static bool _isInternal(String? email) =>
+      email != null && isInternalAccount(email);
+
   /// Tells PostHog who this device belongs to, and whether that is one of
-  /// our own accounts. [email] is the sign-in address Supabase holds; it
-  /// goes no further than [isInternalAccount], which turns it into the one
-  /// boolean PostHog gets — the address itself never leaves (ADR 0005).
-  /// An account without one (Supabase never issues one here) is an ordinary
-  /// user, not an internal one.
+  /// our own accounts.
   void _identify(String userId, String? email) => unawaited(
     _analytics.identify(
       userId: userId,
-      internal: email != null && isInternalAccount(email),
+      internal: _internal = _isInternal(email),
     ),
   );
 
