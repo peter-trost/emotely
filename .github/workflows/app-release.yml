@@ -1,20 +1,28 @@
 name: App release
 
-# Ships the Flutter app to TestFlight and to Play (ADR 0013). Every build goes
-# to the external TestFlight group `Beta` (the internal `Team` group sees every
-# build by itself), and to the
-# Play `internal` track plus the closed `alpha` track — so outside beta testers
-# get every build without a human touching a console.
-# Continuous delivery: every merge to main that touches the app, plus manual
-# runs. Both jobs share one monotonic build number.
+# Ships the Flutter app to TestFlight and to Play (ADR 0013) in two stages.
 #
-# The iOS job waits for App Store Connect to finish processing (external
-# distribution cannot skip it), so it runs 10-30 min longer than the build.
-# The first build of a new version also goes through Beta App Review, and
-# Play reviews every closed-testing release; both are expected waits that
-# happen after this workflow is green.
+# Every merge to main that touches the app uploads to the internal stage of
+# both stores: the TestFlight `Team` group (it has access to all builds) and
+# the Play `internal` track. No outside tester sees those. Both jobs share
+# one monotonic build number.
+#
+# A manual run (workflow_dispatch) is the beta release: it builds nothing and
+# promotes a build already on the internal stage — the newest, or the one
+# named by `build_number` — to the external TestFlight group `Beta` and the
+# closed Play track `alpha`. That is where the waits are: the first build of
+# a version goes through Beta App Review (Apple takes one submission per
+# version at a time, so the iOS job refuses while one is pending), and Play
+# reviews every closed-testing release. Neither wait is inside the run.
 on:
   workflow_dispatch:
+    inputs:
+      build_number:
+        description: >-
+          Build number to promote on both stores (e.g. 1027). Empty means the
+          newest build on each store's internal stage.
+        type: string
+        required: false
   push:
     branches: [main]
     paths:
@@ -28,7 +36,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ios:
+  ios-internal:
+    if: github.event_name == 'push'
     # App Store Connect only accepts builds made with the iOS 26 SDK (Xcode 26),
     # which this image carries by default.
     runs-on: macos-26
@@ -55,7 +64,7 @@ jobs:
       # Monotonic, and above anything the legacy app shipped (ADR 0012).
       # Expressions cannot do arithmetic, hence the shell.
       - run: echo "BUILD_NUMBER=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-      - run: bundle exec fastlane ios beta
+      - run: bundle exec fastlane ios internal
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -63,7 +72,8 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
 
-  android:
+  android-internal:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: release
     defaults:
@@ -96,7 +106,46 @@ jobs:
           ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
       - run: flutter pub get
       - run: echo "BUILD_NUMBER=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-      - run: bundle exec fastlane android beta
+      - run: bundle exec fastlane android internal
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+
+  # The beta stage: store API calls only, so no Xcode, no Flutter, no macOS.
+  ios-beta:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: release
+    defaults:
+      run:
+        working-directory: apps/mobile/app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        with:
+          working-directory: apps/mobile/app
+          bundler-cache: true
+      - run: bundle exec fastlane ios beta
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          PROMOTE_BUILD_NUMBER: ${{ inputs.build_number }}
+
+  android-beta:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: release
+    defaults:
+      run:
+        working-directory: apps/mobile/app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        with:
+          working-directory: apps/mobile/app
+          bundler-cache: true
+      - run: bundle exec fastlane android beta
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PROMOTE_BUILD_NUMBER: ${{ inputs.build_number }}

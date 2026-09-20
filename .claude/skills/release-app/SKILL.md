@@ -10,43 +10,55 @@ Decisions in [ADR 0012](../../../docs/adr/0012-reuse-the-original-store-listings
 [ADR 0013](../../../docs/adr/0013-fastlane-release-pipeline.md) (fastlane +
 match, the `release` environment).
 
-## Ship a beta build
+## Two stages: internal on every merge, beta on demand
 
-Every merge to `main` that touches `apps/mobile/app/**`, the contract schema or the
-workflow itself ships automatically (continuous delivery). To ship without a
-change, or to retry:
+**Internal, automatic.** Every merge to `main` that touches `apps/mobile/**`,
+the contract schema or the workflow itself runs `fastlane ios internal`
+(macos-26, Xcode 26) and `fastlane android internal` (Linux) with
+`BUILD_NUMBER = 1000 + run_number`. The build lands on the TestFlight
+internal group **`Team`** (it has "access to all builds" in App Store
+Connect, so nothing assigns it) and on the Play **`internal`** track. No
+outside tester sees it, nothing is submitted for review, and the iOS job
+returns as soon as the build shows up in App Store Connect rather than
+waiting for processing. Nobody outside the team is notified.
+
+**Beta, manual.** Promoting to the outside testers is a `workflow_dispatch`
+run. It builds nothing: it takes a build already on the internal stage and
+hands it to the external TestFlight group **`Beta`** and the closed Play
+track **`alpha`** ("Closed testing - Alpha", testers = the "emotely beta"
+list), notifying the TestFlight testers. Both jobs are store API calls on
+Linux and take a minute.
 
 ```bash
-gh workflow run app-release.yml
+gh workflow run app-release.yml            # the newest build on each store
+gh workflow run app-release.yml -f build_number=1027   # a specific one
 gh run watch
 ```
 
-The workflow runs `fastlane ios beta` (macos-26, Xcode 26) and `fastlane
-android beta` (Linux) with `BUILD_NUMBER = 1000 + run_number`.
+Without `build_number`, iOS takes the newest processed build of the version
+and Android the internal track's completed release; they are the same build
+only if both internal jobs of that merge succeeded, so pin the number when
+in doubt. iOS does nothing if `Beta` already has that build, so a rerun is
+safe and does not re-notify. The only reason to open a console is to change
+who is in a group.
 
-**Where builds land — no console step.** Every build is distributed to
-testers by the lanes themselves: on iOS to the external TestFlight group
-**`Beta`** (the outside testers; the internal **`Team`** group has "access to
-all builds" in App Store Connect and must not be named in the lane, Apple
-rejects that), on
-Android to the Play **`internal`** track and then the closed **`alpha`**
-track ("Closed testing - Alpha", testers = the "emotely beta" list). The
-only reason to open a console is to change who is in a group.
+Two waits follow a beta run, and neither is inside it:
 
-Three waits, and none of them fails the workflow. The first happens *inside*
-it; the other two continue after it is green:
-
-- **Apple's processing, 10–30 min — during the run.** External distribution
-  cannot skip it, so the macos-26 job now blocks on it instead of returning
-  early. This is why the iOS job is slower than the build alone, and why a
-  green run already means the build reached its groups.
 - **Beta App Review, once per version.** The first build of a new version
-  goes to review before external testers see it; later builds of the same
-  version are distributed without it. Review reads Test Information (kept
-  current by the `asc` prep, see below) and the beta review contact already
-  in App Store Connect — the lane deliberately does not re-send either.
+  goes to review before `Beta` sees it; later builds of the same version
+  are submitted too but Apple auto-approves them within minutes. Review
+  reads Test Information (kept current by the `asc` prep, see below) and
+  the beta review contact already in App Store Connect — the lane
+  deliberately does not re-send either. **Apple takes one submission per
+  version at a time**; while one is pending, `ios beta` fails with the
+  build that blocks it (*"Another build in the same train is already in
+  beta review"* is what pilot would otherwise get, runs 35510026821 and
+  35511874404 on 2026-09-20). Wait for the approval, then run again. Apple
+  emits a webhook for that transition
+  (`BUILD_BETA_DETAIL_EXTERNAL_BUILD_STATE_UPDATED`), but it needs a relay
+  to reach GitHub; not built, see #144.
 - **Google's review of every closed-testing release.** The `internal` copy is
-  live immediately for dogfooding; the `alpha` copy waits for review.
+  live immediately; the `alpha` copy waits for review.
 
 ## Signing
 

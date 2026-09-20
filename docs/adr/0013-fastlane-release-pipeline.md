@@ -55,6 +55,39 @@ closed-testing release. Android takes two `upload_to_play_store` calls
 rather than one, because supply ignores `track_promote_to` on any run that
 uploaded a binary — the promotion has to be its own, binary-free edit.
 
+## Amendment 2026-09-20: merges stay internal; the beta is a manual promotion
+
+The 2026-09-19 model — every merge straight to the outside testers — met
+Apple's review queue on day one. Apple accepts one Beta App Review
+submission per version at a time, pilot submits every build (and does so
+*before* it assigns groups), so the second merge after #127 failed with
+*"Another build in the same train is already in beta review"*, reached
+nobody outside `Team`, and would have failed every merge until Apple
+approved the first build, typically a day or two. Underneath that was a
+second problem: with a merge every few hours, every-merge-to-testers means
+a notification every few hours and a half-finished build in testers' hands
+whenever iteration is fast.
+
+So the pipeline has two stages. **Every merge uploads to the internal stage
+only**: `ios internal` puts the build on TestFlight where the `Team` group
+picks it up by itself (no groups, no submission, and pilot returns as soon
+as the build appears instead of waiting for processing); `android internal`
+uploads to the Play `internal` track. **The beta is a `workflow_dispatch`
+run** that builds nothing: `ios beta` submits the newest processed build
+(or the `build_number` input) for Beta App Review and hands it to the
+external group `Beta`; `android beta` promotes the internal release to the
+closed track `alpha`. Both are store API calls on Linux. `ios beta` refuses
+while a build of the version is still in review — better a red manual run
+that names the blocking build than pilot's `reject_build_waiting_for_review`,
+which expires the reviewed build and restarts the review — and does nothing
+if `Beta` already has the build, so a rerun never re-notifies.
+
+Deferred, not rejected: triggering the beta promotion from Apple's
+`BUILD_BETA_DETAIL_EXTERNAL_BUILD_STATE_UPDATED` webhook once a review
+clears. Apple cannot call GitHub directly, so it needs an HMAC-verifying
+relay and a GitHub token; with a human deciding when the beta ships, there
+is nothing for it to trigger yet. Tracked in #144.
+
 ## What we rejected
 
 - **Xcode cloud-managed signing** (`-allowProvisioningUpdates` with the API
