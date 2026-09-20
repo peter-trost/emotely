@@ -292,6 +292,29 @@ void main() {
       expect(robot.analytics.resets, 1);
     });
 
+    testWidgets('the rows that leave the app span the whole width', (
+      tester,
+    ) async {
+      final robot = robotWith(tester);
+      await robot.launch();
+
+      // Each row is a button the width of the screen, so its highlight runs
+      // edge to edge and the label sits 16 in — not a strip inside the page
+      // margin that lights up narrower than the finger expects.
+      final screen = tester.getRect(
+        find.descendant(of: robot.account, matching: find.byType(Scaffold)),
+      );
+      for (final row in [robot.notice, robot.imprint, robot.feedback]) {
+        final rect = tester.getRect(row);
+        expect(rect.left, screen.left);
+        expect(rect.width, screen.width);
+      }
+      expect(
+        tester.getRect(find.text(privacyNoticeLabel)).left,
+        screen.left + 16,
+      );
+    });
+
     group('consent', () {
       const version = {'version': testConsentVersion};
 
@@ -308,7 +331,7 @@ void main() {
         expect(robot.supabase.bodies('/rest/v1/rpc/withdraw_consent'), [
           version,
         ]);
-        expect(find.text(consentWithdrawnExplanation), findsOneWidget);
+        expect(find.text(consentMissingExplanation), findsOneWidget);
         expect(robot.analytics.events, [event('consent_withdrawn', version)]);
 
         // Not a one-tap re-grant: the way back is the consent screen itself,
@@ -340,7 +363,7 @@ void main() {
 
         await robot.settle();
 
-        expect(find.text(consentWithdrawnExplanation), findsOneWidget);
+        expect(find.text(consentMissingExplanation), findsOneWidget);
       });
 
       testWidgets(
@@ -360,7 +383,7 @@ void main() {
           await robot.tap(robot.withdraw);
 
           expect(robot.supabase.to(consentWithdraw), hasLength(2));
-          expect(find.text(consentWithdrawnExplanation), findsOneWidget);
+          expect(find.text(consentMissingExplanation), findsOneWidget);
         },
       );
 
