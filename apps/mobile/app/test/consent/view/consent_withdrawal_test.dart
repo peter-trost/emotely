@@ -85,7 +85,17 @@ void main() {
     testWidgets('can be given again, through the same question', (
       tester,
     ) async {
-      final robot = robotWith(tester, granted: false, reads: [consentStands()]);
+      // Three reads: the account screen's, the consent screen's (on its own
+      // route, with a bloc of its own), and the account screen's again once
+      // that route closes — which is when the server says it stands.
+      final robot = robotWith(
+        tester,
+        reads: [
+          consentStands(),
+          consentStands(granted: false),
+          consentStands(),
+        ],
+      );
       await openAccount(robot);
       await robot.tap(robot.withdraw);
 

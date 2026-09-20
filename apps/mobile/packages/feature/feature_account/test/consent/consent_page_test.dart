@@ -16,7 +16,7 @@ class _ConsentRobot(
   final analytics = AnalyticsSpy();
 
   /// What the consent route popped with, once it has.
-  bool? result;
+  ConsentOutcome? result;
 
   static const openKey = Key('launcher.open');
 
@@ -47,8 +47,8 @@ class _ConsentRobot(
                 key: openKey,
                 onPressed: () async {
                   final consent = context.read<ConsentBloc>();
-                  result = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute<bool>(
+                  result = await Navigator.of(context).push<ConsentOutcome>(
+                    MaterialPageRoute<ConsentOutcome>(
                       builder: (_) => BlocProvider.value(
                         value: consent,
                         child: const ConsentPage(),
@@ -134,7 +134,7 @@ void main() {
       // Recorded server-side, naming the wording that was agreed to, and
       // only then does the route answer yes.
       expect(robot.supabase.bodies('/rest/v1/rpc/record_consent'), [version]);
-      expect(robot.result, isTrue);
+      expect(robot.result, ConsentOutcome.granted);
       expect(robot.consent, findsNothing);
       expect(robot.analytics.events, [event('consent_granted', version)]);
     });
@@ -146,7 +146,7 @@ void main() {
       await robot.tap(robot.decline);
 
       expect(robot.supabase.to(consentGrant), isEmpty);
-      expect(robot.result, isFalse);
+      expect(robot.result, ConsentOutcome.declined);
       expect(robot.analytics.events, [event('consent_declined', version)]);
     });
 
@@ -222,7 +222,7 @@ void main() {
 
       await robot.settle();
 
-      expect(robot.result, isTrue);
+      expect(robot.result, ConsentOutcome.granted);
     });
 
     testWidgets('a consent that cannot be recorded starts nothing', (
@@ -244,19 +244,21 @@ void main() {
       await robot.tap(robot.retry);
 
       expect(robot.supabase.to(consentGrant), hasLength(2));
-      expect(robot.result, isTrue);
+      expect(robot.result, ConsentOutcome.granted);
     });
 
-    testWidgets('declining after a failed write still answers no', (
+    testWidgets('leaving after a failed write answers with the failure', (
       tester,
     ) async {
+      // Someone who ticked the box and hit a network error did not say
+      // "Not now"; what the route answers keeps the two apart.
       final robot = robotWith(tester, grants: [restRefused()]);
       await robot.launch();
       await robot.consentAndContinue();
 
       await robot.tap(robot.decline);
 
-      expect(robot.result, isFalse);
+      expect(robot.result, ConsentOutcome.writeFailed);
     });
 
     testWidgets('a consent that cannot be read is asked to be read again', (
@@ -282,7 +284,8 @@ void main() {
 
       await robot.tap(robot.decline);
 
-      expect(robot.result, isFalse);
+      // Not an answer: nothing was asked.
+      expect(robot.result, isNull);
       expect(robot.analytics.events, isEmpty);
     });
 

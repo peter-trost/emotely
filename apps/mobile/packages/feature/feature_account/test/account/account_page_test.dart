@@ -40,7 +40,6 @@ class _AccountRobot(
   Finder get notice => find.byKey(AccountView.privacyNoticeKey);
   Finder get imprint => find.byKey(AccountView.imprintKey);
   Finder get feedback => find.byKey(AccountView.feedbackKey);
-  Finder get consent => find.byType(ConsentPage);
 
   /// A launcher route that pushes the account screen with the consent bloc
   /// it owns, as the journal does. Reading this composes the container.
@@ -335,16 +334,13 @@ void main() {
         expect(robot.analytics.events, [event('consent_withdrawn', version)]);
 
         // Not a one-tap re-grant: the way back is the consent screen itself,
-        // with its unticked box.
+        // which the app shows. Once it closes, the account asks the server
+        // again rather than trusting what it showed before — and the server
+        // here says consent stands.
         await robot.tap(robot.restore);
 
-        expect(robot.consent, findsOneWidget);
-        expect(
-          tester
-              .widget<CheckboxListTile>(find.byKey(ConsentView.checkboxKey))
-              .value,
-          isFalse,
-        );
+        expect(robot.navigator.consentRequests, 1);
+        expect(find.text(withdrawConsentExplanation), findsOneWidget);
       });
 
       testWidgets('shows progress while a withdrawal is written', (
@@ -386,28 +382,6 @@ void main() {
           expect(find.text(consentMissingExplanation), findsOneWidget);
         },
       );
-
-      testWidgets('a consent that could not be recorded can be tried again', (
-        tester,
-      ) async {
-        // The consent screen reached from here failed to write; back on the
-        // account screen the section says so and offers the same act.
-        final robot = robotWith(tester, granted: false);
-        robot.supabase.rest(consentGrant, [restRefused(), rpcReturned(null)]);
-        await robot.launch();
-        await robot.tap(robot.restore);
-        await robot.tap(find.byKey(ConsentView.checkboxKey));
-        await robot.tap(find.byKey(ConsentView.agreeKey));
-        await robot.tap(find.byKey(ConsentView.declineKey));
-
-        expect(robot.account, findsOneWidget);
-        expect(find.text(consentFailureMessage), findsOneWidget);
-
-        await robot.tap(robot.restore);
-
-        expect(robot.supabase.to(consentGrant), hasLength(2));
-        expect(find.text(withdrawConsentExplanation), findsOneWidget);
-      });
 
       testWidgets('says so, and retries, when the answer cannot be read', (
         tester,

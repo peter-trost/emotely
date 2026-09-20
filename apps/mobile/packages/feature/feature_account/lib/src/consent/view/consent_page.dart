@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:feature_account/src/consent/bloc/consent_bloc.dart';
+import 'package:feature_account/src/consent/consent_outcome.dart';
 import 'package:feature_account/src/consent/consent_text.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:legal_links/legal_links.dart';
@@ -9,12 +10,13 @@ import 'package:material_ui/material_ui.dart';
 /// Asks for the explicit consent (Art. 9 (2) (a) GDPR) a session needs, on
 /// its own route, before the first session and never again once it stands.
 ///
-/// It reads the [ConsentBloc] already in scope rather than making one: the
-/// journal owns that bloc, because the answer decides what the journal does
-/// when Start is tapped, and two blocs would mean two answers.
+/// It reads the [ConsentBloc] in scope rather than making one: the route
+/// that shows it owns the bloc, so the answer it records is the answer the
+/// route pops with.
 ///
-/// Pops with `true` once consent is recorded, `false` if the user declined
-/// or left — so the caller starts a session on exactly one of those.
+/// Pops with a [ConsentOutcome] — recorded, declined, or not recordable —
+/// so the caller starts a session on exactly one of those and can say why
+/// it did not on the others. Left by the back arrow, it pops with nothing.
 class const ConsentPage({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const ConsentView();
@@ -35,7 +37,7 @@ class const ConsentView({super.key}) extends StatelessWidget {
     // Recorded: this route is done, and the caller starts the session.
     listener: (context, _) {
       if (ModalRoute.of(context)?.isCurrent ?? false) {
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop(ConsentOutcome.granted);
       }
     },
     builder: (context, state) => PopScope(
@@ -145,7 +147,7 @@ class _AskState() extends State<_Ask> {
                   );
                   // Declining is an answer, not a dead end: back to the
                   // journal, which stays entirely usable.
-                  Navigator.of(context).pop(false);
+                  Navigator.of(context).pop(ConsentOutcome.declined);
                 },
                 child: const Text(consentDeclineLabel),
               ),
@@ -210,9 +212,10 @@ class const _ReadFailed() extends StatelessWidget {
             context.read<ConsentBloc>().add(const ConsentEvent.loaded()),
         child: const Text('Try again'),
       ),
+      // Nothing was asked, so there is no answer to give.
       TextButton(
         key: ConsentView.declineKey,
-        onPressed: () => Navigator.of(context).pop(false),
+        onPressed: () => Navigator.of(context).pop(),
         child: const Text('Back'),
       ),
     ],
@@ -239,9 +242,11 @@ class const _WriteFailed() extends StatelessWidget {
             context.read<ConsentBloc>().add(const ConsentEvent.granted()),
         child: const Text('Try again'),
       ),
+      // Leaving here is not a refusal: the box was ticked and the record
+      // did not land, and what the caller says about it must say so.
       TextButton(
         key: ConsentView.declineKey,
-        onPressed: () => Navigator.of(context).pop(false),
+        onPressed: () => Navigator.of(context).pop(ConsentOutcome.writeFailed),
         child: const Text(consentDeclineLabel),
       ),
     ],
