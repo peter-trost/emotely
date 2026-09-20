@@ -3,23 +3,24 @@
 # Release lanes for the Flutter app (ADR 0013). Everything an agent needs to
 # ship a build runs from here; the human steps are the store dashboards.
 #
+# Two stages per store. Every merge to main lands on the internal stage; the
+# beta stage is a deliberate, manual promotion of a build already there.
+#
 #   bundle exec fastlane ios certificates   one-time / rotation: mint the
 #                                           App Store certificate + profile
 #                                           into the match repo (needs the
 #                                           ASC API key + MATCH_PASSWORD)
-#   bundle exec fastlane ios beta           build the IPA, upload to TestFlight
-#                                           and distribute it to the external
-#                                           `Beta` group (the internal `Team`
-#                                           group sees every build by itself);
-#                                           while Apple is still reviewing an
-#                                           earlier build of the version, the
-#                                           upload is Team-only, with a warning
-#   bundle exec fastlane ios promote        no build: hand the newest processed
-#                                           build of the version to `Beta`, for
-#                                           after such a review has cleared
-#   bundle exec fastlane android beta       build the AAB, upload it to Play
-#                                           `internal` and promote it to the
-#                                           closed `alpha` track
+#   bundle exec fastlane ios internal       build the IPA and upload it to
+#                                           TestFlight; the internal `Team`
+#                                           group sees it by itself
+#   bundle exec fastlane ios beta           no build: submit the newest (or
+#                                           the pinned) processed build for
+#                                           Beta App Review and hand it to the
+#                                           external `Beta` group
+#   bundle exec fastlane android internal   build the AAB and upload it to the
+#                                           Play `internal` track
+#   bundle exec fastlane android beta       no build: promote the `internal`
+#                                           release to the closed `alpha` track
 #
 # Inputs, all environment variables (secrets of the `release` environment):
 #   APP_STORE_CONNECT_API_KEY_ID / _ISSUER_ID / _API_KEY_P8   the ASC API key
@@ -27,12 +28,23 @@
 #   PLAY_SERVICE_ACCOUNT_JSON                                 Play upload account
 #   POSTHOG_KEY                                               analytics token
 #   BUILD_NUMBER                                              monotonic build id
+#                                                             (internal lanes)
+#   PROMOTE_BUILD_NUMBER                                      optional: the
+#                                                             build to promote
+#                                                             (beta lanes);
+#                                                             newest if unset
 
 # The rebuild starts at 2.0.0 (ADR 0012): the legacy app got to 1.21.15.
 BUILD_NAME = "2.0.0"
 
 def build_number
   ENV.fetch("BUILD_NUMBER") { UI.user_error!("BUILD_NUMBER is not set") }
+end
+
+# The build a beta lane promotes, or nil for "the newest one".
+def promote_build_number
+  value = ENV.fetch("PROMOTE_BUILD_NUMBER", "").strip
+  value.empty? ? nil : value
 end
 
 def dart_defines
@@ -50,13 +62,18 @@ def flutter(*args)
   sh("cd #{Shellwords.escape(APP_DIR)} && flutter #{Shellwords.join(args)}")
 end
 
-# Loud in the log, and an annotation on the run summary when on GitHub Actions.
-def warn_ci(message)
-  UI.important(message)
-  puts("::warning title=TestFlight::#{message}") if ENV["GITHUB_ACTIONS"]
-end
+# Shown to beta testers as "What to Test". Static: every build is the same ask.
+BETA_CHANGELOG = <<~TEXT.strip
+  emotely is an evening journaling assistant. Please write an entry on a
+  few evenings — ideally on different days, so you see how it picks up
+  where you left off. Anything that felt off, confusing or slow is worth
+  reporting: tap "Send feedback" on the account screen.
+TEXT
 
 platform :ios do
+  APP_IDENTIFIER = "de.emotely.emotely"
+  BETA_GROUP = "Beta"
+
   private_lane :asc_api_key do
     app_store_connect_api_key(
       key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
@@ -69,46 +86,6 @@ platform :ios do
   desc "Mint (or rotate) the App Store signing certificate and profile into the match repo"
   lane :certificates do
     match(type: "appstore", readonly: false, api_key: asc_api_key)
-  end
-
-  APP_IDENTIFIER = "de.emotely.emotely"
-  BETA_GROUP = "Beta"
-
-  # The build of this version Apple is still reviewing, or nil. Apple takes
-  # one Beta App Review submission per train (= version) at a time; a second
-  # one is refused with "Another build in the same train is already in beta
-  # review" (run 35511874404). pilot submits *before* it assigns groups, so
-  # that refusal fails the whole distribution and the build reaches nobody
-  # outside `Team`. Same filter pilot uses for reject_build_waiting_for_review.
-  # Needs Spaceship's token, which `asc_api_key` sets (set_spaceship_token
-  # defaults to true).
-  def build_in_beta_review
-    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER).get_builds(
-      filter: {
-        "betaAppReviewSubmission.betaReviewState" => "WAITING_FOR_REVIEW,IN_REVIEW",
-        "expired" => false,
-        "preReleaseVersion.version" => BUILD_NAME
-      },
-      includes: "betaAppReviewSubmission,preReleaseVersion"
-    ).first
-  end
-
-  # The newest unexpired build of this version, optionally narrowed by more
-  # build filters (`filter[betaGroups]` is how the API answers "which builds
-  # does this group have"; the Build model carries no groups), or nil.
-  def newest_build(**filter)
-    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER).get_builds(
-      filter: { "expired" => false, "preReleaseVersion.version" => BUILD_NAME }.merge(filter),
-      sort: "-uploadedDate",
-      limit: 1
-    ).first
-  end
-
-  def beta_group
-    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER)
-                              .get_beta_groups(filter: { name: BETA_GROUP })
-                              .find { |group| group.name == BETA_GROUP } ||
-      UI.user_error!("App Store Connect has no TestFlight group named #{BETA_GROUP}")
   end
 
   desc "Build the release IPA, signed with what match holds (no upload)"
@@ -125,7 +102,7 @@ platform :ios do
       use_automatic_signing: false,
       team_id: "VCZSHMZY25",
       code_sign_identity: "Apple Distribution",
-      bundle_identifier: "de.emotely.emotely",
+      bundle_identifier: APP_IDENTIFIER,
       profile_name: ENV.fetch("sigh_de.emotely.emotely_appstore_profile-name"),
       targets: ["Runner"]
     )
@@ -142,103 +119,83 @@ platform :ios do
     lane_context[:IPA_OUTPUT_PATH] = ipa
   end
 
-  # Shown to testers as "What to Test". Static: every build is the same ask.
-  BETA_CHANGELOG = <<~TEXT.strip
-    emotely is an evening journaling assistant. Please write an entry on a
-    few evenings — ideally on different days, so you see how it picks up
-    where you left off. Anything that felt off, confusing or slow is worth
-    reporting: tap "Send feedback" on the account screen.
-  TEXT
-
-  # How a build reaches the outside testers; shared by `beta` and `promote`.
-  BETA_DISTRIBUTION = {
-    distribute_external: true,
-    # Only the external group, by exact name. The internal `Team` group
-    # has "access to all builds" turned on in App Store Connect, so every
-    # build reaches it on its own, and naming it here is rejected by Apple
-    # ("Builds cannot be assigned to this internal group", run 35510026821).
-    # `distribute_external` without `groups` is a hard error in pilot, and
-    # a changelog is required with it.
-    groups: [BETA_GROUP],
-    changelog: BETA_CHANGELOG,
-    notify_external_testers: true
-    # submit_beta_review defaults to true: pilot submits every build whose
-    # external state is READY_FOR_BETA_SUBMISSION, which every freshly
-    # processed build is. Apple reviews the first build of a version and
-    # auto-approves the later ones within minutes, so this only bites while
-    # that first review is pending — see `build_in_beta_review`.
-    #
-    # Deliberately not set: `beta_app_review_info` (contact + demo account
-    # already live in App Store Connect, and passing it would overwrite
-    # them on every run), `uses_non_exempt_encryption` (Info.plist already
-    # carries ITSAppUsesNonExemptEncryption=false), `expire_previous_builds`
-    # (testers keep the older build until they update) and
-    # `reject_build_waiting_for_review` (it expires the build under review,
-    # which with a merge every few hours would send the first review of a
-    # version back to the end of Apple's queue every time).
-  }.freeze
-
-  desc "Build the release IPA, upload it to TestFlight and distribute it to the Beta group"
-  lane :beta do
+  desc "Build the release IPA and upload it to TestFlight for the internal Team group"
+  lane :internal do
     build
-    api_key = asc_api_key
-    upload = {
-      api_key: api_key,
+    upload_to_testflight(
+      api_key: asc_api_key,
       ipa: lane_context[:IPA_OUTPUT_PATH],
-      app_identifier: APP_IDENTIFIER
-    }
-
-    blocking = build_in_beta_review
-    if blocking
-      # Apple would refuse the submission, and pilot fails the whole
-      # distribution on that. Upload for `Team` only, set "What to Test"
-      # once the build shows up, and leave the rest to `promote`. Green on
-      # purpose: nothing is broken, Apple is just not done yet.
-      upload_to_testflight(
-        **upload,
-        # With a changelog, pilot waits only until the build appears, sets
-        # the changelog and returns — no processing wait, no distribution.
-        skip_waiting_for_build_processing: true,
-        changelog: BETA_CHANGELOG
-      )
-      warn_ci(
-        "Build #{blocking.app_version} - #{blocking.version} is still in Beta App Review, " \
-        "so #{BUILD_NAME} - #{build_number} was uploaded for the Team group only. " \
-        "Once Apple approves, run the App release workflow with promote_only to hand " \
-        "the newest build to #{BETA_GROUP}."
-      )
-    else
-      upload_to_testflight(
-        **upload,
-        # External distribution means pilot has to wait for Apple to finish
-        # processing: with skip_waiting_for_build_processing it returns before
-        # distribute_build and nothing reaches a group (pilot/build_manager.rb,
-        # `return if !build.ready_for_internal_testing? && skip_waiting...`).
-        # That makes this job take Apple's 10-30 min; accepted, it is the only
-        # way to hand a build to external testers unattended.
-        skip_waiting_for_build_processing: false,
-        **BETA_DISTRIBUTION
-      )
-    end
+      app_identifier: APP_IDENTIFIER,
+      # No groups, no external distribution, no Beta App Review submission:
+      # the internal `Team` group has "access to all builds" in App Store
+      # Connect and picks the build up once Apple has processed it. With a
+      # changelog, pilot waits only until the build appears (a few minutes,
+      # not the 10-30 min of processing), sets "What to Test" and returns.
+      skip_waiting_for_build_processing: true,
+      changelog: BETA_CHANGELOG
+      # Deliberately not set: `uses_non_exempt_encryption` (Info.plist
+      # already carries ITSAppUsesNonExemptEncryption=false) and
+      # `expire_previous_builds` (testers keep the older build until they
+      # update).
+    )
   end
 
-  desc "No build: distribute the newest processed build of the version to the Beta group"
-  lane :promote do
+  # Queries below need Spaceship's token, which `asc_api_key` sets
+  # (set_spaceship_token defaults to true).
+
+  # The build of this version Apple is still reviewing, or nil. Apple takes
+  # one Beta App Review submission per train (= version) at a time; a second
+  # one is refused with "Another build in the same train is already in beta
+  # review" (run 35511874404), and pilot submits *before* it assigns groups,
+  # so that refusal fails the whole distribution. Same filter pilot uses for
+  # reject_build_waiting_for_review.
+  def build_in_beta_review
+    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER).get_builds(
+      filter: {
+        "betaAppReviewSubmission.betaReviewState" => "WAITING_FOR_REVIEW,IN_REVIEW",
+        "expired" => false,
+        "preReleaseVersion.version" => BUILD_NAME
+      },
+      includes: "betaAppReviewSubmission,preReleaseVersion"
+    ).first
+  end
+
+  # The newest unexpired build of this version, narrowed by more build
+  # filters (`filter[betaGroups]` is how the API answers "which builds does
+  # this group have"; the Build model carries no groups), or nil.
+  def newest_build(**filter)
+    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER).get_builds(
+      filter: { "expired" => false, "preReleaseVersion.version" => BUILD_NAME }.merge(filter),
+      sort: "-uploadedDate",
+      limit: 1
+    ).first
+  end
+
+  def beta_group
+    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER)
+                              .get_beta_groups(filter: { name: BETA_GROUP })
+                              .find { |group| group.name == BETA_GROUP } ||
+      UI.user_error!("App Store Connect has no TestFlight group named #{BETA_GROUP}")
+  end
+
+  desc "No build: submit the newest (or PROMOTE_BUILD_NUMBER) processed build for Beta App Review and distribute it to the Beta group"
+  lane :beta do
     api_key = asc_api_key
 
     blocking = build_in_beta_review
     if blocking
-      warn_ci(
+      UI.user_error!(
         "Build #{blocking.app_version} - #{blocking.version} is still in Beta App Review; " \
-        "nothing can be promoted until Apple is done with it."
+        "Apple takes one submission per version at a time. Try again once it is approved."
       )
-      next
     end
 
-    newest = newest_build("processingState" => "VALID")
-    UI.user_error!("App Store Connect has no processed build of #{BUILD_NAME}") if newest.nil?
-    if newest_build("betaGroups" => beta_group.id)&.version == newest.version
-      UI.success("#{BUILD_NAME} - #{newest.version} is already in #{BETA_GROUP}; nothing to promote")
+    wanted = { "processingState" => "VALID" }
+    wanted["version"] = promote_build_number if promote_build_number
+    build = newest_build(**wanted)
+    UI.user_error!("App Store Connect has no processed build #{promote_build_number || 'of ' + BUILD_NAME}") if build.nil?
+    if newest_build("betaGroups" => beta_group.id)&.version == build.version
+      UI.success("#{BUILD_NAME} - #{build.version} is already in #{BETA_GROUP}; nothing to promote")
       next
     end
 
@@ -248,57 +205,78 @@ platform :ios do
       app_identifier: APP_IDENTIFIER,
       distribute_only: true,
       app_version: BUILD_NAME,
-      build_number: newest.version,
-      **BETA_DISTRIBUTION
+      build_number: build.version,
+      distribute_external: true,
+      # Only the external group, by exact name. The internal `Team` group
+      # has "access to all builds" turned on in App Store Connect, so every
+      # build reaches it on its own, and naming it here is rejected by Apple
+      # ("Builds cannot be assigned to this internal group", run 35510026821).
+      # `distribute_external` without `groups` is a hard error in pilot, and
+      # a changelog is required with it.
+      groups: [BETA_GROUP],
+      changelog: BETA_CHANGELOG,
+      notify_external_testers: true
+      # submit_beta_review defaults to true: pilot submits every build whose
+      # external state is READY_FOR_BETA_SUBMISSION, which every processed
+      # build is until submitted. Apple reviews the first build of a version
+      # and auto-approves later ones within minutes.
+      #
+      # Deliberately not set: `beta_app_review_info` (contact + demo account
+      # already live in App Store Connect, and passing it would overwrite
+      # them on every run) and `reject_build_waiting_for_review` (it expires
+      # the build under review and resubmits; the check above refuses
+      # instead, so a pending first review is never restarted by accident).
     )
   end
 end
 
 platform :android do
-  desc "Build the release App Bundle, upload it to Play internal and promote it to the closed alpha track"
-  lane :beta do
-    flutter(
-      "build", "appbundle", "--release",
-      "--build-name=#{BUILD_NAME}", "--build-number=#{build_number}",
-      *dart_defines
-    )
+  PACKAGE_NAME = "de.emotely.emotely"
 
-    play_store_defaults = {
-      package_name: "de.emotely.emotely",
+  def play_store_defaults
+    {
+      package_name: PACKAGE_NAME,
       json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON"),
       skip_upload_metadata: true,
       skip_upload_changelogs: true,
       skip_upload_images: true,
       skip_upload_screenshots: true
     }
+  end
 
-    # 1. The AAB, to `internal` — instant dogfood, no Google review.
+  desc "Build the release App Bundle and upload it to the Play internal track"
+  lane :internal do
+    flutter(
+      "build", "appbundle", "--release",
+      "--build-name=#{BUILD_NAME}", "--build-number=#{build_number}",
+      *dart_defines
+    )
+
+    # Instant dogfood, no Google review.
     upload_to_play_store(
       **play_store_defaults,
       track: "internal",
       aab: File.join(APP_DIR, "build/app/outputs/bundle/release/app-release.aab")
     )
+  end
 
-    # 2. The same version code, promoted to the closed track `alpha` ("Closed
-    # testing - Alpha" in the console, testers = the "emotely beta" list).
+  desc "No build: promote the internal release (or PROMOTE_BUILD_NUMBER) to the closed alpha track"
+  lane :beta do
+    # The closed track `alpha` ("Closed testing - Alpha" in the console,
+    # testers = the "emotely beta" list). Google reviews closed-testing
+    # releases, so it does not go live for testers immediately.
     #
-    # This has to be a second call. supply ignores `track_promote_to` whenever
-    # it uploaded a binary in the same edit: perform_upload only reaches
-    # promote_track in the `else` of `if uploading_new_binaries`
-    # (supply/lib/supply/uploader.rb), so `track: "internal"` +
-    # `track_promote_to: "alpha"` in one call would upload to internal and
-    # silently never touch alpha. skip_upload_aab keeps this edit binary-free
-    # so the promote branch runs; version_code pins it to the build we just
-    # uploaded rather than whatever else sits on internal.
-    #
-    # Google reviews closed-testing releases, so this one does not go live
-    # for testers immediately.
+    # A binary-free edit on purpose: supply ignores `track_promote_to`
+    # whenever it uploaded a binary in the same edit (perform_upload only
+    # reaches promote_track in the `else` of `if uploading_new_binaries`,
+    # supply/lib/supply/uploader.rb). Without `version_code` supply takes the
+    # internal track's one completed release, i.e. the newest upload.
     upload_to_play_store(
       **play_store_defaults,
       skip_upload_aab: true,
       track: "internal",
       track_promote_to: "alpha",
-      version_code: Integer(build_number)
+      **(promote_build_number ? { version_code: Integer(promote_build_number) } : {})
     )
   end
 end

@@ -55,32 +55,38 @@ closed-testing release. Android takes two `upload_to_play_store` calls
 rather than one, because supply ignores `track_promote_to` on any run that
 uploaded a binary — the promotion has to be its own, binary-free edit.
 
-## Amendment 2026-09-20: a pending Beta App Review must not fail a merge
+## Amendment 2026-09-20: merges stay internal; the beta is a manual promotion
 
-Continuous delivery met Apple's review queue on day one. Apple accepts one
-Beta App Review submission per version at a time, pilot submits every build
-(and does so *before* it assigns groups), so the second merge after #127
-failed with *"Another build in the same train is already in beta review"*
-and reached nobody outside `Team` — and would have kept failing on every
-merge until Apple approved the first build, typically a day or two.
+The 2026-09-19 model — every merge straight to the outside testers — met
+Apple's review queue on day one. Apple accepts one Beta App Review
+submission per version at a time, pilot submits every build (and does so
+*before* it assigns groups), so the second merge after #127 failed with
+*"Another build in the same train is already in beta review"*, reached
+nobody outside `Team`, and would have failed every merge until Apple
+approved the first build, typically a day or two. Underneath that was a
+second problem: with a merge every few hours, every-merge-to-testers means
+a notification every few hours and a half-finished build in testers' hands
+whenever iteration is fast.
 
-`ios beta` now asks App Store Connect for a build of the version in
-`WAITING_FOR_REVIEW` or `IN_REVIEW` before it uploads. If there is one, it
-uploads for the internal `Team` group only, sets "What to Test", prints a
-warning annotation and stays green: nothing is broken, Apple is not done.
-`Beta` keeps the build under review and receives it on approval. A new
-`ios promote` lane (`workflow_dispatch` with `promote_only`, Linux, API
-calls only) then hands the newest processed build to `Beta`; the next merge
-after approval does the same by itself, so the manual run is for a quiet
-`main`.
+So the pipeline has two stages. **Every merge uploads to the internal stage
+only**: `ios internal` puts the build on TestFlight where the `Team` group
+picks it up by itself (no groups, no submission, and pilot returns as soon
+as the build appears instead of waiting for processing); `android internal`
+uploads to the Play `internal` track. **The beta is a `workflow_dispatch`
+run** that builds nothing: `ios beta` submits the newest processed build
+(or the `build_number` input) for Beta App Review and hands it to the
+external group `Beta`; `android beta` promotes the internal release to the
+closed track `alpha`. Both are store API calls on Linux. `ios beta` refuses
+while a build of the version is still in review — better a red manual run
+that names the blocking build than pilot's `reject_build_waiting_for_review`,
+which expires the reviewed build and restarts the review — and does nothing
+if `Beta` already has the build, so a rerun never re-notifies.
 
-Rejected: pilot's `reject_build_waiting_for_review`, which expires the
-build under review and resubmits — with a merge every few hours the first
-review of a version would never finish. Also deferred, not rejected:
-triggering the promotion from Apple's
-`BUILD_BETA_DETAIL_EXTERNAL_BUILD_STATE_UPDATED` webhook. Apple cannot call
-GitHub directly, so it needs an HMAC-verifying relay and a GitHub token; at
-the current merge cadence it would buy minutes. Tracked in #144.
+Deferred, not rejected: triggering the beta promotion from Apple's
+`BUILD_BETA_DETAIL_EXTERNAL_BUILD_STATE_UPDATED` webhook once a review
+clears. Apple cannot call GitHub directly, so it needs an HMAC-verifying
+relay and a GitHub token; with a human deciding when the beta ships, there
+is nothing for it to trigger yet. Tracked in #144.
 
 ## What we rejected
 
