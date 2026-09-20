@@ -18,7 +18,11 @@ import {
 import type { TokenUsage } from "./cost.ts";
 import { resolvePrompt } from "./session-prompt.ts";
 import { PRIVACY_TELEMETRY } from "./telemetry.ts";
-import { type PendingQuestion, replayTranscript } from "./transcript-replay.ts";
+import {
+  asAsked,
+  type PendingQuestion,
+  replayTranscript,
+} from "./transcript-replay.ts";
 
 type ListAnswerType = Extract<AnswerType, "color" | "emoji" | "text_list">;
 type ScalarAnswerType = Exclude<AnswerType, ListAnswerType>;
@@ -322,7 +326,10 @@ export async function advanceSession(opts: {
         usage,
         roundLatenciesMs,
         promptId: prompt.id,
-        pending: { toolCallId: ask.toolCallId, input },
+        pending: {
+          toolCallId: ask.toolCallId,
+          input: asAsked(questionSet, input),
+        },
       };
     }
   }

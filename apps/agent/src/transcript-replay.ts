@@ -1,5 +1,6 @@
 import {
   type Answer,
+  type AnswerType,
   type AskQuestionInput,
   askQuestionInput,
   recordAnswerInput,
@@ -7,6 +8,27 @@ import {
 import type { ModelMessage } from "ai";
 
 export type PendingQuestion = { toolCallId: string; input: AskQuestionInput };
+
+type AskedQuestion = { id: string; text: string; answer_type: AnswerType };
+
+/**
+ * What the client shows for an ask. The model picks the question by id and
+ * is told to pass its text along, but that text is model output: seen live
+ * from gpt-oss-120b, "How productive did you feel ?   ?  ... ... etc" for
+ * `productivity`, with the id right and the wording garbled. The set holds
+ * the reviewed wording and the type each question declares, so the client
+ * gets those, keyed by the id the model chose. An id the set does not know
+ * keeps what the model sent — the schema has already validated its shape.
+ */
+export function asAsked(
+  set: { questions: readonly AskedQuestion[] },
+  input: AskQuestionInput,
+): AskQuestionInput {
+  const question = set.questions.find((q) => q.id === input.question_id);
+  return question === undefined
+    ? input
+    : { ...input, question: question.text, answer_type: question.answer_type };
+}
 
 type AssistantToolCall = {
   type: "tool-call";

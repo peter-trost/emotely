@@ -56,7 +56,7 @@ void main() {
       // The account is untouched: withdrawing is not deleting.
       expect(robot.supabase.to(deletion), isEmpty);
       expect(robot.account, findsOneWidget);
-      expect(find.text(consentWithdrawnExplanation), findsOneWidget);
+      expect(find.text(consentMissingExplanation), findsOneWidget);
       expect(robot.analytics.events, [
         event('journal_viewed', journalViewed),
         event('consent_withdrawn', version),
@@ -130,7 +130,7 @@ void main() {
         await robot.tap(robot.withdraw);
 
         expect(robot.supabase.to(consentWithdraw), hasLength(2));
-        expect(find.text(consentWithdrawnExplanation), findsOneWidget);
+        expect(find.text(consentMissingExplanation), findsOneWidget);
       },
     );
 

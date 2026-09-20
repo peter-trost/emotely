@@ -29,65 +29,51 @@ library;
 /// session. That is correct when the wording materially changes, and
 /// needless churn when it does not — so a typo fix is worth a moment's
 /// thought about whether the meaning moved (see ADR 0014).
-const consentVersion = '2026-09-15';
+const consentVersion = '2026-09-20';
 
 /// The heading of the consent screen. Names the moment rather than asking a
 /// question, and stays true when the screen is shown again after a wording
 /// change or after a withdrawal — neither of which is a "first" session.
 const consentTitle = 'Before emotely sends your writing';
 
-/// What is sent, to whom, and what it can contain. Plain, in the app's own
-/// voice, and specific enough that agreeing to it is informed: the three
-/// bullets name the data, the recipients and the sensitivity, which is what
-/// Art. 9 (2) (a) asks an explicit consent to cover.
-const consentWhatIsSent =
-    'A session is a conversation: emotely asks a question, you answer, and '
-    'at the end it writes your entry.';
+/// One point of the consent: a lead the eye can catch, then the sentence or
+/// two behind it.
+typedef ConsentPoint = ({String lead, String body});
 
-/// The recipients, in the order the transcript travels, and where they sit.
-/// Matches the notice's "The conversation with the assistant" section.
+/// What the user agrees to, in three points that fit one screen. Everything
+/// an explicit consent under Art. 9 (2) (a) GDPR has to be informed about —
+/// what is sent and to whom, the third country and its safeguard (EDPB
+/// 05/2020 para 64 (vi)), what may not be done with it, why it is sensitive,
+/// and that it can be taken back — is here; the full notice, one tap below,
+/// carries the rest.
 ///
-/// The third country and its safeguard are named because EDPB 05/2020 para
-/// 64 (vi) lists them among the minimum elements of an informed consent, and
-/// this processing genuinely may leave the EU.
-const consentRecipients =
-    'To answer, the conversation so far — the questions and the answers you '
-    'write in them — is sent to our server, which passes it to a language '
-    'model provider through the Vercel AI Gateway. That provider may be '
-    'outside the EU; where it is, the transfer rests on the European '
-    'Commission’s standard contractual clauses (Art. 46 GDPR). Your entries '
-    'themselves are stored in our database in Frankfurt and nowhere else.';
-
-/// What the provider may not do with it. True as of #96, which sends
-/// `disallowPromptTraining` and `zeroDataRetention` on every round — the
-/// gateway then routes only to providers contractually bound to both.
-/// Material to an informed consent, and the most reassuring true thing
-/// there is to say here.
-const consentNoTraining =
-    'Every request tells the gateway to route only to providers that are '
-    'contractually barred from training on what you write and from keeping '
-    'it after they answer.';
-
-/// The one thing consent cannot undo, said plainly rather than left to be
-/// discovered. Matches the notice.
-const consentIrreversible =
-    'Withdrawing stops anything further being sent, but a conversation that '
-    'has already been answered cannot be recalled from the provider.';
-
-/// Why this needs consent rather than a checkbox nobody reads: because of
-/// what a journal entry is.
-const consentSensitivity =
-    'What you write can say how you feel, how you sleep, how things are with '
-    'the people close to you, or how your health is. That is sensitive '
-    'information, so we do not send it anywhere without asking you first.';
-
-/// The legal statement, said once and without hedging, so the record means
-/// what it says.
-const consentLegalBasis =
-    'Ticking the box below is your explicit consent to that, under '
-    'Art. 9 (2) (a) GDPR. You can take it back at any time on the account '
-    'screen, reached from the icon at the top right of your journal — it is '
-    'one tap, and it does not require deleting anything.';
+/// What this says about where the transcript goes has to agree with the
+/// notice at `getemotely.com/app-privacy`: the same recipients, in the same
+/// order, named the same way. If one changes, both change.
+const consentPoints = <ConsentPoint>[
+  (
+    lead: 'Your answers are sent to an AI model.',
+    body:
+        'Each answer goes to our server and on to a language model provider '
+        'through the Vercel AI Gateway, so emotely can ask the next question '
+        'and write your entry. The provider may be outside the EU; where it '
+        'is, the transfer rests on the EU’s standard contractual clauses.',
+  ),
+  (
+    lead: 'Never used for training, never kept.',
+    body:
+        'Every request routes only to providers contractually barred from '
+        'training on what you write and from keeping it after they answer. '
+        'Your entries themselves are stored in Frankfurt and nowhere else.',
+  ),
+  (
+    lead: 'Sensitive, and yours to take back.',
+    body:
+        'A journal can say how you feel, how you sleep or how your health '
+        'is, so we ask first. You can withdraw on the account screen at any '
+        'time; what a provider has already answered cannot be recalled.',
+  ),
+];
 
 /// The label on the checkbox: the affirmative act itself. Unticked, always.
 const consentCheckboxLabel =
@@ -127,14 +113,19 @@ const withdrawConsentExplanation =
 /// The account screen's withdraw button.
 const withdrawConsentLabel = 'Withdraw consent';
 
-/// What the account screen says once consent has been withdrawn, with the
-/// way back. Giving it again must be no harder than taking it back.
-const consentWithdrawnExplanation =
-    'You have withdrawn your consent, so no new session can start. Your '
-    'entries are untouched. You can consent again whenever you like.';
+/// What the account screen says while consent does not stand, with the way
+/// forward. Deliberately silent on *why* it does not stand: a user who has
+/// never been asked reads this too, on their first visit, and "you have
+/// withdrawn" would be untrue for them. Giving it must be no harder than
+/// taking it back.
+const consentMissingExplanation =
+    'emotely does not have your consent to send your entries to a model '
+    'provider, so no session can start. Your entries stay untouched, and '
+    'you can give it whenever you like.';
 
-/// The account screen's button to consent again after a withdrawal.
-const restoreConsentLabel = 'Consent again';
+/// The account screen's button to the consent screen while consent does
+/// not stand — first time or after a withdrawal alike.
+const giveConsentLabel = 'Give consent';
 
 /// Shown when the consent could not be recorded. The session does not start
 /// on a consent that was never written down, so this says what happened
@@ -156,21 +147,16 @@ const consentUnknownMessage =
 /// Every string the user reads before deciding, in the order the screen
 /// shows them. This is what [consentVersion] names, and what the version
 /// test hashes: if any of it changes, the version must change too, because
-/// a record naming `2026-09-15` has to mean one particular text and not
+/// a record naming `2026-09-20` has to mean one particular text and not
 /// whatever the file happens to say today.
 ///
-/// Deliberately only the *decision* strings — the title, the four
-/// paragraphs, the checkbox and the two buttons. Failure messages and link
-/// labels are not part of what was agreed to, so editing them does not
-/// re-gate the user base.
-const consentWording = [
+/// Deliberately only the *decision* strings — the title, the three points,
+/// the checkbox and the two buttons. Failure messages and link labels are
+/// not part of what was agreed to, so editing them does not re-gate the
+/// user base.
+final consentWording = [
   consentTitle,
-  consentWhatIsSent,
-  consentRecipients,
-  consentNoTraining,
-  consentSensitivity,
-  consentIrreversible,
-  consentLegalBasis,
+  for (final point in consentPoints) ...[point.lead, point.body],
   consentCheckboxLabel,
   consentAgreeLabel,
   consentDeclineLabel,

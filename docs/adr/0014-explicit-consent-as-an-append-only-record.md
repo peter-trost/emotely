@@ -97,7 +97,7 @@ have.
 
 - Withdrawal is one tap on the account screen and never requires deleting the
   account (Art. 7 (3)). Giving consent again goes back through the same
-  screen, the same four paragraphs and the same unticked box — withdrawal must
+  screen, the same three points and the same unticked box — withdrawal must
   be as easy as giving, which does not license making *giving* easier the
   second time.
 - The gate re-reads from the server before every session, not once at launch,
