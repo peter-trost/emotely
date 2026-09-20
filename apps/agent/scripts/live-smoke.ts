@@ -143,8 +143,19 @@ if (!/^\d+\.\d+\.\d+$/.test(config.min_app_version ?? "")) {
 if (!/^https?:\/\//.test(config.store_url ?? "")) {
   throw new Error(`config store_url malformed: ${config.store_url}`);
 }
-if (!(configRes.headers.get("cache-control") ?? "").includes("s-maxage")) {
-  throw new Error("config is not cacheable at the edge");
+// The handler sends `s-maxage`, but the client never sees it: Vercel's CDN
+// strips `s-maxage` and `stale-while-revalidate` from `Cache-Control` before
+// the response leaves the edge (vercel.com/docs/caching/cdn-cache, "Using
+// Vercel Functions"), and tells you to read `x-vercel-cache` instead. So the
+// proof that the gate answers from the edge is a second request served from
+// cache. HIT is the steady state; STALE is a hit inside the
+// stale-while-revalidate window, which is the behaviour the handler asks for.
+const cachedRes = await fetch(`${BASE}/api/config`);
+const cacheState = cachedRes.headers.get("x-vercel-cache") ?? "";
+if (!["HIT", "STALE"].includes(cacheState)) {
+  throw new Error(
+    `config is not cacheable at the edge: x-vercel-cache=${cacheState || "(absent)"}`,
+  );
 }
 // Each platform must get a usable link, and the cache must key on which.
 if (!(configRes.headers.get("vary") ?? "").includes("platform")) {
