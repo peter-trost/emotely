@@ -118,9 +118,9 @@ void main() {
       await robot.launch();
       await robot.settle();
 
-      await robot.answerColor('teal');
+      await robot.answerColor(Colors.teal);
 
-      expect(robot.lastPostedValue, ['#00897B']);
+      expect(robot.lastPostedValue, ['#009688']);
       expect(robot.questionText, SessionRobot.rate.question);
     });
 

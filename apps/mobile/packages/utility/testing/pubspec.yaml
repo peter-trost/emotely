@@ -16,6 +16,9 @@ dependencies:
   contract: any
   design_system: any
   feedback_link: any
+  # The color picker the session feature shows; the helper that taps its
+  # swatches lives here so the feature's robot and the live smoke share it.
+  flex_color_picker: 4.0.0
   flutter:
     sdk: flutter
   flutter_test:

@@ -27,6 +27,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:testing/testing.dart';
 
 const _smokeEmail = String.fromEnvironment('SMOKE_EMAIL');
 const _smokePassword = String.fromEnvironment('SMOKE_PASSWORD');
@@ -128,14 +129,13 @@ class LiveSessionRobot(final WidgetTester tester) {
 
   Future<void> answerCurrentQuestion() async {
     if (find.byType(RatingInput).evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(RatingInput.chipKey(8)));
-      await tester.pump();
+      await tapSliderAt(tester, find.byKey(RatingInput.sliderKey), 8);
       await _submit(RatingInput.submitKey);
     } else if (find.byType(TextListInput).evaluate().isNotEmpty) {
-      for (final item in ['the live smoke', 'green tests', 'cheap models']) {
-        await tester.enterText(find.byKey(TextListInput.fieldKey), item);
-        await tester.pump();
-        await tester.tap(find.byKey(TextListInput.addKey));
+      const items = ['the live smoke', 'green tests', 'cheap models'];
+      // Each filled field opens the next one.
+      for (final (index, item) in items.indexed) {
+        await tester.enterText(find.byKey(TextListInput.fieldKey(index)), item);
         await tester.pump();
       }
       await _submit(TextListInput.submitKey);
@@ -147,12 +147,19 @@ class LiveSessionRobot(final WidgetTester tester) {
       await tester.pump();
       await _submit(LongtextInput.submitKey);
     } else if (find.byType(EmojiInput).evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(EmojiInput.chipKey('🙏')));
-      await tester.pump();
+      // The empty slot opens the picker on its smileys page.
+      await tester.tap(find.byKey(EmojiInput.slotKey(0)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('😊'));
+      await tester.pumpAndSettle();
       await _submit(EmojiInput.submitKey);
     } else if (find.byType(ColorInput).evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(ColorInput.paletteKey('teal')));
-      await tester.pump();
+      // The empty slot opens the picker on its Material swatches.
+      await tester.tap(find.byKey(ColorInput.slotKey(0)));
+      await tester.pumpAndSettle();
+      await tapSwatch(tester, Colors.teal);
+      await tester.tap(find.byKey(ColorInput.selectKey));
+      await tester.pumpAndSettle();
       await _submit(ColorInput.submitKey);
     } else {
       fail('no answer widget on screen');
