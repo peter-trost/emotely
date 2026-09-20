@@ -143,6 +143,10 @@ platform :ios do
   # Queries below need Spaceship's token, which `asc_api_key` sets
   # (set_spaceship_token defaults to true).
 
+  def asc_app
+    @asc_app ||= Spaceship::ConnectAPI::App.find(APP_IDENTIFIER)
+  end
+
   # The build of this version Apple is still reviewing, or nil. Apple takes
   # one Beta App Review submission per train (= version) at a time; a second
   # one is refused with "Another build in the same train is already in beta
@@ -150,7 +154,7 @@ platform :ios do
   # so that refusal fails the whole distribution. Same filter pilot uses for
   # reject_build_waiting_for_review.
   def build_in_beta_review
-    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER).get_builds(
+    asc_app.get_builds(
       filter: {
         "betaAppReviewSubmission.betaReviewState" => "WAITING_FOR_REVIEW,IN_REVIEW",
         "expired" => false,
@@ -162,19 +166,23 @@ platform :ios do
 
   # The newest unexpired build of this version, narrowed by more build
   # filters (`filter[betaGroups]` is how the API answers "which builds does
-  # this group have"; the Build model carries no groups), or nil.
+  # this group have"; the Build model carries no groups), or nil. One page
+  # of one through the client: App#get_builds walks every page whatever the
+  # limit (fastlane #16398), which grows with each upload.
   def newest_build(**filter)
-    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER).get_builds(
-      filter: { "expired" => false, "preReleaseVersion.version" => BUILD_NAME }.merge(filter),
+    Spaceship::ConnectAPI.get_builds(
+      filter: { app: asc_app.id, "expired" => false, "preReleaseVersion.version" => BUILD_NAME }.merge(filter),
+      # The client's default adds `betaBuildMetrics`, which Apple no longer
+      # accepts as a relationship ("not a valid relationship name").
+      includes: "buildBetaDetail",
       sort: "-uploadedDate",
       limit: 1
-    ).first
+    ).to_models.first
   end
 
   def beta_group
-    Spaceship::ConnectAPI::App.find(APP_IDENTIFIER)
-                              .get_beta_groups(filter: { name: BETA_GROUP })
-                              .find { |group| group.name == BETA_GROUP } ||
+    asc_app.get_beta_groups(filter: { name: BETA_GROUP })
+           .find { |group| group.name == BETA_GROUP } ||
       UI.user_error!("App Store Connect has no TestFlight group named #{BETA_GROUP}")
   end
 
@@ -182,21 +190,24 @@ platform :ios do
   lane :beta do
     api_key = asc_api_key
 
+    wanted = { "processingState" => "VALID" }
+    wanted["version"] = promote_build_number if promote_build_number
+    build = newest_build(**wanted)
+    UI.user_error!("App Store Connect has no processed build #{promote_build_number || "of #{BUILD_NAME}"}") if build.nil?
+
+    # Before the review check, so a rerun for a build that is already in
+    # the group (including the one under review) is a no-op, not a failure.
+    if newest_build("version" => build.version, "betaGroups" => beta_group.id)
+      UI.success("#{BUILD_NAME} - #{build.version} is already in #{BETA_GROUP}; nothing to promote")
+      next
+    end
+
     blocking = build_in_beta_review
     if blocking
       UI.user_error!(
         "Build #{blocking.app_version} - #{blocking.version} is still in Beta App Review; " \
         "Apple takes one submission per version at a time. Try again once it is approved."
       )
-    end
-
-    wanted = { "processingState" => "VALID" }
-    wanted["version"] = promote_build_number if promote_build_number
-    build = newest_build(**wanted)
-    UI.user_error!("App Store Connect has no processed build #{promote_build_number || 'of ' + BUILD_NAME}") if build.nil?
-    if newest_build("betaGroups" => beta_group.id)&.version == build.version
-      UI.success("#{BUILD_NAME} - #{build.version} is already in #{BETA_GROUP}; nothing to promote")
-      next
     end
 
     # pilot's `distribute` mode: no ipa, the build is looked up by number.
