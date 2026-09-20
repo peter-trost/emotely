@@ -12,7 +12,7 @@ void main() {
       await analytics.codeRequestFailed();
       await analytics.codeRejected();
       await analytics.passwordFailed();
-      await analytics.identify(userId: 'user-1');
+      await analytics.identify(userId: 'user-1', internal: false);
       await analytics.signedIn();
 
       expect(spy.identified, ['user-1']);
@@ -22,6 +22,19 @@ void main() {
         event('sign_in_code_rejected'),
         event('sign_in_password_failed'),
         event('signed_in'),
+      ]);
+    });
+
+    test('flags the person internal or not, never by email', () async {
+      final spy = AnalyticsSpy();
+      final analytics = spy.authAnalytics;
+
+      await analytics.identify(userId: 'user-1', internal: true);
+      await analytics.identify(userId: 'user-2', internal: false);
+
+      expect(spy.identities, [
+        identity('user-1', {r'$internal_or_test_user': true}),
+        identity('user-2', {r'$internal_or_test_user': false}),
       ]);
     });
 

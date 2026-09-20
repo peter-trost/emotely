@@ -24,7 +24,11 @@ sealed class AuthEvent with _$AuthEvent {
   /// Sign out of this device.
   const factory signOutRequested() = AuthSignOutRequested;
 
-  /// Supabase reports a session for [userId], or none. Mirrors the SDK's
-  /// auth stream; the UI never sends it.
-  const factory sessionChanged(String? userId) = AuthSessionChanged;
+  /// Supabase reports a session for [userId] with sign-in address [email],
+  /// or none. Mirrors the SDK's auth stream; the UI never sends it. The
+  /// address rides along only so the bloc can derive PostHog's
+  /// internal-account flag from its domain; it reaches neither the state nor
+  /// the screen.
+  const factory sessionChanged(String? userId, String? email) =
+      AuthSessionChanged;
 }

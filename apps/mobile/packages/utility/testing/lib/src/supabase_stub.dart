@@ -24,6 +24,15 @@ class SupabaseStub() {
             invocation.namedArguments[#body],
           ),
         );
+    // `updateUser` (an email change) puts through the same seam.
+    when(client.put(any, headers: anyNamed('headers'), body: anyNamed('body')))
+        .thenAnswer(
+          (invocation) => _serve(
+            'PUT',
+            invocation.positionalArguments.first as Uri,
+            invocation.namedArguments[#body],
+          ),
+        );
     // ... while the data API (postgrest) builds a request and sends it.
     when(client.send(any)).thenAnswer((invocation) async {
       final request = invocation.positionalArguments.first as http.BaseRequest;
@@ -146,8 +155,8 @@ class SupabaseStub() {
   }
 
   /// Starts the client with a live session, as after a restored sign-in.
-  Future<void> signedIn() =>
-      supabase.auth.recoverSession(jsonEncode(session()));
+  Future<void> signedIn({String email = SupabaseStub.email}) =>
+      supabase.auth.recoverSession(jsonEncode(session(email: email)));
 
   /// The requests the app made to `METHOD /path`, in order.
   List<RecordedRequest> to(String endpoint) => [
@@ -163,7 +172,10 @@ class SupabaseStub() {
   ];
 
   /// A session as Supabase Auth returns it after a verified code.
-  static Map<String, Object?> session({String sub = userId}) => {
+  static Map<String, Object?> session({
+    String sub = userId,
+    String email = SupabaseStub.email,
+  }) => {
     'access_token': jwt(sub: sub),
     'token_type': 'bearer',
     'expires_in': 3600,
@@ -204,6 +216,14 @@ AuthRound codeSent() =>
 /// Supabase accepted the code and granted a session.
 AuthRound sessionGranted({String sub = SupabaseStub.userId}) =>
     () async => _json(SupabaseStub.session(sub: sub), 200);
+
+/// Supabase applied an `updateUser` and returns the user as it now stands,
+/// e.g. after a confirmed email change; the SDK then emits `userUpdated`.
+AuthRound userUpdated({String email = SupabaseStub.email}) =>
+    () async => _json(
+      SupabaseStub.session(email: email)['user']! as Map<String, Object?>,
+      200,
+    );
 
 /// Supabase refused with its error envelope, e.g. `otp_expired`.
 ///
