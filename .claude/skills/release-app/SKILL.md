@@ -42,11 +42,37 @@ it; the other two continue after it is green:
   green run already means the build reached its groups.
 - **Beta App Review, once per version.** The first build of a new version
   goes to review before external testers see it; later builds of the same
-  version are distributed without it. Review reads Test Information (kept
-  current by the `asc` prep, see below) and the beta review contact already
-  in App Store Connect — the lane deliberately does not re-send either.
+  version are submitted too but Apple auto-approves them within minutes.
+  Review reads Test Information (kept current by the `asc` prep, see below)
+  and the beta review contact already in App Store Connect — the lane
+  deliberately does not re-send either.
 - **Google's review of every closed-testing release.** The `internal` copy is
   live immediately for dogfooding; the `alpha` copy waits for review.
+
+**While that first review is pending, Beta is frozen.** Apple accepts one
+Beta App Review submission per version at a time, and pilot submits before
+it assigns groups, so a merge in that window used to fail the iOS job
+(*"Another build in the same train is already in beta review"*, runs
+35510026821 and 35511874404 on 2026-09-20) and reach nobody outside `Team`.
+Now `ios beta` checks for a build of the version in `WAITING_FOR_REVIEW` or
+`IN_REVIEW` first; if there is one, it uploads for `Team` only, sets "What to
+Test", prints a warning annotation and exits green. `Beta` keeps the build
+under review and gets it when Apple approves. To move `Beta` to the newest
+build after that, without building anything:
+
+```bash
+gh workflow run app-release.yml -f promote_only=true
+gh run watch
+```
+
+That runs `fastlane ios promote` on Linux (App Store Connect API calls
+only): it refuses while a review is still pending, does nothing if the newest
+processed build is already in `Beta`, and otherwise submits and distributes
+it exactly as `ios beta` would have. The next merge after approval does the
+same thing by itself, so the manual run is only for a quiet `main`. Apple
+does emit a webhook for this transition
+(`BUILD_BETA_DETAIL_EXTERNAL_BUILD_STATE_UPDATED`), but it needs a relay to
+reach GitHub; not built, see the issue linked from ADR 0013.
 
 ## Signing
 

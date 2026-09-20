@@ -13,8 +13,22 @@ name: App release
 # The first build of a new version also goes through Beta App Review, and
 # Play reviews every closed-testing release; both are expected waits that
 # happen after this workflow is green.
+#
+# While that first review is pending, Apple refuses a second submission for
+# the same version, so merges in that window upload to the internal `Team`
+# group only and the job warns instead of failing. Once Apple approves, a
+# manual run with `promote_only` hands the newest build to `Beta` without
+# building anything.
 on:
   workflow_dispatch:
+    inputs:
+      promote_only:
+        description: >-
+          Skip the builds and hand the newest processed TestFlight build of
+          the current version to the Beta group. For after Beta App Review
+          has cleared the build that made earlier runs upload Team-only.
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -29,6 +43,8 @@ concurrency:
 
 jobs:
   ios:
+    # `inputs` is empty on a push, so this is true for every merge.
+    if: ${{ !inputs.promote_only }}
     # App Store Connect only accepts builds made with the iOS 26 SDK (Xcode 26),
     # which this image carries by default.
     runs-on: macos-26
@@ -63,7 +79,28 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
 
+  # App Store Connect API calls only, so no Xcode, no Flutter, no macOS runner.
+  ios-promote:
+    if: ${{ inputs.promote_only }}
+    runs-on: ubuntu-latest
+    environment: release
+    defaults:
+      run:
+        working-directory: apps/mobile/app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        with:
+          working-directory: apps/mobile/app
+          bundler-cache: true
+      - run: bundle exec fastlane ios promote
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+
   android:
+    if: ${{ !inputs.promote_only }}
     runs-on: ubuntu-latest
     environment: release
     defaults:

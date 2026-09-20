@@ -55,6 +55,33 @@ closed-testing release. Android takes two `upload_to_play_store` calls
 rather than one, because supply ignores `track_promote_to` on any run that
 uploaded a binary — the promotion has to be its own, binary-free edit.
 
+## Amendment 2026-09-20: a pending Beta App Review must not fail a merge
+
+Continuous delivery met Apple's review queue on day one. Apple accepts one
+Beta App Review submission per version at a time, pilot submits every build
+(and does so *before* it assigns groups), so the second merge after #127
+failed with *"Another build in the same train is already in beta review"*
+and reached nobody outside `Team` — and would have kept failing on every
+merge until Apple approved the first build, typically a day or two.
+
+`ios beta` now asks App Store Connect for a build of the version in
+`WAITING_FOR_REVIEW` or `IN_REVIEW` before it uploads. If there is one, it
+uploads for the internal `Team` group only, sets "What to Test", prints a
+warning annotation and stays green: nothing is broken, Apple is not done.
+`Beta` keeps the build under review and receives it on approval. A new
+`ios promote` lane (`workflow_dispatch` with `promote_only`, Linux, API
+calls only) then hands the newest processed build to `Beta`; the next merge
+after approval does the same by itself, so the manual run is for a quiet
+`main`.
+
+Rejected: pilot's `reject_build_waiting_for_review`, which expires the
+build under review and resubmits — with a merge every few hours the first
+review of a version would never finish. Also deferred, not rejected:
+triggering the promotion from Apple's
+`BUILD_BETA_DETAIL_EXTERNAL_BUILD_STATE_UPDATED` webhook. Apple cannot call
+GitHub directly, so it needs an HMAC-verifying relay and a GitHub token; at
+the current merge cadence it would buy minutes. Tracked in #144.
+
 ## What we rejected
 
 - **Xcode cloud-managed signing** (`-allowProvisioningUpdates` with the API
