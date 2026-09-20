@@ -2,47 +2,74 @@ import 'package:contract/contract.dart';
 import 'package:feature_session/src/widgets/submit_button.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// One or more short items, added one at a time; submits [Answer.textList].
+/// Several short items, one field each, as the legacy app had it; submits
+/// [Answer.textList].
 ///
-/// Whatever is still typed in the field when submitting counts as an item,
-/// so a user never loses the last thing they wrote by skipping "Add".
+/// There is always one empty field at the end: writing in it opens the
+/// next, so a list grows as it is written and never needs an "add". A
+/// field emptied and then left closes again, so the list never keeps a
+/// hole the user walked away from.
 class const TextListInput({
   required final ValueChanged<Answer> onSubmit,
   super.key,
 }) extends StatefulWidget {
-  static const fieldKey = Key('text_list_input.field');
-  static const addKey = Key('text_list_input.add');
   static const submitKey = Key('text_list_input.submit');
 
-  /// Key of the chip showing the [index]th added item.
-  static Key itemKey(int index) => Key('text_list_input.item.$index');
+  /// Key of the [index]th field.
+  static Key fieldKey(int index) => Key('text_list_input.field.$index');
 
   @override
   State<TextListInput> createState() => _TextListInputState();
 }
 
 class _TextListInputState() extends State<TextListInput> {
-  final _controller = TextEditingController();
-  final _items = <String>[];
+  final _fields = <_Field>[];
 
-  String get _pending => _controller.text.trim();
+  List<String> get _answer => [
+    for (final field in _fields)
+      if (field.text.isNotEmpty) field.text,
+  ];
 
-  List<String> get _answer => [..._items, if (_pending.isNotEmpty) _pending];
+  @override
+  void initState() {
+    super.initState();
+    _open();
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    for (final field in _fields) {
+      field.dispose();
+    }
     super.dispose();
   }
 
-  void _add() {
-    if (_pending.isEmpty) {
+  void _open() {
+    final field = _Field();
+    field.focus.addListener(() => _left(field));
+    _fields.add(field);
+  }
+
+  /// The last field has been written in: open the next one.
+  void _changed(_Field field) {
+    setState(() {
+      if (field == _fields.last && field.text.isNotEmpty) {
+        _open();
+      }
+    });
+  }
+
+  /// A field lost focus: if it is empty and not the last, close it. The
+  /// controller and node are disposed once the frame that drops them has
+  /// been built, not inside the notification that is still using them.
+  void _left(_Field field) {
+    if (field.focus.hasFocus ||
+        field.text.isNotEmpty ||
+        field == _fields.last) {
       return;
     }
-    setState(() {
-      _items.add(_pending);
-      _controller.clear();
-    });
+    setState(() => _fields.remove(field));
+    WidgetsBinding.instance.addPostFrameCallback((_) => field.dispose());
   }
 
   @override
@@ -50,35 +77,17 @@ class _TextListInputState() extends State<TextListInput> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     spacing: 12,
     children: [
-      if (_items.isNotEmpty)
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final (index, item) in _items.indexed)
-              InputChip(
-                key: TextListInput.itemKey(index),
-                label: Text(item),
-                onDeleted: () => setState(() => _items.removeAt(index)),
-              ),
-          ],
+      for (final (index, field) in _fields.indexed)
+        TextField(
+          key: TextListInput.fieldKey(index),
+          controller: field.controller,
+          focusNode: field.focus,
+          textCapitalization: TextCapitalization.sentences,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(hintText: 'Write one thing…'),
+          onChanged: (_) => _changed(field),
+          onSubmitted: (_) => _fields[index + 1].focus.requestFocus(),
         ),
-      TextField(
-        key: TextListInput.fieldKey,
-        controller: _controller,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: InputDecoration(
-          hintText: 'Add an item…',
-          suffixIcon: IconButton(
-            key: TextListInput.addKey,
-            tooltip: 'Add',
-            icon: const Icon(Icons.add),
-            onPressed: _pending.isEmpty ? null : _add,
-          ),
-        ),
-        onChanged: (_) => setState(() {}),
-        onSubmitted: (_) => _add(),
-      ),
       SubmitButton(
         key: TextListInput.submitKey,
         onPressed: _answer.isEmpty
@@ -87,4 +96,17 @@ class _TextListInputState() extends State<TextListInput> {
       ),
     ],
   );
+}
+
+/// One item's controller and focus node, which live and die together.
+class _Field() {
+  final controller = TextEditingController();
+  final focus = FocusNode();
+
+  String get text => controller.text.trim();
+
+  void dispose() {
+    controller.dispose();
+    focus.dispose();
+  }
 }

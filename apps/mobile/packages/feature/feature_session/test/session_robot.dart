@@ -7,6 +7,8 @@ import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:testing/testing.dart';
 
+import 'slide_rating.dart';
+
 /// Drives a journaling session on the feature's own page, composed the way
 /// the app composes it, against a scripted agent, a signed-in Supabase and
 /// a spied PostHog. Finders are getters, actions settle, tests read as
@@ -60,8 +62,7 @@ class SessionRobot(
   Future<void> settle() => tester.pumpAndSettle();
 
   Future<void> answerRating(int value) async {
-    await tester.tap(find.byKey(RatingInput.chipKey(value)));
-    await tester.pump();
+    await slideRatingTo(tester, value);
     await tapSubmit(tester, RatingInput.submitKey);
     await settle();
   }
@@ -73,21 +74,34 @@ class SessionRobot(
     await settle();
   }
 
+  /// Writes one item per field; each filled field opens the next.
   Future<void> answerTextList(List<String> items) async {
-    for (final item in items) {
-      await tester.enterText(find.byKey(TextListInput.fieldKey), item);
-      await tester.pump();
-      await tester.tap(find.byKey(TextListInput.addKey));
+    for (final (index, item) in items.indexed) {
+      await tester.enterText(find.byKey(TextListInput.fieldKey(index)), item);
       await tester.pump();
     }
     await tapSubmit(tester, TextListInput.submitKey);
     await settle();
   }
 
-  Future<void> answerColor(String paletteName) async {
-    await tester.tap(find.byKey(ColorInput.paletteKey(paletteName)));
-    await tester.pump();
+  /// Picks [color] from the picker's Material swatches into the empty slot.
+  Future<void> answerColor(Color color) async {
+    await tester.tap(find.byKey(ColorInput.slotKey(0)));
+    await settle();
+    await tapSwatch(tester, color);
+    await tester.tap(find.byKey(ColorInput.selectKey));
+    await settle();
     await tapSubmit(tester, ColorInput.submitKey);
+    await settle();
+  }
+
+  /// Picks [emoji] from the picker's opening page into the empty slot.
+  Future<void> answerEmoji(String emoji) async {
+    await tester.tap(find.byKey(EmojiInput.slotKey(0)));
+    await settle();
+    await tester.tap(find.text(emoji));
+    await settle();
+    await tapSubmit(tester, EmojiInput.submitKey);
     await settle();
   }
 

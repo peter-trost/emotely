@@ -1,38 +1,31 @@
+import 'dart:async';
+
 import 'package:contract/contract.dart';
-import 'package:design_system/design_system.dart';
 import 'package:feature_session/src/widgets/submit_button.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// A palette color with the name screen readers announce for it.
-typedef PaletteColor = ({Color color, String name});
-
-/// Colors offered as one-tap inserts; any typed `#RRGGBB` works as well.
-const colorPalette = <PaletteColor>[
-  (color: Color(0xFFE53935), name: 'red'),
-  (color: Color(0xFFFB8C00), name: 'orange'),
-  (color: Color(0xFFFDD835), name: 'yellow'),
-  (color: Color(0xFF43A047), name: 'green'),
-  (color: Color(0xFF00897B), name: 'teal'),
-  (color: Color(0xFF1E88E5), name: 'blue'),
-  (color: Color(0xFF3949AB), name: 'indigo'),
-  (color: Color(0xFF8E24AA), name: 'purple'),
-  (color: Color(0xFFD81B60), name: 'pink'),
-  (color: Color(0xFF6D4C41), name: 'brown'),
-  (color: Color(0xFF757575), name: 'grey'),
-  (color: Color(0xFF212121), name: 'black'),
-];
-
-/// Free text in which `#RRGGBB` codes render as swatches; submits every
-/// color found as [Answer.color], in order of appearance.
+/// A row of color circles, as the legacy app had it; submits [Answer.color]
+/// in slot order.
+///
+/// There is always one empty slot at the end: tapping it opens the picker
+/// and a chosen color fills it, so the row grows as colors are picked.
+/// Tapping a filled slot reopens the picker on that color, to change it
+/// or clear it.
 class const ColorInput({
   required final ValueChanged<Answer> onSubmit,
   super.key,
 }) extends StatefulWidget {
-  static const fieldKey = Key('color_input.field');
   static const submitKey = Key('color_input.submit');
+  static const selectKey = Key('color_input.select');
+  static const clearKey = Key('color_input.clear');
+  static const cancelKey = Key('color_input.cancel');
 
-  /// Key of the palette button for [name].
-  static Key paletteKey(String name) => Key('color_input.palette.$name');
+  /// Key of the [index]th slot; the last one is always empty.
+  static Key slotKey(int index) => Key('color_input.slot.$index');
+
+  /// What the empty slot, and the picker, are called.
+  static const pickLabel = 'Pick a color';
 
   @override
   State<ColorInput> createState() => _ColorInputState();
@@ -40,24 +33,27 @@ class const ColorInput({
 
 class _ColorInputState() extends State<ColorInput> {
   static const _converter = HexColorConverter();
-  final _controller = ColorTextEditingController();
+  final _colors = <Color>[];
 
-  List<Color> get _colors => [
-    for (final match in ColorTextEditingController.hexColorRegex.allMatches(
-      _controller.text,
-    ))
-      _converter.fromJson(match.group(0)!),
-  ];
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Future<void> _open(int index) async {
+    final current = index < _colors.length ? _colors[index] : null;
+    final pick = await showDialog<_ColorPick>(
+      context: context,
+      builder: (_) => _ColorPickerDialog(current: current),
+    );
+    setState(() {
+      switch (pick) {
+        case null:
+          break;
+        case _Cleared():
+          _colors.removeAt(index);
+        case _Selected(:final color) when current == null:
+          _colors.add(color);
+        case _Selected(:final color):
+          _colors[index] = color;
+      }
+    });
   }
-
-  void _insert(Color color) => setState(
-    () => _controller.insertTextAtSelection('${_converter.toJson(color)} '),
-  );
 
   @override
   Widget build(BuildContext context) => Column(
@@ -65,31 +61,129 @@ class _ColorInputState() extends State<ColorInput> {
     spacing: 12,
     children: [
       Wrap(
+        spacing: 12,
+        runSpacing: 12,
         children: [
-          for (final entry in colorPalette)
-            IconButton(
-              key: ColorInput.paletteKey(entry.name),
-              tooltip: entry.name,
-              icon: CircleAvatar(backgroundColor: entry.color, radius: 14),
-              onPressed: () => _insert(entry.color),
+          for (final (index, color) in _colors.indexed)
+            _Slot(
+              key: ColorInput.slotKey(index),
+              color: color,
+              label: _converter.toJson(color),
+              onTap: () => unawaited(_open(index)),
             ),
+          _Slot(
+            key: ColorInput.slotKey(_colors.length),
+            color: null,
+            label: ColorInput.pickLabel,
+            onTap: () => unawaited(_open(_colors.length)),
+          ),
         ],
-      ),
-      TextField(
-        key: ColorInput.fieldKey,
-        controller: _controller,
-        minLines: 2,
-        maxLines: 6,
-        decoration: const InputDecoration(
-          hintText: 'Pick colors, or type #RRGGBB…',
-        ),
-        onChanged: (_) => setState(() {}),
       ),
       SubmitButton(
         key: ColorInput.submitKey,
         onPressed: _colors.isEmpty
             ? null
-            : () => widget.onSubmit(Answer.color(_colors)),
+            : () => widget.onSubmit(Answer.color(List.of(_colors))),
+      ),
+    ],
+  );
+}
+
+/// One circle: a picked color, or the outlined "+" that picks the next.
+class const _Slot({
+  required final Color? color,
+  required final String label,
+  required final VoidCallback onTap,
+  super.key,
+}) extends StatelessWidget {
+  static const _size = 48.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Ink(
+          width: _size,
+          height: _size,
+          decoration: ShapeDecoration(
+            color: color,
+            shape: CircleBorder(
+              side: color == null
+                  ? BorderSide(color: scheme.outline, width: 2)
+                  : BorderSide.none,
+            ),
+          ),
+          child: color == null
+              ? ExcludeSemantics(
+                  child: Icon(Icons.add, color: scheme.onSurface),
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+/// What the picker dialog came back with; dismissing it returns nothing.
+sealed class const _ColorPick();
+
+class const _Selected(final Color color) extends _ColorPick;
+
+class const _Cleared() extends _ColorPick;
+
+/// The legacy app's picker: a hue wheel and the Material swatches, with
+/// Select, Cancel and — for a slot that already has a color — Clear.
+class const _ColorPickerDialog({required final Color? current})
+    extends StatefulWidget {
+  @override
+  State<_ColorPickerDialog> createState() => _ColorPickerDialogState();
+}
+
+class _ColorPickerDialogState() extends State<_ColorPickerDialog> {
+  /// A Material orange rather than the brand seed: the picker opens on the
+  /// page that holds its color, and a swatch color opens the swatches, a
+  /// free color the wheel — swatches first is the quicker start.
+  late Color _picked = widget.current ?? Colors.orange;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text(ColorInput.pickLabel),
+    content: SingleChildScrollView(
+      child: ColorPicker(
+        color: _picked,
+        onColorChanged: (color) => setState(() => _picked = color),
+        pickersEnabled: const {
+          ColorPickerType.accent: false,
+          ColorPickerType.wheel: true,
+        },
+        padding: EdgeInsets.zero,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        wheelDiameter: 180,
+      ),
+    ),
+    actions: [
+      TextButton(
+        key: ColorInput.cancelKey,
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      if (widget.current != null)
+        TextButton(
+          key: ColorInput.clearKey,
+          onPressed: () => Navigator.of(context).pop(const _Cleared()),
+          child: const Text('Clear'),
+        ),
+      FilledButton(
+        key: ColorInput.selectKey,
+        onPressed: () => Navigator.of(context).pop(_Selected(_picked)),
+        child: const Text('Select'),
       ),
     ],
   );
