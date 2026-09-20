@@ -38,6 +38,35 @@ describe("advanceSession", () => {
     assert.ok(result.messages.length > 0);
   });
 
+  it("shows the client the set's wording, not the model's rendering of it", async () => {
+    // Seen live from gpt-oss-120b for "How productive did you feel today?":
+    // the id was right, the text was not. The reviewed wording wins.
+    const model = scriptedSessionModel([
+      {
+        ask: {
+          questionId: "q-rate",
+          question: "How productive did you feel ?   ?  ... ... etc  ...",
+          answerType: "longtext",
+        },
+      },
+    ]);
+    const result = await advanceSession({
+      questionSet: set,
+      model,
+      messages: [],
+    });
+
+    assert.equal(result.status, "awaiting_answer");
+    if (result.status !== "awaiting_answer") {
+      return;
+    }
+    assert.deepEqual(result.pending.input, {
+      question_id: "q-rate",
+      question: "Rate your day?",
+      answer_type: "rating",
+    });
+  });
+
   it("consumes the answer, records, and pauses at the next question", async () => {
     const start = await advanceSession({
       questionSet: set,

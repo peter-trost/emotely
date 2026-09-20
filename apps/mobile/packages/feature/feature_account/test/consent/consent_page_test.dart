@@ -119,15 +119,10 @@ void main() {
       await robot.launch();
 
       expect(find.text(consentTitle), findsOneWidget);
-      for (final paragraph in [
-        consentWhatIsSent,
-        consentRecipients,
-        consentNoTraining,
-        consentSensitivity,
-        consentIrreversible,
-        consentLegalBasis,
-      ]) {
-        expect(find.text(paragraph), findsOneWidget);
+      // Three points, each read as one sentence by a screen reader: the
+      // lead and its body are one text, not a heading and a paragraph.
+      for (final point in consentPoints) {
+        expect(find.text('${point.lead} ${point.body}'), findsOneWidget);
       }
       // The box starts unticked, and until it is ticked the button cannot
       // be pressed at all: no pre-ticked box, and no "by continuing".
@@ -174,6 +169,25 @@ void main() {
       await robot.tap(robot.notice);
 
       expect(launcher.launched, [privacyNoticeUrl]);
+    });
+
+    testWidgets('the checkbox row spans the whole width', (tester) async {
+      final robot = robotWith(tester);
+      await robot.launch();
+
+      // The row is the tap target for the decision, so it runs edge to edge
+      // with its box and label 16 in, rather than being a strip inside the
+      // page margin that highlights narrower than it looks.
+      final screen = tester.getRect(
+        find.descendant(of: robot.consent, matching: find.byType(Scaffold)),
+      );
+      final row = tester.getRect(robot.checkbox);
+      expect(row.left, screen.left);
+      expect(row.width, screen.width);
+      expect(
+        tester.getRect(find.byType(Checkbox)).left,
+        greaterThanOrEqualTo(screen.left + 16),
+      );
     });
 
     testWidgets('shows progress while it reads, and while it writes', (
