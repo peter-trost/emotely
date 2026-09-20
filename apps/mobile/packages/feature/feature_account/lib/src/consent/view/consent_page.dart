@@ -45,28 +45,25 @@ class const ConsentView({super.key}) extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(title: const Text(consentTitle)),
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: switch (state) {
-              // Still reading. Showing the question here would flash it for
-              // a moment and then answer it, which is not how a decision
-              // this size should arrive.
-              ConsentUnknown() ||
-              ConsentBusy() => const Center(child: CircularProgressIndicator()),
-              ConsentWriteFailure() => const _WriteFailed(),
-              // The read failed: the app does not know whether consent
-              // already stands, and asking again would re-prompt someone
-              // who has consented — consent fatigue, on a flaky network.
-              // Say what happened and offer to look again.
-              ConsentFailure() => const _ReadFailed(),
-              // `known(granted: true)` is handled by the listener above;
-              // a known `false` asks the question. A failed *withdrawal*
-              // can only be reached from the account screen, which owns
-              // that act, so it asks here too rather than being a state of
-              // its own.
-              ConsentKnown() || ConsentWithdrawFailure() => const _Ask(),
-            },
-          ),
+          child: switch (state) {
+            // Still reading. Showing the question here would flash it for
+            // a moment and then answer it, which is not how a decision
+            // this size should arrive.
+            ConsentUnknown() ||
+            ConsentBusy() => const Center(child: CircularProgressIndicator()),
+            ConsentWriteFailure() => const _Margin(child: _WriteFailed()),
+            // The read failed: the app does not know whether consent
+            // already stands, and asking again would re-prompt someone
+            // who has consented — consent fatigue, on a flaky network.
+            // Say what happened and offer to look again.
+            ConsentFailure() => const _Margin(child: _ReadFailed()),
+            // `known(granted: true)` is handled by the listener above;
+            // a known `false` asks the question. A failed *withdrawal*
+            // can only be reached from the account screen, which owns
+            // that act, so it asks here too rather than being a state of
+            // its own.
+            ConsentKnown() || ConsentWithdrawFailure() => const _Ask(),
+          },
         ),
       ),
     ),
@@ -87,65 +84,108 @@ class _AskState() extends State<_Ask> {
   var _ticked = false;
 
   @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 16,
+      children: [
+        _Margin(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [for (final point in consentPoints) _Point(point: point)],
+          ),
+        ),
+        TextButton(
+          key: ConsentView.noticeKey,
+          onPressed: () => unawaited(openPrivacyNotice()),
+          child: const Text(consentReadNoticeLabel),
+        ),
+        // Full-bleed, like every list row: the whole width is the tap
+        // target, so its highlight runs edge to edge and the box and label
+        // sit at the row's own inset.
+        CheckboxListTile(
+          key: ConsentView.checkboxKey,
+          value: _ticked,
+          // The label is the checkbox's own semantics, so a screen reader
+          // reads the thing being agreed to, not "checkbox, unchecked".
+          title: const Text(consentCheckboxLabel),
+          controlAffinity: ListTileControlAffinity.leading,
+          onChanged: (ticked) => setState(() => _ticked = ticked ?? false),
+        ),
+        _Margin(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              // A disabled button reads as just "dimmed" to a screen
+              // reader, which leaves someone who cannot see the checkbox
+              // with no way to know why the button does nothing. The hint
+              // says what to do.
+              Semantics(
+                enabled: _ticked,
+                hint: _ticked ? null : consentAgreeBlockedHint,
+                child: FilledButton(
+                  key: ConsentView.agreeKey,
+                  // Disabled until the box is ticked: the button alone is
+                  // not the affirmative act, the pair is.
+                  onPressed: _ticked
+                      ? () => context.read<ConsentBloc>().add(
+                          const ConsentEvent.granted(),
+                        )
+                      : null,
+                  child: const Text(consentAgreeLabel),
+                ),
+              ),
+              TextButton(
+                key: ConsentView.declineKey,
+                onPressed: () {
+                  context.read<ConsentBloc>().add(
+                    const ConsentEvent.declined(),
+                  );
+                  // Declining is an answer, not a dead end: back to the
+                  // journal, which stays entirely usable.
+                  Navigator.of(context).pop(false);
+                },
+                child: const Text(consentDeclineLabel),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// One of the three points: a bold lead, then its body, in one text so a
+/// screen reader hears one sentence and not a heading followed by a
+/// paragraph.
+class const _Point({required final ConsentPoint point})
+    extends StatelessWidget {
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 16,
+    final style = Theme.of(context).textTheme.bodyLarge;
+    return Text.rich(
+      TextSpan(
+        style: style,
         children: [
-          Text(consentWhatIsSent, style: theme.textTheme.bodyLarge),
-          Text(consentRecipients, style: theme.textTheme.bodyLarge),
-          Text(consentNoTraining, style: theme.textTheme.bodyLarge),
-          Text(consentSensitivity, style: theme.textTheme.bodyLarge),
-          Text(consentIrreversible, style: theme.textTheme.bodyLarge),
-          Text(consentLegalBasis, style: theme.textTheme.bodyLarge),
-          TextButton(
-            key: ConsentView.noticeKey,
-            onPressed: () => unawaited(openPrivacyNotice()),
-            child: const Text(consentReadNoticeLabel),
+          TextSpan(
+            text: point.lead,
+            style: style?.copyWith(fontWeight: FontWeight.bold),
           ),
-          CheckboxListTile(
-            key: ConsentView.checkboxKey,
-            value: _ticked,
-            // The label is the checkbox's own semantics, so a screen reader
-            // reads the thing being agreed to, not "checkbox, unchecked".
-            title: const Text(consentCheckboxLabel),
-            controlAffinity: ListTileControlAffinity.leading,
-            onChanged: (ticked) => setState(() => _ticked = ticked ?? false),
-          ),
-          // A disabled button reads as just "dimmed" to a screen reader,
-          // which leaves someone who cannot see the checkbox with no way to
-          // know why the button does nothing. The hint says what to do.
-          Semantics(
-            enabled: _ticked,
-            hint: _ticked ? null : consentAgreeBlockedHint,
-            child: FilledButton(
-              key: ConsentView.agreeKey,
-              // Disabled until the box is ticked: the button alone is not
-              // the affirmative act, the pair is.
-              onPressed: _ticked
-                  ? () => context.read<ConsentBloc>().add(
-                      const ConsentEvent.granted(),
-                    )
-                  : null,
-              child: const Text(consentAgreeLabel),
-            ),
-          ),
-          TextButton(
-            key: ConsentView.declineKey,
-            onPressed: () {
-              context.read<ConsentBloc>().add(const ConsentEvent.declined());
-              // Declining is an answer, not a dead end: back to the journal,
-              // which stays entirely usable.
-              Navigator.of(context).pop(false);
-            },
-            child: const Text(consentDeclineLabel),
-          ),
+          TextSpan(text: ' ${point.body}'),
         ],
       ),
     );
   }
+}
+
+/// The page margin, applied to the text and the buttons but not to the
+/// checkbox row, which claims the full width.
+class const _Margin({required final Widget child}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) =>
+      Padding(padding: const EdgeInsets.all(16), child: child);
 }
 
 /// Whether consent already stands could not be read. Distinct from the

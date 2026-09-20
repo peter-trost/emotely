@@ -361,16 +361,16 @@ void main() {
       await robot.startSession();
 
       // Everything an explicit consent has to be informed about, in the
-      // app's own words: what is sent, to whom and where they sit, what may
-      // not be done with it, why it is sensitive, what cannot be undone,
-      // and the basis itself.
-      expect(find.text(consentWhatIsSent), findsOneWidget);
-      expect(find.text(consentRecipients), findsOneWidget);
-      expect(find.text(consentNoTraining), findsOneWidget);
-      expect(find.text(consentSensitivity), findsOneWidget);
-      expect(find.text(consentIrreversible), findsOneWidget);
-      expect(find.text(consentLegalBasis), findsOneWidget);
+      // app's own words and in three points: what is sent and to whom, what
+      // may not be done with it, why it is sensitive and that it can be
+      // taken back. The full notice is one tap away for the rest.
+      expect(consentPoints, hasLength(3));
+      for (final point in consentPoints) {
+        expect(find.text('${point.lead} ${point.body}'), findsOneWidget);
+      }
+      expect(find.textContaining('training'), findsOneWidget);
       expect(find.text(consentCheckboxLabel), findsOneWidget);
+      expect(find.byKey(ConsentView.noticeKey), findsOneWidget);
 
       // EDPB 05/2020 para 64 (vi): a third-country transfer and its
       // safeguard are minimum elements, so they are named rather than
@@ -415,9 +415,10 @@ void main() {
       // The consent events carry a version and nothing else; no wording of
       // the notice and nothing the user wrote ever reaches PostHog.
       for (final outgoing in robot.analytics.outgoingStrings) {
-        expect(outgoing, isNot(contains(consentRecipients)));
+        for (final point in consentPoints) {
+          expect(outgoing, isNot(contains(point.body)));
+        }
         expect(outgoing, isNot(contains(consentCheckboxLabel)));
-        expect(outgoing, isNot(contains(consentSensitivity)));
       }
       expect(robot.analytics.events, [
         event('journal_viewed', journalViewed),
