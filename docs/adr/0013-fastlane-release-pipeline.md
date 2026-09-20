@@ -38,7 +38,8 @@ The human-readable copies live in the login keychain on the dev Mac
 ## Amendment 2026-09-19: every build reaches the beta testers
 
 The lanes now distribute, not just upload (#127). `ios beta` hands each build
-to the TestFlight groups `Team` (internal) and `Beta` (external); `android
+to the external TestFlight group `Beta` (the internal `Team` group has
+access to all builds by itself; naming it is rejected by Apple); `android
 beta` uploads to `internal` and then promotes that same version code to the
 closed track `alpha`. Outside testers were the reason: an external TestFlight
 group and a closed Play track are the only ways to reach someone who is not

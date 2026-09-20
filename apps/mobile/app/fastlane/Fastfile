@@ -8,9 +8,9 @@
 #                                           into the match repo (needs the
 #                                           ASC API key + MATCH_PASSWORD)
 #   bundle exec fastlane ios beta           build the IPA, upload to TestFlight
-#                                           and distribute it to the `Team`
-#                                           (internal) and `Beta` (external)
-#                                           groups
+#                                           and distribute it to the external
+#                                           `Beta` group (the internal `Team`
+#                                           group sees every build by itself)
 #   bundle exec fastlane android beta       build the AAB, upload it to Play
 #                                           `internal` and promote it to the
 #                                           closed `alpha` track
@@ -98,7 +98,7 @@ platform :ios do
     reporting: tap "Send feedback" on the account screen.
   TEXT
 
-  desc "Build the release IPA, upload it to TestFlight and distribute it to the Team and Beta groups"
+  desc "Build the release IPA, upload it to TestFlight and distribute it to the Beta group"
   lane :beta do
     build
     upload_to_testflight(
@@ -113,10 +113,13 @@ platform :ios do
       # way to hand a build to external testers unattended.
       skip_waiting_for_build_processing: false,
       distribute_external: true,
-      # Both groups by exact name: internal `Team` keeps dogfooding, external
-      # `Beta` is the outside testers. `distribute_external` without `groups`
-      # is a hard error in pilot, and a changelog is required with it.
-      groups: ["Team", "Beta"],
+      # Only the external group, by exact name. The internal `Team` group
+      # has "access to all builds" turned on in App Store Connect, so every
+      # build reaches it on its own, and naming it here is rejected by Apple
+      # ("Builds cannot be assigned to this internal group", run 35510026821).
+      # `distribute_external` without `groups` is a hard error in pilot, and
+      # a changelog is required with it.
+      groups: ["Beta"],
       changelog: BETA_CHANGELOG,
       notify_external_testers: true,
       # submit_beta_review defaults to true and pilot only posts a submission
