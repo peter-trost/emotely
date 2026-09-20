@@ -34,6 +34,10 @@ class SessionBloc({
   static const entrySaveFailedMessage =
       'Your entry could not be saved. Please try again.';
 
+  /// The failure copy when the session to resume could not be read back.
+  static const sessionReadFailedMessage =
+      'Could not load your unfinished session. Please try again.';
+
   /// What the server answers when the gateway refused the round: the model
   /// could not be reached, so no amount of retrying now will help.
   static const modelUnavailableStatus = 502;
@@ -57,12 +61,31 @@ class SessionBloc({
   /// so repeating is always safe.
   late Future<void> Function(Emitter<SessionState> emit) _retry;
 
-  Future<void> _onStarted(SessionStarted event, Emitter<SessionState> emit) {
-    if (event.resume case final session?) {
-      return _resume(session, emit);
+  Future<void> _onStarted(
+    SessionStarted event,
+    Emitter<SessionState> emit,
+  ) async {
+    if (event.resume) {
+      _retry = (emit) => _onStarted(event, emit);
+      emit(const SessionState.loading(answered: 0));
+      final OpenSession? stored;
+      try {
+        stored = await _repository.openSession();
+      } on Exception catch (error, stackTrace) {
+        unawaited(_analytics.sessionFailed());
+        unawaited(_errors.sessionFailed(error, stackTrace));
+        emit(const SessionState.failure(message: sessionReadFailedMessage));
+        return;
+      }
+      // Gone in the meantime — discarded on another device, or finished
+      // there: the offer was the journal's, the answer is the server's.
+      if (stored != null) {
+        await _resume(stored, emit);
+        return;
+      }
     }
     unawaited(_analytics.sessionStarted());
-    return _round(emit, _agentClient.advance);
+    await _round(emit, _agentClient.advance);
   }
 
   /// Picks a stored session up: the pending question goes straight back on

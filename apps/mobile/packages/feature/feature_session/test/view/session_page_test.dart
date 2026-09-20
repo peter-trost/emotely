@@ -7,7 +7,6 @@ import 'package:feature_session/src/view/session_page.dart';
 import 'package:feature_session/src/widgets/longtext_input.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -515,13 +514,16 @@ void main() {
     });
 
     group('resuming a stored session', () {
-      const stored = OpenSession(
-        id: 's-open',
-        transcript: ['stored'],
-        signature: 'stored-sig',
-        questions: [rateQuestion],
-        pending: PendingQuestion(toolCallId: 'c1', question: rateQuestion),
-      );
+      const pending = PendingQuestion(toolCallId: 'c1', question: rateQuestion);
+
+      /// A journal holding one unfinished session; the page reads it back
+      /// itself, since a route carries no more than the wish to resume.
+      SupabaseStub storing({PendingQuestion? pending}) =>
+          SupabaseStub()..rest('GET /rest/v1/sessions', [
+            rows([
+              sessionRow(questions: [rateQuestion], pending: pending),
+            ]),
+          ]);
       final finished = completed(
         summary: 'Done.',
         answers: const {'q-rate': Answer.rating(7)},
@@ -531,7 +533,12 @@ void main() {
         tester,
       ) async {
         final agent = AgentStub()..script([finished]);
-        final robot = SessionRobot(tester, agent, resume: stored);
+        final robot = SessionRobot(
+          tester,
+          agent,
+          supabase: storing(pending: pending),
+          resume: true,
+        );
         await robot.launch();
         await robot.settle();
 
@@ -555,12 +562,8 @@ void main() {
         final robot = SessionRobot(
           tester,
           agent,
-          resume: const OpenSession(
-            id: 's-open',
-            transcript: ['stored'],
-            signature: 'stored-sig',
-            questions: [rateQuestion],
-          ),
+          supabase: storing(),
+          resume: true,
         );
         await robot.launch();
         await robot.settle();
@@ -569,6 +572,55 @@ void main() {
         expect(agent.lastRequest['transcript'], ['stored']);
         expect(agent.lastRequest, isNot(contains('answer')));
         expect(robot.summary, findsOneWidget);
+      });
+
+      testWidgets('starts afresh when nothing is stored any more', (
+        tester,
+      ) async {
+        // The journal offered to continue, but the session was discarded
+        // elsewhere in the meantime: the server is asked, not the offer.
+        final agent = AgentStub()
+          ..script([awaiting(toolCallId: 'c1', question: SessionRobot.rate)]);
+        final robot = SessionRobot(tester, agent, resume: true);
+        await robot.launch();
+        await robot.settle();
+
+        expect(agent.requests, hasLength(1));
+        expect(agent.lastRequest, isNot(contains('transcript')));
+        expect(robot.questionText, SessionRobot.rate.question);
+        expect(robot.analytics.events.first, event('session_started'));
+      });
+
+      testWidgets('says so when the stored session cannot be read, and '
+          'retries', (tester) async {
+        final agent = AgentStub()..script([finished]);
+        final supabase = SupabaseStub()
+          ..rest('GET /rest/v1/sessions', [
+            restRefused(),
+            rows([
+              sessionRow(questions: [rateQuestion], pending: pending),
+            ]),
+          ]);
+        final robot = SessionRobot(
+          tester,
+          agent,
+          supabase: supabase,
+          resume: true,
+        );
+        await robot.launch();
+        await robot.settle();
+
+        expect(
+          find.text(SessionRobot.sessionReadFailedMessage),
+          findsOneWidget,
+        );
+        expect(agent.requests, isEmpty);
+        expect(robot.analytics.exceptions, hasLength(1));
+
+        await robot.tapRetry();
+
+        expect(robot.questionText, rateQuestion.question);
+        expect(agent.requests, isEmpty);
       });
     });
 

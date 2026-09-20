@@ -1,6 +1,7 @@
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
+import 'package:feature_session/feature_session.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -31,12 +32,36 @@ class const SignInRoute() extends GoRouteData with $SignInRoute {
   routes: [
     TypedGoRoute<AccountRoute>(path: 'account', name: 'account'),
     TypedGoRoute<ConsentRoute>(path: 'consent', name: 'consent'),
+    TypedGoRoute<SessionRoute>(path: 'session', name: 'session'),
+    TypedGoRoute<EntryRoute>(path: 'entries/:id', name: 'entry'),
   ],
 )
 class const JournalRoute() extends GoRouteData with $JournalRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const JournalPage();
+}
+
+/// One filed entry, by its id; the screen reads it back itself.
+@immutable
+class const EntryRoute({required final String id})
+    extends GoRouteData
+    with $EntryRoute {
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      EntryPage(entryId: id);
+}
+
+/// A journaling session, pushed so the journal can reload when it pops.
+/// `?resume=true` picks the stored session up; the session reads it back
+/// itself, so the location is all there is to carry.
+@immutable
+class const SessionRoute({final bool resume = false})
+    extends GoRouteData
+    with $SessionRoute {
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      SessionPage(resume: resume);
 }
 
 /// The consent screen, pushed for its [ConsentOutcome]. The route owns the

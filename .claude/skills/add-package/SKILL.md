@@ -94,15 +94,33 @@ to resolve their feature's navigator. Nothing per-user is a singleton.
 
 ## 5. When a feature must reach another feature's screen
 
-Declare an abstract navigator in the feature, implement it in the app:
+Declare an abstract navigator in the feature, implement it in the app with
+a route from the app's route table (ADR 0016):
 
 ```dart
 // feature_journal/lib/src/navigator.dart
-abstract interface class JournalNavigator {
-  Future<void> startSession(BuildContext context, {OpenSession? resume});
+abstract class JournalNavigator() {
+  Future<void> startSession(NavigatorState navigator, {required bool resume});
+  void openEntry(NavigatorState navigator, {required String entryId});
 }
-// app: implements it with the real pages, registers it as a singleton
+// app/lib/app/navigators.dart: implements it, registered as a singleton
+class const AppJournalNavigator() implements JournalNavigator {
+  @override
+  Future<void> startSession(NavigatorState navigator, {required bool resume}) =>
+      SessionRoute(resume: resume).push<void>(navigator.context);
+  @override
+  void openEntry(NavigatorState navigator, {required String entryId}) =>
+      EntryRoute(id: entryId).go(navigator.context);
+}
 ```
+
+The seam takes the `NavigatorState` (its context outlives the page), and
+it passes ids and flags, never objects: a route carries only what its
+location can say, and the screen reads the rest back itself. Add the route
+class to `app/lib/app/routes.dart` and run `dart run build_runner build` in
+`app`. The feature's own screens go through the seam too when they have a
+route (`openEntry` above): the widget is the feature's, the route is the
+app's. A feature package never depends on go_router.
 
 This is the one sanctioned interface with a single production
 implementation, because it genuinely has two: the app's and the test fake.

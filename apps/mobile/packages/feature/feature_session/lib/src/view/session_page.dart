@@ -4,12 +4,11 @@ import 'package:feature_session/src/bloc/session_bloc.dart';
 import 'package:feature_session/src/widgets/answer_input.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Wires a [SessionBloc] to the [AgentClient] in scope and starts a session,
-/// or picks [resume] up where the journal left it.
-class const SessionPage({final OpenSession? resume, super.key})
+/// Wires a [SessionBloc] to the [AgentClient] in scope and starts a session
+/// — or, with [resume], picks the stored one up where the journal left it.
+class const SessionPage({final bool resume = false, super.key})
     extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(

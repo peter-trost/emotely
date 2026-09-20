@@ -35,6 +35,18 @@ class const JournalRepository({required final SupabaseClient supabase}) {
     return [for (final row in rows) EntryRecord.fromJson(row)];
   }
 
+  /// One filed entry by its [id], or nothing if the journal holds no such
+  /// entry — deleted since, or never this user's, which RLS answers the
+  /// same way (ADR 0010).
+  Future<EntryRecord?> entry(String id) async {
+    final row = await supabase
+        .from(_entries)
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+    return row == null ? null : EntryRecord.fromJson(row);
+  }
+
   /// How many entries the user has filed. Asked for the count alone — the
   /// server counts and no row travels — because the one caller wants a
   /// milestone, not the journal.

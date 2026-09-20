@@ -5,6 +5,31 @@ State management: bloc. Widgets: standalone
 look lives in `ThemeData` (Baskervville serif, emotely-orange seed), not in
 hand-rolled widgets.
 
+## Routing (ADR 0016)
+
+- `lib/app/routes.dart` is the one route table: a `GoRouteData` class per
+  screen with a `@TypedGoRoute` annotation, generated into `routes.g.dart`
+  by go_router_builder (`dart run build_runner build` here after any
+  change; `melos run codegen:check` is the tripwire). Only the app depends
+  on go_router; a feature package never imports it.
+- Nothing travels as `extra`. A route carries path and query parameters
+  only (`EntryRoute(id:)`, `SessionRoute(resume:)`), and the screen reads
+  what it shows by that. A screen that needs an object gets a bloc that
+  loads it, not a constructor argument from the caller.
+- A feature reaches a screen through its navigator, and the app's
+  implementation in `lib/app/navigators.dart` answers with a route:
+  `const AccountRoute().go(navigator.context)`, or `.push<T>` when the
+  caller awaits an answer (the session's end, the consent outcome). The
+  navigator's context outlives any screen, which is why the seams take a
+  `NavigatorState` rather than a page's context.
+- The signed-in/out guard is `authRedirect` in `lib/app/router.dart`, pure
+  over "signed in?" and the matched location; `SignedInListenable` re-runs
+  it only when that boolean flips. Never gate a screen on auth state
+  inside a widget — add to the redirect.
+- The router is built once, in `_RouterState`, over the auth bloc above
+  it. `ConfigGate` and `PostHogWidget` live in `MaterialApp.router`'s
+  `builder`, over the navigator.
+
 ## Dependencies (ADR 0015)
 
 - `lib/app/dependencies.dart` is the one composition root: `registerApp`

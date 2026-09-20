@@ -2,9 +2,7 @@ import 'package:emotely/app/routes.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
-import 'package:feature_session/feature_session.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// The app's side of every feature's navigator (ADR 0015): a feature says
@@ -29,10 +27,8 @@ class const AppAccountNavigator() implements AccountNavigator {
 /// account screen, signing out.
 class const AppJournalNavigator() implements JournalNavigator {
   @override
-  Future<void> startSession(NavigatorState navigator, {OpenSession? resume}) =>
-      navigator.push(
-        MaterialPageRoute<void>(builder: (_) => SessionPage(resume: resume)),
-      );
+  Future<void> startSession(NavigatorState navigator, {required bool resume}) =>
+      SessionRoute(resume: resume).push<void>(navigator.context);
 
   /// The consent screen on its own route ([ConsentRoute]), answering how
   /// it was left. A decline, a failed write and a dismissed route all leave
@@ -76,6 +72,10 @@ class const AppJournalNavigator() implements JournalNavigator {
   @override
   void openAccount(NavigatorState navigator) =>
       const AccountRoute().go(navigator.context);
+
+  @override
+  void openEntry(NavigatorState navigator, {required String entryId}) =>
+      EntryRoute(id: entryId).go(navigator.context);
 
   @override
   void signOut(BuildContext context) =>

@@ -53,6 +53,18 @@ RouteBase get $journalRoute => GoRouteData.$route(
       hasOverriddenOnExit: false,
       factory: $ConsentRoute._fromState,
     ),
+    GoRouteData.$route(
+      path: 'session',
+      name: 'session',
+      hasOverriddenOnExit: false,
+      factory: $SessionRoute._fromState,
+    ),
+    GoRouteData.$route(
+      path: 'entries/:id',
+      name: 'entry',
+      hasOverriddenOnExit: false,
+      factory: $EntryRoute._fromState,
+    ),
   ],
 );
 
@@ -114,4 +126,81 @@ mixin $ConsentRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $SessionRoute on GoRouteData {
+  static SessionRoute _fromState(GoRouterState state) => SessionRoute(
+    resume:
+        _$convertMapValue(
+          'resume',
+          state.uri.queryParameters,
+          _$boolConverter,
+        ) ??
+        false,
+  );
+
+  SessionRoute get _self => this as SessionRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/session',
+    queryParams: {if (_self.resume != false) 'resume': _self.resume.toString()},
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $EntryRoute on GoRouteData {
+  static EntryRoute _fromState(GoRouterState state) =>
+      EntryRoute(id: state.pathParameters['id']!);
+
+  EntryRoute get _self => this as EntryRoute;
+
+  @override
+  String get location =>
+      GoRouteData.$location('/entries/${Uri.encodeComponent(_self.id)}');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
 }

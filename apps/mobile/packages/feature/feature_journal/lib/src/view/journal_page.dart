@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:feature_journal/src/bloc/journal_bloc.dart';
 import 'package:feature_journal/src/navigator.dart';
-import 'package:feature_journal/src/view/entry_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:journal_repository/journal_repository.dart';
@@ -109,17 +108,17 @@ class const _SessionCard({required final OpenSession? openSession})
   Widget build(BuildContext context) => switch (openSession) {
     null => FilledButton(
       key: JournalView.startKey,
-      onPressed: () => unawaited(_open(context, resume: null)),
+      onPressed: () => unawaited(_open(context, resume: false)),
       child: const Text('Start a session'),
     ),
-    final session => Column(
+    _ => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 8,
       children: [
         const Text('You have an unfinished session.'),
         FilledButton(
           key: JournalView.continueKey,
-          onPressed: () => unawaited(_open(context, resume: session)),
+          onPressed: () => unawaited(_open(context, resume: true)),
           child: const Text('Continue'),
         ),
         TextButton(
@@ -143,7 +142,7 @@ class const _SessionCard({required final OpenSession? openSession})
   /// before every session, never from what this device read at launch.
   static Future<void> _open(
     BuildContext context, {
-    required OpenSession? resume,
+    required bool resume,
   }) async {
     final journal = context.read<JournalBloc>();
     final navigator = Navigator.of(context);
@@ -173,8 +172,12 @@ class const _EntryTile({required final EntryRecord record})
     ),
     onTap: () {
       context.read<JournalBloc>().add(const JournalEvent.entryOpened());
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => EntryPage(record: record)),
+      // The entry screen is this feature's, but its route is the app's
+      // (ADR 0016); resolving the navigator is one of the two container
+      // calls a widget may make (ADR 0015).
+      GetIt.I<JournalNavigator>().openEntry(
+        Navigator.of(context),
+        entryId: record.id,
       );
     },
   );

@@ -1,5 +1,4 @@
 import 'package:agent_client/agent_client.dart';
-import 'package:contract/contract.dart';
 import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:testing/testing.dart';
@@ -72,7 +71,7 @@ void main() {
       // Consent stood, so the session ran; the journal read itself again
       // when the session came back.
       expect(robot.navigator.consentRequests, 0);
-      expect(robot.navigator.sessions, [null]);
+      expect(robot.navigator.sessions, [false]);
       expect(robot.supabase.to(entriesEndpoint), hasLength(2));
     });
 
@@ -102,12 +101,9 @@ void main() {
 
       await robot.tap(robot.continueSession);
 
-      final resumed = robot.navigator.sessions.single!;
-      expect(resumed.id, SupabaseStub.sessionId);
-      expect(resumed.transcript, ['stored', 'stored']);
-      expect(resumed.signature, 'stored-sig');
-      expect(resumed.pending, pending);
-      expect(resumed.questions, [rateQuestion, gratefulQuestion]);
+      // Only the wish to continue travels; the session reads the stored
+      // round back itself.
+      expect(robot.navigator.sessions, [true]);
     });
 
     group('the consent gate', () {
@@ -128,13 +124,13 @@ void main() {
 
         expect(robot.supabase.to(consentRead), hasLength(1));
         expect(robot.navigator.consentRequests, 0);
-        expect(robot.navigator.sessions, [null]);
+        expect(robot.navigator.sessions, [false]);
 
         await robot.tap(robot.start);
 
         expect(robot.supabase.to(consentRead), hasLength(2));
         expect(robot.navigator.consentRequests, 1);
-        expect(robot.navigator.sessions, [null]);
+        expect(robot.navigator.sessions, [false]);
       });
 
       testWidgets('starts the session once consent is given', (tester) async {
@@ -145,7 +141,7 @@ void main() {
         await robot.tap(robot.start);
 
         expect(robot.navigator.consentRequests, 1);
-        expect(robot.navigator.sessions, [null]);
+        expect(robot.navigator.sessions, [false]);
       });
 
       testWidgets('starts nothing when consent is not given', (tester) async {
@@ -245,7 +241,7 @@ void main() {
       expect(robot.start, findsOneWidget);
     });
 
-    testWidgets('opens an entry and reads it back', (tester) async {
+    testWidgets('asks the app to open an entry by its id', (tester) async {
       final robot = robotWith(
         tester,
         entries: [
@@ -253,8 +249,6 @@ void main() {
             id: 'e-1',
             summary: 'A seven kind of day.',
             createdAt: newer,
-            answers: {rateQuestion.questionId: const Answer.rating(7)},
-            questions: [rateQuestion],
           ),
         ],
       );
@@ -262,15 +256,9 @@ void main() {
 
       await robot.tap(robot.entry('e-1'));
 
-      expect(robot.entryPage, findsOneWidget);
-      expect(find.text('A seven kind of day.'), findsOneWidget);
-      expect(find.text(rateQuestion.question), findsOneWidget);
-      expect(find.text('7 / $ratingMax'), findsOneWidget);
+      // Only the id travels: the entry screen reads the entry back itself.
+      expect(robot.navigator.entryOpens, ['e-1']);
       expect(robot.analytics.events.last, event('entry_opened'));
-
-      await robot.back();
-
-      expect(robot.home, findsOneWidget);
     });
 
     testWidgets('opens the account screen and signs out through the app', (

@@ -89,6 +89,42 @@ void main() {
       expect(request.query['order'], 'created_at.desc.nullslast');
     });
 
+    test('reads one entry by its id', () async {
+      final written = DateTime.utc(2026, 9, 2, 8);
+      supabase.rest('GET /rest/v1/entries', [
+        rows([
+          entryRow(
+            id: 'e2',
+            summary: 'Newer',
+            createdAt: written,
+            answers: answers,
+            questions: const [question],
+          ),
+        ]),
+      ]);
+
+      final entry = await repository.entry('e2');
+
+      expect(
+        entry,
+        EntryRecord(
+          id: 'e2',
+          summary: 'Newer',
+          answers: answers,
+          questions: const [question],
+          createdAt: written,
+        ),
+      );
+      final request = supabase.to('GET /rest/v1/entries').single;
+      expect(request.query['id'], 'eq.e2');
+    });
+
+    test('has no entry for an id the journal does not hold', () async {
+      supabase.rest('GET /rest/v1/entries', [rows(const [])]);
+
+      expect(await repository.entry('gone'), isNull);
+    });
+
     test('counts the entries without fetching any', () async {
       supabase.rest('HEAD /rest/v1/entries', [rowsCounted(3)]);
 
