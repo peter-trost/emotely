@@ -1,7 +1,8 @@
 name: App release
 
 # Ships the Flutter app to TestFlight and to Play (ADR 0013). Every build goes
-# to the TestFlight groups `Team` (internal) and `Beta` (external), and to the
+# to the external TestFlight group `Beta` (the internal `Team` group sees every
+# build by itself), and to the
 # Play `internal` track plus the closed `alpha` track — so outside beta testers
 # get every build without a human touching a console.
 # Continuous delivery: every merge to main that touches the app, plus manual
