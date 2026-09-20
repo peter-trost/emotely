@@ -215,6 +215,9 @@ platform :ios do
       api_key: api_key,
       app_identifier: APP_IDENTIFIER,
       distribute_only: true,
+      # With no ipa to read it from, pilot prompts for the platform, which
+      # crashes a non-interactive run (run 35530701943).
+      app_platform: "ios",
       app_version: BUILD_NAME,
       build_number: build.version,
       distribute_external: true,
