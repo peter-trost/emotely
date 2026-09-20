@@ -121,8 +121,11 @@ class LiveSessionRobot(final WidgetTester tester) {
     if (find.byType(ConsentPage).evaluate().isEmpty) {
       return;
     }
+    // The screen is longer than a phone; both controls sit below the fold.
+    await tester.ensureVisible(find.byKey(ConsentView.checkboxKey));
     await tester.tap(find.byKey(ConsentView.checkboxKey));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(ConsentView.agreeKey));
     await tester.tap(find.byKey(ConsentView.agreeKey));
     await tester.pumpAndSettle();
   }
