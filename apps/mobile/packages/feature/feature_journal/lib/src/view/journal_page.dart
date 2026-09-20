@@ -9,9 +9,9 @@ import 'package:material_ui/material_ui.dart';
 
 /// Home: the journal so far and the way into the next session.
 ///
-/// Everything it leads to — the session, the consent screen, the account
-/// screen, signing out — belongs to another feature, so it asks the app
-/// for them through [JournalNavigator] (ADR 0015).
+/// Everything it leads to — the session, the consent screen, and its own
+/// entries on their routes — is the app's to show, so it asks for them
+/// through [JournalNavigator] (ADR 0015, ADR 0016).
 class const JournalPage({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(
@@ -25,8 +25,6 @@ class const JournalView({super.key}) extends StatelessWidget {
   static const startKey = Key('journal_view.start');
   static const continueKey = Key('journal_view.continue');
   static const discardKey = Key('journal_view.discard');
-  static const accountKey = Key('journal_view.account');
-  static const signOutKey = Key('journal_view.sign_out');
   static const retryKey = Key('journal_view.retry');
   static const emptyKey = Key('journal_view.empty');
   static Key entryKey(String id) => Key('journal_view.entry.$id');
@@ -35,26 +33,8 @@ class const JournalView({super.key}) extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Your journal'),
-      actions: [
-        IconButton(
-          key: accountKey,
-          tooltip: 'Account',
-          icon: const Icon(Icons.manage_accounts_outlined),
-          // Resolving the navigator is one of the two container calls a
-          // widget may make (ADR 0015).
-          onPressed: () =>
-              GetIt.I<JournalNavigator>().openAccount(Navigator.of(context)),
-        ),
-        IconButton(
-          key: signOutKey,
-          tooltip: 'Sign out',
-          icon: const Icon(Icons.logout),
-          onPressed: () => GetIt.I<JournalNavigator>().signOut(context),
-        ),
-      ],
-    ),
+    // The account and signing out live on the More tab, next to it.
+    appBar: AppBar(title: const Text('Your journal')),
     body: SafeArea(
       child: BlocBuilder<JournalBloc, JournalState>(
         builder: (context, state) => switch (state) {

@@ -74,7 +74,7 @@ void main() {
 
       await robot.back();
 
-      expect(robot.home, findsOneWidget);
+      expect(robot.more, findsOneWidget);
       expect(robot.supabase.to(deletion), isEmpty);
       expect(robot.supabase.to(logout), isEmpty);
       expect(robot.analytics.events, [event('journal_viewed', journalViewed)]);
@@ -264,19 +264,19 @@ void main() {
 
       await tester.expectMeetsAccessibilityGuidelines(
         await freshApp(),
-        prepare: (tester) => robot.tap(robot.openAccount),
+        prepare: (tester) => robot.openAccount(),
       );
       await tester.expectMeetsAccessibilityGuidelines(
         await freshApp(),
         prepare: (tester) async {
-          await robot.tap(robot.openAccount);
+          await robot.openAccount();
           await robot.askToDelete();
         },
       );
       await tester.expectMeetsAccessibilityGuidelines(
         await freshApp(),
         prepare: (tester) async {
-          await robot.tap(robot.openAccount);
+          await robot.openAccount();
           await robot.askToDelete();
           await robot.tap(robot.confirm);
         },

@@ -1,3 +1,4 @@
+import 'package:emotely/app/shell.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
@@ -7,8 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import '../helpers/helpers.dart';
 
 /// Drives the account screen through the real app against a scripted
-/// Supabase: from the journal to the screen, through the confirmation, and
-/// back out to sign-in once the account is gone.
+/// Supabase: from the journal over the More tab to the screen, through the
+/// confirmation, and back out to sign-in once the account is gone.
 class AccountRobot(
   final WidgetTester tester, {
   required final SupabaseStub supabase,
@@ -17,9 +18,11 @@ class AccountRobot(
   final analytics = AnalyticsSpy();
 
   Finder get home => find.byType(JournalPage);
+  Finder get more => find.byType(MorePage);
   Finder get account => find.byType(AccountPage);
   Finder get signIn => find.byType(SignInPage);
-  Finder get openAccount => find.byKey(JournalView.accountKey);
+  Finder get moreTab => find.byKey(AppShell.moreTabKey);
+  Finder get accountRow => find.byKey(MoreView.accountKey);
   Finder get deleteAccount => find.byKey(AccountView.deleteKey);
   Finder get confirmation => find.byType(AlertDialog);
   Finder get confirm => find.byKey(AccountView.confirmKey);
@@ -37,7 +40,13 @@ class AccountRobot(
     await supabase.signedIn();
     await tester.pumpWidget(app);
     await settle();
-    await tap(openAccount);
+    await openAccount();
+  }
+
+  /// From wherever the app is: the More tab, then its account row.
+  Future<void> openAccount() async {
+    await tap(moreTab);
+    await tap(accountRow);
   }
 
   /// Asks to delete the account; the confirmation is now open.
@@ -45,9 +54,8 @@ class AccountRobot(
 
   Future<void> settle() => tester.pumpAndSettle();
 
-  /// Scrolls to the target first: the account screen is a scroll view, and
-  /// with the feedback row it is taller than the test viewport, so the
-  /// delete button below it is off-screen until it is scrolled to.
+  /// Scrolls to the target first: a list may be taller than the test
+  /// viewport.
   Future<void> tap(Finder finder) async {
     await tester.ensureVisible(finder);
     await tester.tap(finder);

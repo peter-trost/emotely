@@ -260,19 +260,6 @@ void main() {
       expect(robot.analytics.events.last, event('entry_opened'));
     });
 
-    testWidgets('opens the account screen and signs out through the app', (
-      tester,
-    ) async {
-      final robot = robotWith(tester);
-      await robot.launch();
-
-      await robot.tap(robot.account);
-      await robot.tap(robot.signOut);
-
-      expect(robot.navigator.accountOpens, 1);
-      expect(robot.navigator.signOuts, 1);
-    });
-
     testWidgets('meets accessibility guidelines', (tester) async {
       final robot = robotWith(
         tester,

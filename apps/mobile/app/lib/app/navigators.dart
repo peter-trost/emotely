@@ -6,25 +6,33 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// The app's side of every feature's navigator (ADR 0015): a feature says
-/// what it needs from the outside, the app says how — with the real pages
-/// and the real blocs, which only the app may know together.
+/// what it needs from the outside, the app says how — with a route from
+/// its table (ADR 0016), reached through the navigator's own context,
+/// which outlives any screen: a feature captures the navigator before it
+/// awaits the server, and this must not reach back into a page that may
+/// have gone.
 
-/// Signing out is the auth feature's act: the root swaps to sign-in once
-/// the auth bloc has ended the session.
+/// Signing out is the auth feature's act: the router lands on sign-in once
+/// the auth bloc has ended the session. The account screen and the
+/// consent screen are routes of the app's.
 class const AppAccountNavigator() implements AccountNavigator {
   @override
   void signOut(BuildContext context) =>
       context.read<AuthBloc>().add(const AuthEvent.signOutRequested());
 
-  /// The account screen reads the record again once the route closes, so
-  /// what the route answered is of no use to it here.
+  /// The More tab reads the record again once the route closes, so what
+  /// the route answered is of no use to it here.
   @override
   Future<void> requestConsent(NavigatorState navigator) =>
       const ConsentRoute().push<ConsentOutcome>(navigator.context);
+
+  @override
+  void openAccount(NavigatorState navigator) =>
+      const AccountRoute().go(navigator.context);
 }
 
-/// Everything the journal leads to: the session, the consent gate, the
-/// account screen, signing out.
+/// Everything the journal leads to: the session, the consent gate, and its
+/// own entries on their routes.
 class const AppJournalNavigator() implements JournalNavigator {
   @override
   Future<void> startSession(NavigatorState navigator, {String? resume}) =>
@@ -65,19 +73,7 @@ class const AppJournalNavigator() implements JournalNavigator {
         ?.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// The router is reached through the navigator's own context, which
-  /// outlives any screen: the journal captures the navigator before it
-  /// awaits the server, and this must not reach back into a page that may
-  /// have gone.
-  @override
-  void openAccount(NavigatorState navigator) =>
-      const AccountRoute().go(navigator.context);
-
   @override
   void openEntry(NavigatorState navigator, {required String entryId}) =>
       EntryRoute(id: entryId).go(navigator.context);
-
-  @override
-  void signOut(BuildContext context) =>
-      context.read<AuthBloc>().add(const AuthEvent.signOutRequested());
 }

@@ -57,7 +57,8 @@ emotely/
 │  │     │                  (shared test support)
 │  │     └─ feature/        depend only on utilities, never on each other: feature_auth,
 │  │                        feature_journal (home), feature_session, feature_account
-│  │                        (with the consent gate); each reaches the others only
+│  │                        (the More tab, the account, the consent gate); each
+│  │                        reaches the others only
 │  │                        through a navigator the app implements with its
 │  │                        go_router route table
 │  └─ web/        Jaspr (Dart) · getemotely.com landing page + waitlist · static, deploys to Vercel

@@ -1,5 +1,7 @@
 import 'package:contract/contract.dart';
 import 'package:emotely/app/app.dart';
+import 'package:emotely/app/shell.dart';
+import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -87,11 +89,41 @@ void main() {
       expect(find.byType(EntryPage), findsNothing);
     });
 
-    testWidgets('signs out from the journal and returns to sign-in', (
+    testWidgets('keeps the journal tab and the More tab side by side', (
       tester,
     ) async {
-      // The journal asks the app to sign out; the app tells the auth bloc,
-      // and the root swaps the screen underneath.
+      final supabase = SupabaseStub();
+      await supabase.signedIn();
+      await tester.pumpWidget(
+        appUnderTest(
+          agent: AgentStub(),
+          supabase: supabase,
+          analytics: AnalyticsSpy(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(JournalPage), findsOneWidget);
+      expect(find.byType(MorePage), findsNothing);
+
+      await tester.tap(find.byKey(AppShell.moreTabKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MorePage), findsOneWidget);
+      expect(find.byType(JournalPage), findsNothing);
+
+      await tester.tap(find.byKey(AppShell.journalTabKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(JournalPage), findsOneWidget);
+      expect(find.byType(MorePage), findsNothing);
+    });
+
+    testWidgets('signs out from the More tab and returns to sign-in', (
+      tester,
+    ) async {
+      // The More tab asks the app to sign out; the app tells the auth bloc,
+      // and the router lands on sign-in.
       final supabase = SupabaseStub()..script(logout: [signedOut()]);
       await supabase.signedIn();
       final analytics = AnalyticsSpy();
@@ -104,7 +136,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(JournalView.signOutKey));
+      await tester.tap(find.byKey(AppShell.moreTabKey));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(MoreView.signOutKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(MoreView.signOutKey));
       await tester.pumpAndSettle();
 
       expect(find.byType(SignInPage), findsOneWidget);

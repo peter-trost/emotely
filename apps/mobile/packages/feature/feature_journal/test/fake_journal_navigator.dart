@@ -17,12 +17,6 @@ class FakeJournalNavigator() extends JournalNavigator {
   /// Every entry the journal asked to open, by id.
   final entryOpens = <String>[];
 
-  /// How often the journal opened the account screen.
-  var accountOpens = 0;
-
-  /// How often the journal asked to be signed out.
-  var signOuts = 0;
-
   @override
   Future<void> startSession(NavigatorState navigator, {String? resume}) {
     sessions.add(resume);
@@ -38,10 +32,4 @@ class FakeJournalNavigator() extends JournalNavigator {
   @override
   void openEntry(NavigatorState navigator, {required String entryId}) =>
       entryOpens.add(entryId);
-
-  @override
-  void openAccount(NavigatorState navigator) => accountOpens++;
-
-  @override
-  void signOut(BuildContext context) => signOuts++;
 }

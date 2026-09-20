@@ -36,7 +36,9 @@ void main() {
       // The observer is what `PosthogObserver.currentContext` reads; without
       // it the SDK logs "Cannot show survey: No valid context found". The
       // router owns the navigator now, so it is the navigator that is asked.
-      final navigator = tester.widget<Navigator>(find.byType(Navigator));
+      // The root navigator, above the tabs' own: it is the one the router
+      // hands the observers to.
+      final navigator = tester.widget<Navigator>(find.byType(Navigator).first);
       expect(navigator.observers.whereType<PosthogObserver>(), hasLength(1));
     });
   });

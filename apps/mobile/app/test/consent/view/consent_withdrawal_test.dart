@@ -32,17 +32,17 @@ void main() {
       return ConsentRobot(tester, supabase: supabase, agent: agent);
     }
 
-    /// From the journal into the account screen.
-    Future<void> openAccount(ConsentRobot robot) async {
+    /// From the journal over to the More tab, where consent is managed.
+    Future<void> openMore(ConsentRobot robot) async {
       await robot.launch();
-      await robot.tap(robot.openAccount);
+      await robot.tap(robot.moreTab);
     }
 
     testWidgets('is one tap, and does not touch the account or the entries', (
       tester,
     ) async {
       final robot = robotWith(tester);
-      await openAccount(robot);
+      await openMore(robot);
 
       expect(robot.withdraw, findsOneWidget);
       expect(find.text(withdrawConsentExplanation), findsOneWidget);
@@ -55,7 +55,7 @@ void main() {
       ]);
       // The account is untouched: withdrawing is not deleting.
       expect(robot.supabase.to(deletion), isEmpty);
-      expect(robot.account, findsOneWidget);
+      expect(robot.more, findsOneWidget);
       expect(find.text(consentMissingExplanation), findsOneWidget);
       expect(robot.analytics.events, [
         event('journal_viewed', journalViewed),
@@ -69,10 +69,10 @@ void main() {
       // The server answers "stands" at launch and "does not" from the
       // withdrawal on, which is what it would really do.
       final robot = robotWith(tester, granted: false, reads: [consentStands()]);
-      await openAccount(robot);
+      await openMore(robot);
       await robot.tap(robot.withdraw);
 
-      await robot.back();
+      await robot.tap(robot.journalTab);
 
       // Back on the journal, Start now asks again rather than sending.
       expect(robot.home, findsOneWidget);
@@ -96,7 +96,7 @@ void main() {
           consentStands(),
         ],
       );
-      await openAccount(robot);
+      await openMore(robot);
       await robot.tap(robot.withdraw);
 
       expect(robot.restore, findsOneWidget);
@@ -125,7 +125,7 @@ void main() {
       'a withdrawal that fails leaves consent standing, and says so',
       (tester) async {
         final robot = robotWith(tester, withdrawals: [restRefused()]);
-        await openAccount(robot);
+        await openMore(robot);
 
         await robot.tap(robot.withdraw);
 
@@ -148,7 +148,7 @@ void main() {
       tester,
     ) async {
       final robot = robotWith(tester, reads: [restRefused()]);
-      await openAccount(robot);
+      await openMore(robot);
 
       // A read that failed says nothing about whether consent stands, so
       // neither button is offered — but the section must not simply be
@@ -158,10 +158,10 @@ void main() {
       expect(robot.restore, findsNothing);
       expect(find.text(consentUnknownMessage), findsOneWidget);
       // The rest of the screen still works.
-      expect(find.byKey(AccountView.deleteKey), findsOneWidget);
-      expect(robot.accountNotice, findsOneWidget);
+      expect(find.byKey(MoreView.accountKey), findsOneWidget);
+      expect(robot.moreNotice, findsOneWidget);
 
-      await robot.tap(find.byKey(AccountView.consentRetryKey));
+      await robot.tap(find.byKey(MoreView.consentRetryKey));
 
       // Looking again brings the control back.
       expect(robot.withdraw, findsOneWidget);
@@ -184,15 +184,15 @@ void main() {
       expect(launcher.launched, [privacyNoticeUrl]);
     });
 
-    testWidgets('the account screen links the notice and the imprint', (
+    testWidgets('the More tab links the notice and the imprint', (
       tester,
     ) async {
       final launcher = UrlLauncherSpy.setup();
       final robot = robotWith(tester);
-      await openAccount(robot);
+      await openMore(robot);
 
-      await robot.tap(robot.accountNotice);
-      await robot.tap(robot.accountImprint);
+      await robot.tap(robot.moreNotice);
+      await robot.tap(robot.moreImprint);
 
       expect(launcher.launched, [privacyNoticeUrl, imprintUrl]);
     });
@@ -205,8 +205,8 @@ void main() {
         robot.app,
         prepare: (tester) async {
           await robot.settle();
-          await robot.tap(robot.openAccount);
-          await tester.ensureVisible(find.byKey(AccountView.deleteKey));
+          await robot.tap(robot.moreTab);
+          await tester.ensureVisible(find.byKey(MoreView.signOutKey));
           await robot.settle();
         },
       );

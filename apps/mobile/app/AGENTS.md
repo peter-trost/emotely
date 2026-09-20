@@ -29,6 +29,12 @@ hand-rolled widgets.
 - The router is built once, in `_RouterState`, over the auth bloc above
   it. `ConfigGate` and `PostHogWidget` live in `MaterialApp.router`'s
   `builder`, over the navigator.
+- Signed in, the user lives in two tabs (`AppShellRoute`, a
+  `StatefulShellRoute` rendered by `lib/app/shell.dart`): the journal with
+  its entries, and More (`feature_account`'s `MorePage`) with the account
+  under it. A screen that must cover the tab bar — the session, the
+  consent screen — is declared outside the shell, at the root of the
+  table, and pushed.
 
 ## Dependencies (ADR 0015)
 

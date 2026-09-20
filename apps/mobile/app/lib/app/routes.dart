@@ -1,11 +1,12 @@
+import 'package:emotely/app/shell.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
 import 'package:feature_session/feature_session.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 part 'routes.g.dart';
 
@@ -16,12 +17,18 @@ part 'routes.g.dart';
 ///
 /// Nothing travels as `extra`: a route carries only what its location can
 /// say, so every screen can be reached from its location alone.
+///
+/// Signed in, the user lives in two tabs ([AppShellRoute]): the journal,
+/// with its entries, and More, with the account under it. The session and
+/// the consent screen sit outside the shell, on the root navigator, so
+/// they cover the tab bar while they are up.
 
 /// Where a signed-out user is sent, and the only screen they can see.
 /// [from] is the location they were going to — a deep link, or the screen
 /// they were on when the session ended under them — which the redirect
 /// sends them to once they sign in.
 @TypedGoRoute<SignInRoute>(path: '/sign-in', name: 'signIn')
+@immutable
 class const SignInRoute({final String? from})
     extends GoRouteData
     with $SignInRoute {
@@ -29,18 +36,75 @@ class const SignInRoute({final String? from})
   Widget build(BuildContext context, GoRouterState state) => const SignInPage();
 }
 
-/// Home: the journal. Every other signed-in screen sits under it, so the
-/// back button always leads here.
-@TypedGoRoute<JournalRoute>(
-  path: '/',
-  name: 'journal',
-  routes: [
-    TypedGoRoute<AccountRoute>(path: 'account', name: 'account'),
-    TypedGoRoute<ConsentRoute>(path: 'consent', name: 'consent'),
-    TypedGoRoute<SessionRoute>(path: 'session', name: 'session'),
-    TypedGoRoute<EntryRoute>(path: 'entries/:id', name: 'entry'),
+/// The tab bar, with one stack per tab.
+@TypedStatefulShellRoute<AppShellRoute>(
+  branches: [
+    TypedStatefulShellBranch<JournalBranch>(
+      routes: [
+        TypedGoRoute<JournalRoute>(
+          path: '/',
+          name: 'journal',
+          routes: [
+            TypedGoRoute<EntryRoute>(path: 'entries/:id', name: 'entry'),
+          ],
+        ),
+      ],
+    ),
+    TypedStatefulShellBranch<MoreBranch>(
+      routes: [
+        TypedGoRoute<MoreRoute>(
+          path: '/more',
+          name: 'more',
+          routes: [
+            TypedGoRoute<AccountRoute>(path: 'account', name: 'account'),
+          ],
+        ),
+      ],
+    ),
   ],
 )
+@immutable
+class const AppShellRoute() extends StatefulShellRouteData {
+  @override
+  Widget builder(
+    BuildContext context,
+    GoRouterState state,
+    StatefulNavigationShell navigationShell,
+  ) => AppShell(
+    navigationShell: navigationShell,
+    tabs: const [JournalBranch(), MoreBranch()],
+  );
+}
+
+/// The journal tab's stack, and what its tab shows in the bar.
+class const JournalBranch()
+    extends StatefulShellBranchData
+    with TabDestination {
+  @override
+  Key get key => AppShell.journalTabKey;
+  @override
+  IconData get icon => Icons.menu_book_outlined;
+  @override
+  IconData get selectedIcon => Icons.menu_book;
+  @override
+  String get label => 'Journal';
+}
+
+/// The More tab's stack, and what its tab shows in the bar.
+class const MoreBranch() extends StatefulShellBranchData with TabDestination {
+  @override
+  Key get key => AppShell.moreTabKey;
+  @override
+  IconData get icon => Icons.more_horiz;
+  @override
+  IconData get selectedIcon => Icons.more_horiz;
+  @override
+  String get label => 'More';
+}
+
+/// Home: the journal. Its entries sit under it, so the back button leads
+/// here.
+@immutable
 class const JournalRoute() extends GoRouteData with $JournalRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
@@ -57,12 +121,33 @@ class const EntryRoute({required final String id})
       EntryPage(entryId: id);
 }
 
+/// The More tab, with a consent bloc of its own for the rows that take
+/// consent back and give it again; the journal asks the server again
+/// before every session, so nothing has to be shared between the two tabs.
+@immutable
+class const MoreRoute() extends GoRouteData with $MoreRoute {
+  @override
+  Widget build(BuildContext context, GoRouterState state) => BlocProvider(
+    create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
+    child: const MorePage(),
+  );
+}
+
+/// The account screen, under More.
+@immutable
+class const AccountRoute() extends GoRouteData with $AccountRoute {
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const AccountPage();
+}
+
 /// A journaling session, pushed so the journal can reload when it pops.
 /// `?resume=<id>` picks that stored session up; the session reads it back
 /// itself, so the location is all there is to carry. The journal only ever
 /// holds one session in progress (a new one replaces it), but the route
 /// names which, so the location says what it does and a second unfinished
 /// session would need no new route.
+@TypedGoRoute<SessionRoute>(path: '/session', name: 'session')
 @immutable
 class const SessionRoute({final String? resume})
     extends GoRouteData
@@ -75,23 +160,12 @@ class const SessionRoute({final String? resume})
 /// The consent screen, pushed for its [ConsentOutcome]. The route owns the
 /// bloc, which is the authority on the answer: `granted` only after the
 /// server recorded it. The provider closes the bloc with the route.
+@TypedGoRoute<ConsentRoute>(path: '/consent', name: 'consent')
 @immutable
 class const ConsentRoute() extends GoRouteData with $ConsentRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) => BlocProvider(
     create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
     child: const ConsentPage(),
-  );
-}
-
-/// The account screen, with a consent bloc of its own for the section that
-/// takes consent back; the journal asks the server again before every
-/// session, so nothing has to be shared between the two routes.
-@immutable
-class const AccountRoute() extends GoRouteData with $AccountRoute {
-  @override
-  Widget build(BuildContext context, GoRouterState state) => BlocProvider(
-    create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
-    child: const AccountPage(),
   );
 }
