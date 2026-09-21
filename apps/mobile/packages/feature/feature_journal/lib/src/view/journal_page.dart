@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:feature_journal/src/bloc/journal_bloc.dart';
 import 'package:feature_journal/src/navigator.dart';
+import 'package:feature_journal/src/routes.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:journal_repository/journal_repository.dart';
@@ -152,13 +153,8 @@ class const _EntryTile({required final EntryRecord record})
     ),
     onTap: () {
       context.read<JournalBloc>().add(const JournalEvent.entryOpened());
-      // The entry screen is this feature's, but its route is the app's
-      // (ADR 0016); resolving the navigator is one of the two container
-      // calls a widget may make (ADR 0015).
-      GetIt.I<JournalNavigator>().openEntry(
-        Navigator.of(context),
-        entryId: record.id,
-      );
+      // The journal's own screen, on the journal's own route (ADR 0016).
+      EntryRoute(id: record.id).go(context);
     },
   );
 }

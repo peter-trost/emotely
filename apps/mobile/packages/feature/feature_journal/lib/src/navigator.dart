@@ -1,10 +1,10 @@
 import 'package:flutter/widgets.dart';
 
 /// What the journal asks of the app and cannot do itself, because a feature
-/// never knows another feature (ADR 0015) and never knows a route
-/// (ADR 0016): every screen it leads to is the app's to show. The app
-/// implements this with its route table; a test fakes it and records what
-/// was asked.
+/// never knows another feature (ADR 0015): the session and the consent
+/// screen are other features' routes. Its own screens it reaches itself
+/// (ADR 0016). The app implements this with those features' routes; a test
+/// fakes it and records what was asked.
 ///
 /// The methods take the [NavigatorState] rather than a context, because
 /// the journal captures it before it awaits the server and must not reach
@@ -21,9 +21,4 @@ abstract class JournalNavigator() {
   /// write, a dismissed screen — is `false`; what the user is told about it
   /// is the app's, since the app owns the consent screen and its words.
   Future<bool> requestConsent(NavigatorState navigator);
-
-  /// Opens the entry [entryId] on its own route. The journal has the entry
-  /// in hand, but only the id travels: the screen reads it back itself, so
-  /// it can be reached from its location alone.
-  void openEntry(NavigatorState navigator, {required String entryId});
 }

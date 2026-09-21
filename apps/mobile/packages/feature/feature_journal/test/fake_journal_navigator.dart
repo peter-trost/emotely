@@ -14,9 +14,6 @@ class FakeJournalNavigator() extends JournalNavigator {
   /// What a consent request answers.
   var consentGiven = false;
 
-  /// Every entry the journal asked to open, by id.
-  final entryOpens = <String>[];
-
   @override
   Future<void> startSession(NavigatorState navigator, {String? resume}) {
     sessions.add(resume);
@@ -28,8 +25,4 @@ class FakeJournalNavigator() extends JournalNavigator {
     consentRequests++;
     return Future.value(consentGiven);
   }
-
-  @override
-  void openEntry(NavigatorState navigator, {required String entryId}) =>
-      entryOpens.add(entryId);
 }

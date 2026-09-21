@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:emotely/app/routes.dart';
 import 'package:feature_auth/feature_auth.dart';
+import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
@@ -73,7 +74,7 @@ GoRouter createRouter({
   required SignedInListenable refresh,
   required List<NavigatorObserver> observers,
 }) => GoRouter(
-  routes: $appRoutes,
+  routes: appRoutes,
   initialLocation: const JournalRoute().location,
   refreshListenable: refresh,
   redirect: (context, state) =>

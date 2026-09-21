@@ -18,8 +18,4 @@ abstract class AccountNavigator() {
   /// Takes the [NavigatorState] rather than a context so the app can reach
   /// its router from something that outlives the screen.
   Future<void> requestConsent(NavigatorState navigator);
-
-  /// Opens the account screen on its own route, from the More tab. The
-  /// screen is this feature's; its route is the app's (ADR 0016).
-  void openAccount(NavigatorState navigator);
 }

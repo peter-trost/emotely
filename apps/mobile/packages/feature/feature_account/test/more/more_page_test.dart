@@ -1,7 +1,6 @@
 import 'package:feature_account/feature_account.dart';
 import 'package:feedback_link/feedback_link.dart';
 import 'package:flutter/services.dart' show PlatformException;
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:legal_links/legal_links.dart';
@@ -44,11 +43,9 @@ class _MoreRobot(
     );
     registerAccount(GetIt.I);
     GetIt.I.registerSingleton<AccountNavigator>(navigator);
-    return pageUnderTest(
-      BlocProvider(
-        create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
-        child: const MorePage(),
-      ),
+    return featureUnderTest(
+      routes: [$moreRoute],
+      initialLocation: const MoreRoute().location,
     );
   }
 
@@ -151,13 +148,22 @@ void main() {
       );
     });
 
-    testWidgets('opens the account screen through the app', (tester) async {
+    testWidgets('opens the account screen on its own route, and comes back', (
+      tester,
+    ) async {
       final robot = robotWith(tester);
       await robot.launch();
 
       await robot.tap(robot.account);
 
-      expect(robot.navigator.accountOpens, 1);
+      expect(find.byType(AccountPage), findsOneWidget);
+      expect(robot.more, findsNothing);
+
+      await tester.pageBack();
+      await robot.settle();
+
+      expect(robot.more, findsOneWidget);
+      expect(find.byType(AccountPage), findsNothing);
     });
 
     testWidgets('signs out through the app', (tester) async {

@@ -45,7 +45,10 @@ class SessionRobot(
       analytics: analytics,
     );
     registerSession(GetIt.I);
-    return pageUnderTest(SessionPage(resume: resume));
+    return featureUnderTest(
+      routes: [$sessionRoute],
+      initialLocation: SessionRoute(resume: resume).location,
+    );
   }
 
   /// Opens the session signed in; the first round is in flight until

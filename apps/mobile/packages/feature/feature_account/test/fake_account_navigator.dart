@@ -9,9 +9,6 @@ class FakeAccountNavigator() extends AccountNavigator {
   /// How often the feature asked for the consent screen.
   var consentRequests = 0;
 
-  /// How often the feature asked for the account screen.
-  var accountOpens = 0;
-
   @override
   void signOut(BuildContext context) => signOuts++;
 
@@ -20,7 +17,4 @@ class FakeAccountNavigator() extends AccountNavigator {
     consentRequests++;
     return Future.value();
   }
-
-  @override
-  void openAccount(NavigatorState navigator) => accountOpens++;
 }

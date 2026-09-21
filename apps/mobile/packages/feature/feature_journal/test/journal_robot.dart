@@ -30,8 +30,8 @@ class JournalRobot(
 
   Finder entry(String id) => find.byKey(JournalView.entryKey(id));
 
-  /// The journal page as the app would show it. Reading this composes the
-  /// container, so read it once per test.
+  /// The journal's routes as the app mounts them, opened on the journal.
+  /// Reading this composes the container, so read it once per test.
   Widget get app {
     registerUtilitiesUnderTest(
       GetIt.I,
@@ -41,7 +41,10 @@ class JournalRobot(
     );
     registerJournal(GetIt.I);
     GetIt.I.registerSingleton<JournalNavigator>(navigator);
-    return pageUnderTest(const JournalPage());
+    return featureUnderTest(
+      routes: [$journalRoute],
+      initialLocation: const JournalRoute().location,
+    );
   }
 
   /// Signed in, with the journal loaded.

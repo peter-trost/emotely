@@ -24,6 +24,7 @@ dependencies:
   flutter_test:
     sdk: flutter
   get_it: 9.2.1
+  go_router: 18.0.1
   http: 1.6.0
   journal_repository: any
   material_ui: ^1.1.0

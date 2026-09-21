@@ -1,20 +1,21 @@
-import 'package:emotely/app/routes.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
+import 'package:feature_session/feature_session.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// The app's side of every feature's navigator (ADR 0015): a feature says
-/// what it needs from the outside, the app says how — with a route from
-/// its table (ADR 0016), reached through the navigator's own context,
-/// which outlives any screen: a feature captures the navigator before it
-/// awaits the server, and this must not reach back into a page that may
-/// have gone.
+/// what it needs from another feature, the app says how — with that
+/// feature's route (ADR 0016), reached through the navigator's own
+/// context, which outlives any screen: a feature captures the navigator
+/// before it awaits the server, and this must not reach back into a page
+/// that may have gone. A feature's own screens it reaches itself.
 
 /// Signing out is the auth feature's act: the router lands on sign-in once
-/// the auth bloc has ended the session. The account screen and the
-/// consent screen are routes of the app's.
+/// the auth bloc has ended the session. The consent screen is the account
+/// feature's own route, pushed here so the More tab, which lives in the
+/// tab shell, gets it on the root navigator above the bar.
 class const AppAccountNavigator() implements AccountNavigator {
   @override
   void signOut(BuildContext context) =>
@@ -25,14 +26,10 @@ class const AppAccountNavigator() implements AccountNavigator {
   @override
   Future<void> requestConsent(NavigatorState navigator) =>
       const ConsentRoute().push<ConsentOutcome>(navigator.context);
-
-  @override
-  void openAccount(NavigatorState navigator) =>
-      const AccountRoute().go(navigator.context);
 }
 
-/// Everything the journal leads to: the session, the consent gate, and its
-/// own entries on their routes.
+/// What the journal leads to outside itself: the session and the consent
+/// gate.
 class const AppJournalNavigator() implements JournalNavigator {
   @override
   Future<void> startSession(NavigatorState navigator, {String? resume}) =>
@@ -72,8 +69,4 @@ class const AppJournalNavigator() implements JournalNavigator {
     ScaffoldMessenger.maybeOf(navigator.context)
         ?.showSnackBar(SnackBar(content: Text(message)));
   }
-
-  @override
-  void openEntry(NavigatorState navigator, {required String entryId}) =>
-      EntryRoute(id: entryId).go(navigator.context);
 }
