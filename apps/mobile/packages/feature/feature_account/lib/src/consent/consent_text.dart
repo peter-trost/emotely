@@ -70,8 +70,8 @@ const consentPoints = <ConsentPoint>[
     lead: 'Sensitive, and yours to take back.',
     body:
         'A journal can say how you feel, how you sleep or how your health '
-        'is, so we ask first. You can withdraw on the account screen at any '
-        'time; what a provider has already answered cannot be recalled.',
+        'is, so we ask first. You can withdraw on the More tab at any time; '
+        'what a provider has already answered cannot be recalled.',
   ),
 ];
 
@@ -101,19 +101,19 @@ const consentDeclinedMessage =
 /// The link to the whole notice, from the consent screen.
 const consentReadNoticeLabel = 'Read the full privacy notice';
 
-/// What the account screen says above the withdraw button while consent
-/// stands. Art. 7 (3): withdrawal must be as easy as giving, and the user
-/// should know what it does before they tap.
+/// What the More tab says under the withdraw row while consent stands.
+/// Art. 7 (3): withdrawal must be as easy as giving, and the user should
+/// know what it does before they tap.
 const withdrawConsentExplanation =
     'You consented to your entries being sent to a model provider so emotely '
     'can write them with you. Withdraw it and no new session can start. The '
     'entries you already wrote stay where they are until you delete them, '
     'and withdrawing does not delete your account.';
 
-/// The account screen's withdraw button.
+/// The More tab's withdraw row.
 const withdrawConsentLabel = 'Withdraw consent';
 
-/// What the account screen says while consent does not stand, with the way
+/// What the More tab says while consent does not stand, with the way
 /// forward. Deliberately silent on *why* it does not stand: a user who has
 /// never been asked reads this too, on their first visit, and "you have
 /// withdrawn" would be untrue for them. Giving it must be no harder than
@@ -123,8 +123,8 @@ const consentMissingExplanation =
     'provider, so no session can start. Your entries stay untouched, and '
     'you can give it whenever you like.';
 
-/// The account screen's button to the consent screen while consent does
-/// not stand — first time or after a withdrawal alike.
+/// The More tab's row to the consent screen while consent does not stand —
+/// first time or after a withdrawal alike.
 const giveConsentLabel = 'Give consent';
 
 /// Shown when the consent could not be recorded. The session does not start

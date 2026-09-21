@@ -355,7 +355,7 @@ void main() {
 
       // Apple 5.1.1(i) wants the revocation path described, and it must be
       // the one the app actually offers (#97), not "delete your account".
-      expect(find.textContaining('account screen'), findsComponents);
+      expect(find.textContaining('More tab'), findsComponents);
       expect(find.textContaining('does not require deleting'), findsComponents);
       expect(find.textContaining('Art. 7 (3)'), findsComponents);
       expect(find.textContaining('consent_granted'), findsComponents);
@@ -600,7 +600,7 @@ void main() {
 
       expect(find.text('Feedback'), findsOneComponent);
       expect(find.textContaining('Send feedback'), findsComponents);
-      expect(find.textContaining('account screen'), findsComponents);
+      expect(find.textContaining('More tab'), findsComponents);
       expect(find.textContaining('hello@getemotely.com'), findsComponents);
       expect(find.textContaining('app version'), findsComponents);
     });
