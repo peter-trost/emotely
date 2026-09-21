@@ -492,8 +492,8 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
     h2(id: 'deletion', [.text('Deleting your account')]),
     p([
       .text(
-        'In the app: Your journal → the account icon (top right) → Delete '
-        'account, then confirm. Without the app: the ',
+        'In the app: More → Your account → Delete account, then confirm. '
+        'Without the app: the ',
       ),
       a(href: '/delete-account', [.text('deletion page')]),
       .text(

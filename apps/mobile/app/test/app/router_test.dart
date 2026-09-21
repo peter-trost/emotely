@@ -1,5 +1,6 @@
 import 'package:emotely/app/router.dart';
 import 'package:emotely/app/routes.dart';
+import 'package:emotely/app/shell.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
@@ -118,7 +119,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(JournalView.accountKey));
+      await tester.tap(find.byKey(AppShell.moreTabKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(MoreView.accountKey));
       await tester.pumpAndSettle();
 
       expect(find.byType(AccountPage), findsOneWidget);
