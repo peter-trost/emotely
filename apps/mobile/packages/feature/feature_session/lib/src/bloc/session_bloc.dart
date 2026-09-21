@@ -65,12 +65,12 @@ class SessionBloc({
     SessionStarted event,
     Emitter<SessionState> emit,
   ) async {
-    if (event.resume) {
+    if (event.resume case final id?) {
       _retry = (emit) => _onStarted(event, emit);
       emit(const SessionState.loading(answered: 0));
       final OpenSession? stored;
       try {
-        stored = await _repository.openSession();
+        stored = await _repository.session(id);
       } on Exception catch (error, stackTrace) {
         unawaited(_analytics.sessionFailed());
         unawaited(_errors.sessionFailed(error, stackTrace));

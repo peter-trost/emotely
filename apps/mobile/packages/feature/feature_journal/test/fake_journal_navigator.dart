@@ -4,9 +4,9 @@ import 'package:flutter/widgets.dart';
 /// Records what the journal asked of the app, and answers the consent
 /// question the way a test says.
 class FakeJournalNavigator() extends JournalNavigator {
-  /// Every session the journal asked to run, and whether it was to be
-  /// resumed.
-  final sessions = <bool>[];
+  /// Every session the journal asked to run: the id to resume, or null for
+  /// a fresh one.
+  final sessions = <String?>[];
 
   /// How often the journal asked for consent.
   var consentRequests = 0;
@@ -24,7 +24,7 @@ class FakeJournalNavigator() extends JournalNavigator {
   var signOuts = 0;
 
   @override
-  Future<void> startSession(NavigatorState navigator, {required bool resume}) {
+  Future<void> startSession(NavigatorState navigator, {String? resume}) {
     sessions.add(resume);
     return Future.value();
   }

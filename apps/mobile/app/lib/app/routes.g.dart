@@ -16,10 +16,16 @@ RouteBase get $signInRoute => GoRouteData.$route(
 );
 
 mixin $SignInRoute on GoRouteData {
-  static SignInRoute _fromState(GoRouterState state) => const SignInRoute();
+  static SignInRoute _fromState(GoRouterState state) =>
+      SignInRoute(from: state.uri.queryParameters['from']);
+
+  SignInRoute get _self => this as SignInRoute;
 
   @override
-  String get location => GoRouteData.$location('/sign-in');
+  String get location => GoRouteData.$location(
+    '/sign-in',
+    queryParams: {if (_self.from != null) 'from': _self.from},
+  );
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -129,22 +135,15 @@ mixin $ConsentRoute on GoRouteData {
 }
 
 mixin $SessionRoute on GoRouteData {
-  static SessionRoute _fromState(GoRouterState state) => SessionRoute(
-    resume:
-        _$convertMapValue(
-          'resume',
-          state.uri.queryParameters,
-          _$boolConverter,
-        ) ??
-        false,
-  );
+  static SessionRoute _fromState(GoRouterState state) =>
+      SessionRoute(resume: state.uri.queryParameters['resume']);
 
   SessionRoute get _self => this as SessionRoute;
 
   @override
   String get location => GoRouteData.$location(
     '/session',
-    queryParams: {if (_self.resume != false) 'resume': _self.resume.toString()},
+    queryParams: {if (_self.resume != null) 'resume': _self.resume},
   );
 
   @override
@@ -183,24 +182,4 @@ mixin $EntryRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
-}
-
-bool _$boolConverter(String value) {
-  switch (value) {
-    case 'true':
-      return true;
-    case 'false':
-      return false;
-    default:
-      throw UnsupportedError('Cannot convert "$value" into a bool.');
-  }
 }

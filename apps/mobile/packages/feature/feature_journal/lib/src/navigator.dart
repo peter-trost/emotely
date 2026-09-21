@@ -9,11 +9,11 @@ import 'package:flutter/widgets.dart';
 /// the journal captures it before it awaits the server and must not reach
 /// back into a widget tree that may have moved on.
 abstract class JournalNavigator() {
-  /// Runs a session on its own route — a new one, or with [resume] the
-  /// stored one picked up where the journal left it — and completes when
-  /// the route is popped, finished or not. Only the wish to resume travels;
-  /// the session reads the stored round back itself.
-  Future<void> startSession(NavigatorState navigator, {required bool resume});
+  /// Runs a session on its own route — a new one, or with [resume] the id
+  /// of the stored one, picked up where the journal left it — and completes
+  /// when the route is popped, finished or not. Only the id travels; the
+  /// session reads the stored round back itself.
+  Future<void> startSession(NavigatorState navigator, {String? resume});
 
   /// Asks for the explicit consent a session needs, on its own route, and
   /// answers whether it now stands. Anything else — a refusal, a failed

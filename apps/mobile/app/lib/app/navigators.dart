@@ -27,7 +27,7 @@ class const AppAccountNavigator() implements AccountNavigator {
 /// account screen, signing out.
 class const AppJournalNavigator() implements JournalNavigator {
   @override
-  Future<void> startSession(NavigatorState navigator, {required bool resume}) =>
+  Future<void> startSession(NavigatorState navigator, {String? resume}) =>
       SessionRoute(resume: resume).push<void>(navigator.context);
 
   /// The consent screen on its own route ([ConsentRoute]), answering how

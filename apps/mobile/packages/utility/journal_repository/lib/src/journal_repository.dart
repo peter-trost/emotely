@@ -26,6 +26,18 @@ class const JournalRepository({required final SupabaseClient supabase}) {
     return row == null ? null : OpenSession.fromJson(row);
   }
 
+  /// The session [id], if it is still in progress: what a route names when
+  /// it asks to continue one. Finished or discarded since, it is nothing.
+  Future<OpenSession?> session(String id) async {
+    final row = await supabase
+        .from(_sessions)
+        .select()
+        .eq('id', id)
+        .eq('status', _inProgress)
+        .maybeSingle();
+    return row == null ? null : OpenSession.fromJson(row);
+  }
+
   /// Every filed entry, newest first.
   Future<List<EntryRecord>> entries() async {
     final rows = await supabase

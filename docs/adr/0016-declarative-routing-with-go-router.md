@@ -61,18 +61,27 @@ arguments, and tab stacks with independent histories — are exactly what the
    where they can be read:
    - `/entries/:id` — `EntryPage` reads the entry with a bloc of its own
      (`JournalRepository.entry`).
-   - `/session?resume=true` — `SessionBloc` reads the stored session back
-     itself. A session discarded on another device in the meantime starts
-     fresh, which is more honest than resuming the journal's copy.
+   - `/session?resume=<id>` — `SessionBloc` reads that stored session back
+     itself (`JournalRepository.session`). A session discarded or finished
+     on another device in the meantime starts fresh, which is more honest
+     than resuming the journal's copy. The journal holds one session in
+     progress at a time, but the route names which, so the location says
+     what it does.
    - `/consent` — the route owns the `ConsentBloc` and pops with a
      `ConsentOutcome` (granted, declined, write failed; nothing when left
      unanswered), so the journal can still say why no session started
      without reading a bloc it no longer shares.
 
 4. **The auth guard is a redirect over the live bloc state.** `authRedirect`
-   is a pure function of "signed in?" and the matched location: signed out,
-   every location leads to sign-in; signed in, sign-in leads to the
-   journal. It reads `AuthBloc.state` when it runs, not a value captured
+   is a pure function of "signed in?" and the location being entered:
+   signed out, every location leads to sign-in, which remembers it as
+   `?from=`; signed in, sign-in leads there — a deep link opened while
+   signed out, or the screen the user was on when the session ended under
+   them — or to the journal when there was nowhere in particular. Only a
+   location of this app's that is not sign-in is honoured. Besides the
+   pure tests, the router is tested for real: a deep link delivered the way
+   the platform delivers it (`handlePushRoute`), then a sign-in through the
+   screen. It reads `AuthBloc.state` when it runs, not a value captured
    earlier, and `refreshListenable` is a `ChangeNotifier` over the bloc's
    stream mapped to that one boolean and `distinct()`ed — the bloc moves
    through several states while a code is typed, none of which changes

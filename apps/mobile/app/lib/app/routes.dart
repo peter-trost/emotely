@@ -18,8 +18,13 @@ part 'routes.g.dart';
 /// say, so every screen can be reached from its location alone.
 
 /// Where a signed-out user is sent, and the only screen they can see.
+/// [from] is the location they were going to — a deep link, or the screen
+/// they were on when the session ended under them — which the redirect
+/// sends them to once they sign in.
 @TypedGoRoute<SignInRoute>(path: '/sign-in', name: 'signIn')
-class const SignInRoute() extends GoRouteData with $SignInRoute {
+class const SignInRoute({final String? from})
+    extends GoRouteData
+    with $SignInRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) => const SignInPage();
 }
@@ -53,10 +58,13 @@ class const EntryRoute({required final String id})
 }
 
 /// A journaling session, pushed so the journal can reload when it pops.
-/// `?resume=true` picks the stored session up; the session reads it back
-/// itself, so the location is all there is to carry.
+/// `?resume=<id>` picks that stored session up; the session reads it back
+/// itself, so the location is all there is to carry. The journal only ever
+/// holds one session in progress (a new one replaces it), but the route
+/// names which, so the location says what it does and a second unfinished
+/// session would need no new route.
 @immutable
-class const SessionRoute({final bool resume = false})
+class const SessionRoute({final String? resume})
     extends GoRouteData
     with $SessionRoute {
   @override

@@ -6,18 +6,38 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 /// The one decision above every screen — signed in or not — as a redirect
-/// (ADR 0016). Signed out, every location leads to sign-in; signed in,
-/// sign-in leads to the journal and everything else stands.
+/// (ADR 0016). Signed out, every location leads to sign-in, which remembers
+/// where the user was going; signed in, sign-in leads there, or to the
+/// journal when there was nowhere in particular, and everything else
+/// stands.
+///
+/// So a deep link opened while signed out, or a screen the user was on when
+/// the session ended under them, is where they land once they sign in.
+/// Only a location of this app's is honoured: anything that does not start
+/// with `/`, or that would lead back to sign-in, falls back to the journal.
 ///
 /// Pure, so it can be read and tested on its own: [signedIn] is the auth
-/// bloc's answer at the moment the router asks, and [location] is the
-/// matched path without its query.
-String? authRedirect({required bool signedIn, required String location}) {
+/// bloc's answer at the moment the router asks, and [uri] the location
+/// being entered, query and all.
+String? authRedirect({required bool signedIn, required Uri uri}) {
   final signIn = const SignInRoute().location;
+  final atSignIn = uri.path == signIn;
   if (!signedIn) {
-    return location == signIn ? null : signIn;
+    if (atSignIn) {
+      return null;
+    }
+    final wanted = uri.toString();
+    return SignInRoute(
+      from: wanted == const JournalRoute().location ? null : wanted,
+    ).location;
   }
-  return location == signIn ? const JournalRoute().location : null;
+  if (!atSignIn) {
+    return null;
+  }
+  final from = uri.queryParameters['from'];
+  final local =
+      from != null && from.startsWith('/') && !from.startsWith(signIn);
+  return local ? from : const JournalRoute().location;
 }
 
 /// Tells the router to ask [authRedirect] again whenever whether someone is
@@ -56,9 +76,7 @@ GoRouter createRouter({
   routes: $appRoutes,
   initialLocation: const JournalRoute().location,
   refreshListenable: refresh,
-  redirect: (context, state) => authRedirect(
-    signedIn: auth.state is AuthSignedIn,
-    location: state.matchedLocation,
-  ),
+  redirect: (context, state) =>
+      authRedirect(signedIn: auth.state is AuthSignedIn, uri: state.uri),
   observers: observers,
 );

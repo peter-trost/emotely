@@ -71,7 +71,7 @@ void main() {
       // Consent stood, so the session ran; the journal read itself again
       // when the session came back.
       expect(robot.navigator.consentRequests, 0);
-      expect(robot.navigator.sessions, [false]);
+      expect(robot.navigator.sessions, [null]);
       expect(robot.supabase.to(entriesEndpoint), hasLength(2));
     });
 
@@ -101,9 +101,8 @@ void main() {
 
       await robot.tap(robot.continueSession);
 
-      // Only the wish to continue travels; the session reads the stored
-      // round back itself.
-      expect(robot.navigator.sessions, [true]);
+      // Only the id travels; the session reads the stored round back itself.
+      expect(robot.navigator.sessions, [SupabaseStub.sessionId]);
     });
 
     group('the consent gate', () {
@@ -124,13 +123,13 @@ void main() {
 
         expect(robot.supabase.to(consentRead), hasLength(1));
         expect(robot.navigator.consentRequests, 0);
-        expect(robot.navigator.sessions, [false]);
+        expect(robot.navigator.sessions, [null]);
 
         await robot.tap(robot.start);
 
         expect(robot.supabase.to(consentRead), hasLength(2));
         expect(robot.navigator.consentRequests, 1);
-        expect(robot.navigator.sessions, [false]);
+        expect(robot.navigator.sessions, [null]);
       });
 
       testWidgets('starts the session once consent is given', (tester) async {
@@ -141,7 +140,7 @@ void main() {
         await robot.tap(robot.start);
 
         expect(robot.navigator.consentRequests, 1);
-        expect(robot.navigator.sessions, [false]);
+        expect(robot.navigator.sessions, [null]);
       });
 
       testWidgets('starts nothing when consent is not given', (tester) async {

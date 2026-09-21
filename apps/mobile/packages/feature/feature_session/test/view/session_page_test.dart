@@ -537,7 +537,7 @@ void main() {
           tester,
           agent,
           supabase: storing(pending: pending),
-          resume: true,
+          resume: SupabaseStub.sessionId,
         );
         await robot.launch();
         await robot.settle();
@@ -563,7 +563,7 @@ void main() {
           tester,
           agent,
           supabase: storing(),
-          resume: true,
+          resume: SupabaseStub.sessionId,
         );
         await robot.launch();
         await robot.settle();
@@ -581,7 +581,7 @@ void main() {
         // elsewhere in the meantime: the server is asked, not the offer.
         final agent = AgentStub()
           ..script([awaiting(toolCallId: 'c1', question: SessionRobot.rate)]);
-        final robot = SessionRobot(tester, agent, resume: true);
+        final robot = SessionRobot(tester, agent, resume: 's-gone');
         await robot.launch();
         await robot.settle();
 
@@ -605,7 +605,7 @@ void main() {
           tester,
           agent,
           supabase: supabase,
-          resume: true,
+          resume: SupabaseStub.sessionId,
         );
         await robot.launch();
         await robot.settle();

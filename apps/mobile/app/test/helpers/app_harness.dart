@@ -1,5 +1,6 @@
 import 'package:emotely/app/app.dart';
 import 'package:emotely/app/dependencies.dart';
+import 'package:feature_auth/feature_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,4 +50,31 @@ Widget appUnderTest({
     configUrl: ConfigStub.endpoint,
   );
   return const EmotelyApp();
+}
+
+/// A deep link arriving while the app runs: the platform's `pushRoute`
+/// notification, delivered to the router the way iOS and Android deliver
+/// it, rather than a call on the router. What the router does with it —
+/// the redirect included — is then exactly what it would do on a device.
+Future<void> deepLink(WidgetTester tester, String location) async {
+  await tester.binding.handlePushRoute(location);
+  await tester.pumpAndSettle();
+}
+
+/// Signs in through the sign-in screen the way a user does: the email,
+/// the code, done. The Supabase stub must have `otp:` and `verify:` rounds
+/// scripted.
+Future<void> signInThroughTheScreen(
+  WidgetTester tester, {
+  String email = SupabaseStub.email,
+  String code = '123456',
+}) async {
+  await tester.enterText(find.byKey(SignInPage.emailKey), email);
+  await tester.pump();
+  await tester.tap(find.byKey(SignInPage.sendCodeKey));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(SignInPage.codeKey), code);
+  await tester.pump();
+  await tester.tap(find.byKey(SignInPage.signInKey));
+  await tester.pumpAndSettle();
 }

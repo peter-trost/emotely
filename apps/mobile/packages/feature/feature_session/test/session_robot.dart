@@ -17,7 +17,7 @@ class SessionRobot(
   final AgentStub agent, {
   final AnalyticsSpy? spy,
   final SupabaseStub? supabase,
-  final bool resume = false,
+  final String? resume,
 }) {
   /// Set up by [launch]; the spy every test can inspect.
   late final AnalyticsSpy analytics = spy ?? AnalyticsSpy();

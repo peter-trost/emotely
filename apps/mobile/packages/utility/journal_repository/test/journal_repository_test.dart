@@ -45,6 +45,28 @@ void main() {
       expect(request.query['status'], 'eq.in_progress');
     });
 
+    test('reads one session in progress by its id', () async {
+      supabase.rest('GET /rest/v1/sessions', [
+        rows([
+          sessionRow(id: 's-1', pending: pending, questions: const [question]),
+        ]),
+      ]);
+
+      final open = await repository.session('s-1');
+
+      expect(open?.id, 's-1');
+      expect(open?.pending, pending);
+      final request = supabase.to('GET /rest/v1/sessions').single;
+      expect(request.query['id'], 'eq.s-1');
+      expect(request.query['status'], 'eq.in_progress');
+    });
+
+    test('has no session for an id that is finished or gone', () async {
+      supabase.rest('GET /rest/v1/sessions', [rows(const [])]);
+
+      expect(await repository.session('s-done'), isNull);
+    });
+
     test('has no session in progress when the journal holds none', () async {
       supabase.rest('GET /rest/v1/sessions', [rows(const [])]);
 

@@ -108,17 +108,17 @@ class const _SessionCard({required final OpenSession? openSession})
   Widget build(BuildContext context) => switch (openSession) {
     null => FilledButton(
       key: JournalView.startKey,
-      onPressed: () => unawaited(_open(context, resume: false)),
+      onPressed: () => unawaited(_open(context, resume: null)),
       child: const Text('Start a session'),
     ),
-    _ => Column(
+    final session => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 8,
       children: [
         const Text('You have an unfinished session.'),
         FilledButton(
           key: JournalView.continueKey,
-          onPressed: () => unawaited(_open(context, resume: true)),
+          onPressed: () => unawaited(_open(context, resume: session.id)),
           child: const Text('Continue'),
         ),
         TextButton(
@@ -142,7 +142,7 @@ class const _SessionCard({required final OpenSession? openSession})
   /// before every session, never from what this device read at launch.
   static Future<void> _open(
     BuildContext context, {
-    required bool resume,
+    required String? resume,
   }) async {
     final journal = context.read<JournalBloc>();
     final navigator = Navigator.of(context);

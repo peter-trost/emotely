@@ -7,8 +7,9 @@ import 'package:get_it/get_it.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Wires a [SessionBloc] to the [AgentClient] in scope and starts a session
-/// — or, with [resume], picks the stored one up where the journal left it.
-class const SessionPage({final bool resume = false, super.key})
+/// — or, with [resume], the id of a stored session, picks that one up where
+/// the journal left it.
+class const SessionPage({final String? resume, super.key})
     extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(

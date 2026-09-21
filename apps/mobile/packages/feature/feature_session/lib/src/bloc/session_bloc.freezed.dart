@@ -123,7 +123,7 @@ return retried(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( bool resume)?  started,TResult Function( Answer answer)?  answered,TResult Function()?  retried,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? resume)?  started,TResult Function( Answer answer)?  answered,TResult Function()?  retried,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SessionStarted() when started != null:
 return started(_that.resume);case SessionAnswered() when answered != null:
@@ -146,7 +146,7 @@ return retried();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( bool resume)  started,required TResult Function( Answer answer)  answered,required TResult Function()  retried,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? resume)  started,required TResult Function( Answer answer)  answered,required TResult Function()  retried,}) {final _that = this;
 switch (_that) {
 case SessionStarted():
 return started(_that.resume);case SessionAnswered():
@@ -165,7 +165,7 @@ return retried();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( bool resume)?  started,TResult? Function( Answer answer)?  answered,TResult? Function()?  retried,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? resume)?  started,TResult? Function( Answer answer)?  answered,TResult? Function()?  retried,}) {final _that = this;
 switch (_that) {
 case SessionStarted() when started != null:
 return started(_that.resume);case SessionAnswered() when answered != null:
@@ -182,10 +182,10 @@ return retried();case _:
 
 
 class SessionStarted implements SessionEvent {
-  const SessionStarted({this.resume = false});
+  const SessionStarted({this.resume});
   
 
-@JsonKey() final  bool resume;
+ final  String? resume;
 
 /// Create a copy of SessionEvent
 /// with the given fields replaced by the non-null parameter values.
@@ -219,7 +219,7 @@ abstract mixin class $SessionStartedCopyWith<$Res> implements $SessionEventCopyW
   factory $SessionStartedCopyWith(SessionStarted value, $Res Function(SessionStarted) _then) = _$SessionStartedCopyWithImpl;
 @useResult
 $Res call({
- bool resume
+ String? resume
 });
 
 
@@ -236,10 +236,10 @@ class _$SessionStartedCopyWithImpl<$Res>
 
 /// Create a copy of SessionEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? resume = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? resume = freezed,}) {
   return _then(SessionStarted(
-resume: null == resume ? _self.resume : resume // ignore: cast_nullable_to_non_nullable
-as bool,
+resume: freezed == resume ? _self.resume : resume // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
