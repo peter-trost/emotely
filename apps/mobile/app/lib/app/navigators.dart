@@ -7,10 +7,8 @@ import 'package:material_ui/material_ui.dart';
 
 /// The app's side of every feature's navigator (ADR 0015): a feature says
 /// what it needs from another feature, the app says how — with that
-/// feature's route (ADR 0016), reached through the navigator's own
-/// context, which outlives any screen: a feature captures the navigator
-/// before it awaits the server, and this must not reach back into a page
-/// that may have gone. A feature's own screens it reaches itself.
+/// feature's route (ADR 0016), from the context of the tap that asked. A
+/// feature's own screens it reaches itself.
 
 /// Signing out is the auth feature's act: the router lands on sign-in once
 /// the auth bloc has ended the session. The consent screen is the account
@@ -24,16 +22,16 @@ class const AppAccountNavigator() implements AccountNavigator {
   /// The More tab reads the record again once the route closes, so what
   /// the route answered is of no use to it here.
   @override
-  Future<void> requestConsent(NavigatorState navigator) =>
-      const ConsentRoute().push<ConsentOutcome>(navigator.context);
+  Future<void> requestConsent(BuildContext context) =>
+      const ConsentRoute().push<ConsentOutcome>(context);
 }
 
 /// What the journal leads to outside itself: the session and the consent
 /// gate.
 class const AppJournalNavigator() implements JournalNavigator {
   @override
-  Future<void> startSession(NavigatorState navigator, {String? resume}) =>
-      SessionRoute(resume: resume).push<void>(navigator.context);
+  Future<void> startSession(BuildContext context, {String? resume}) =>
+      SessionRoute(resume: resume).push<void>(context);
 
   /// The consent screen on its own route ([ConsentRoute]), answering how
   /// it was left. A decline, a failed write and a dismissed route all leave
@@ -41,14 +39,16 @@ class const AppJournalNavigator() implements JournalNavigator {
   /// not the same thing to say, so the message is chosen by what actually
   /// happened rather than always reading as a refusal.
   @override
-  Future<bool> requestConsent(NavigatorState navigator) async {
-    final outcome = await const ConsentRoute().push<ConsentOutcome>(
-      navigator.context,
-    );
+  Future<bool> requestConsent(BuildContext context) async {
+    final outcome = await const ConsentRoute().push<ConsentOutcome>(context);
     if (outcome == ConsentOutcome.granted) {
       return true;
     }
-    _saySoFar(navigator, outcome);
+    // The journal is still there under the popped route, unless a sign-out
+    // replaced the stack meanwhile; then there is nobody to tell.
+    if (context.mounted) {
+      _saySoFar(context, outcome);
+    }
     return false;
   }
 
@@ -57,7 +57,7 @@ class const AppJournalNavigator() implements JournalNavigator {
   /// the box and hit a network error that they chose "Not now" is untrue.
   /// Dismissing the screen says nothing at all — the user left, and knows
   /// it — and so does a failed read, whose screen already said its piece.
-  static void _saySoFar(NavigatorState navigator, ConsentOutcome? outcome) {
+  static void _saySoFar(BuildContext context, ConsentOutcome? outcome) {
     final message = switch (outcome) {
       ConsentOutcome.writeFailed => consentFailureMessage,
       ConsentOutcome.declined => consentDeclinedMessage,
@@ -66,7 +66,7 @@ class const AppJournalNavigator() implements JournalNavigator {
     if (message == null) {
       return;
     }
-    ScaffoldMessenger.maybeOf(navigator.context)
+    ScaffoldMessenger.maybeOf(context)
         ?.showSnackBar(SnackBar(content: Text(message)));
   }
 }

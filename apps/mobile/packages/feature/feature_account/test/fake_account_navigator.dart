@@ -13,7 +13,7 @@ class FakeAccountNavigator() extends AccountNavigator {
   void signOut(BuildContext context) => signOuts++;
 
   @override
-  Future<void> requestConsent(NavigatorState navigator) {
+  Future<void> requestConsent(BuildContext context) {
     consentRequests++;
     return Future.value();
   }

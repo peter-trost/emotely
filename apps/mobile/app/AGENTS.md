@@ -20,8 +20,9 @@ hand-rolled widgets.
   only through its navigator, and the app's implementation in
   `lib/app/navigators.dart` answers with that feature's route: `.push<T>`
   when the caller awaits an answer (the session's end, the consent
-  outcome). The navigator's context outlives any screen, which is why the
-  seams take a `NavigatorState` rather than a page's context.
+  outcome). The seams take the `BuildContext` of the tap; a caller that
+  awaits the server before asking checks `context.mounted` first, and so
+  does an implementation that uses the context after its own await.
 - Nothing travels as `extra`. A route carries path and query parameters
   only (`EntryRoute(id:)`, `SessionRoute(resume:)`), and the screen reads
   what it shows by that. A screen that needs an object gets a bloc that

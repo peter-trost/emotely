@@ -110,19 +110,20 @@ feature and implement it in the app with that feature's route:
 ```dart
 // feature_journal/lib/src/navigator.dart
 abstract class JournalNavigator() {
-  Future<void> startSession(NavigatorState navigator, {required bool resume});
+  Future<void> startSession(BuildContext context, {required bool resume});
 }
 // app/lib/app/navigators.dart: implements it, registered as a singleton
 class const AppJournalNavigator() implements JournalNavigator {
   @override
-  Future<void> startSession(NavigatorState navigator, {required bool resume}) =>
-      SessionRoute(resume: resume).push<void>(navigator.context);
+  Future<void> startSession(BuildContext context, {required bool resume}) =>
+      SessionRoute(resume: resume).push<void>(context);
 }
 ```
 
-The seam takes the `NavigatorState` (its context outlives the page), and
-it passes ids and flags, never objects: a route carries only what its
-location can say, and the screen reads the rest back itself.
+The seam takes the `BuildContext` of the tap (check `context.mounted`
+after any await before using it), and it passes ids and flags, never
+objects: a route carries only what its location can say, and the screen
+reads the rest back itself.
 
 This is the one sanctioned interface with a single production
 implementation, because it genuinely has two: the app's and the test fake.

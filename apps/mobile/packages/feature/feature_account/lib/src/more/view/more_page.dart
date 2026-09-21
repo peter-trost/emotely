@@ -233,7 +233,7 @@ class const _Consent() extends StatelessWidget {
   /// what it showed before — the record is what counts.
   static Future<void> _askAgain(BuildContext context) async {
     final consent = context.read<ConsentBloc>();
-    await GetIt.I<AccountNavigator>().requestConsent(Navigator.of(context));
+    await GetIt.I<AccountNavigator>().requestConsent(context);
     consent.add(const ConsentEvent.loaded());
   }
 }

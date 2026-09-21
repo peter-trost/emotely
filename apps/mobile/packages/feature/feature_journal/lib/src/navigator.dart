@@ -6,19 +6,19 @@ import 'package:flutter/widgets.dart';
 /// (ADR 0016). The app implements this with those features' routes; a test
 /// fakes it and records what was asked.
 ///
-/// The methods take the [NavigatorState] rather than a context, because
-/// the journal captures it before it awaits the server and must not reach
-/// back into a widget tree that may have moved on.
+/// Every method takes the [BuildContext] of the tap that asked. The journal
+/// awaits the server before it asks, so it checks `context.mounted` first:
+/// a page that is gone by the time the server answers navigates nowhere.
 abstract class JournalNavigator() {
   /// Runs a session on its own route — a new one, or with [resume] the id
   /// of the stored one, picked up where the journal left it — and completes
   /// when the route is popped, finished or not. Only the id travels; the
   /// session reads the stored round back itself.
-  Future<void> startSession(NavigatorState navigator, {String? resume});
+  Future<void> startSession(BuildContext context, {String? resume});
 
   /// Asks for the explicit consent a session needs, on its own route, and
   /// answers whether it now stands. Anything else — a refusal, a failed
   /// write, a dismissed screen — is `false`; what the user is told about it
   /// is the app's, since the app owns the consent screen and its words.
-  Future<bool> requestConsent(NavigatorState navigator);
+  Future<bool> requestConsent(BuildContext context);
 }

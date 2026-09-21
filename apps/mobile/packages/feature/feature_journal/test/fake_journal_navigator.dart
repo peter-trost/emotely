@@ -14,15 +14,18 @@ class FakeJournalNavigator() extends JournalNavigator {
   /// What a consent request answers.
   var consentGiven = false;
 
+  /// How long the consent screen stays up before it answers.
+  var consentTakes = Duration.zero;
+
   @override
-  Future<void> startSession(NavigatorState navigator, {String? resume}) {
+  Future<void> startSession(BuildContext context, {String? resume}) {
     sessions.add(resume);
     return Future.value();
   }
 
   @override
-  Future<bool> requestConsent(NavigatorState navigator) {
+  Future<bool> requestConsent(BuildContext context) {
     consentRequests++;
-    return Future.value(consentGiven);
+    return Future.delayed(consentTakes, () => consentGiven);
   }
 }

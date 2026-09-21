@@ -2,6 +2,7 @@ import 'package:agent_client/agent_client.dart';
 import 'package:contract/contract.dart';
 import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:testing/testing.dart';
 
 import '../journal_robot.dart';
@@ -107,6 +108,45 @@ void main() {
     });
 
     group('the consent gate', () {
+      testWidgets('starts nothing for a page gone while the server answered', (
+        tester,
+      ) async {
+        // The tap's page is unmounted (a sign-out, say) while the consent
+        // read is in flight: nobody is left to ask, so nothing is asked.
+        final robot = robotWith(
+          tester,
+          consentReads: [delayedAuth(consentStands(granted: false))],
+        );
+        await robot.launch();
+
+        await tester.tap(robot.start);
+        await tester.pump();
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(robot.navigator.consentRequests, 0);
+        expect(robot.navigator.sessions, isEmpty);
+      });
+
+      testWidgets('starts nothing for a page gone while consent was asked', (
+        tester,
+      ) async {
+        // Consent is given, but the page that asked for it is gone by then.
+        final robot = robotWith(tester, consentGranted: false);
+        robot.navigator
+          ..consentGiven = true
+          ..consentTakes = const Duration(seconds: 1);
+        await robot.launch();
+
+        await tester.tap(robot.start);
+        await tester.pump();
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(robot.navigator.consentRequests, 1);
+        expect(robot.navigator.sessions, isEmpty);
+      });
+
       testWidgets('asks the server before every session, never a local flag', (
         tester,
       ) async {

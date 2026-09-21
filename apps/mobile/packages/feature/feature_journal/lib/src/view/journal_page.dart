@@ -126,13 +126,18 @@ class const _SessionCard({required final OpenSession? openSession})
     required String? resume,
   }) async {
     final journal = context.read<JournalBloc>();
-    final navigator = Navigator.of(context);
     final app = GetIt.I<JournalNavigator>();
-    if (!await journal.consentStands() &&
-        !await app.requestConsent(navigator)) {
+    // Each await is a server round trip; a page that is gone by the time
+    // the answer arrives navigates nowhere on its own behalf.
+    if (!await journal.consentStands()) {
+      if (!context.mounted || !await app.requestConsent(context)) {
+        return;
+      }
+    }
+    if (!context.mounted) {
       return;
     }
-    await app.startSession(navigator, resume: resume);
+    await app.startSession(context, resume: resume);
     journal.add(const JournalEvent.loaded());
   }
 }

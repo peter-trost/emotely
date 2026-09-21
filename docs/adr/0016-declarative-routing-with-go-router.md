@@ -52,11 +52,13 @@ arguments, and tab stacks with independent histories — are exactly what the
    the root. A feature reaches *another* feature's screen only through its
    navigator (ADR 0015), which the app implements with that feature's route.
 
-2. **Navigator seams take the `NavigatorState`**, as before. The app's
-   implementation reaches the router through `navigator.context`, which
-   outlives any screen: the journal captures the navigator before it awaits
-   the server and must not reach back into a page that may have gone.
-   `InheritedGoRouter` sits above the navigator, so the lookup is exact.
+2. **Navigator seams take the `BuildContext` of the tap that asked**, and
+   a caller that awaits the server before asking checks `context.mounted`
+   first — a page gone by the time the answer arrives navigates nowhere.
+   (Amended 2026-09-21: the first cut passed a `NavigatorState` captured
+   before the await, a context in disguise with a longer lifetime, and
+   reached the router through `navigator.context`. The `mounted` guard is
+   what the lint asks for and says the right thing; the state was a dodge.)
 
 3. **No `extra`.** A route carries path and query parameters only, so every
    screen can be reached from its location alone. Where a screen used to be
