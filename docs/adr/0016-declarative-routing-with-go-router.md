@@ -100,7 +100,17 @@ arguments, and tab stacks with independent histories — are exactly what the
 6. **`push` where the caller awaits an answer, `go` otherwise.** The
    session (the journal reloads when it pops) and the consent screen (its
    outcome) are pushed; the account and entry screens are gone to, as
-   sub-routes of the journal so the back button leads home.
+   sub-routes of their tab so the back button leads to it.
+
+7. **Two tabs, one `StatefulShellRoute`.** Signed in, the user lives in
+   the journal tab (the journal, its entries) and the More tab (the
+   account, consent, the legal documents, feedback, and signing out last
+   — `feature_account`'s `MorePage`, in sections with a heading each).
+   Each tab keeps its own stack. The session and the consent screen are
+   declared outside the shell, at the root of the table, so pushing them
+   covers the tab bar: a session is not something to switch away from.
+   The journal's app bar lost its account and sign-out buttons to the
+   More tab, and `JournalNavigator` lost the two methods with them.
 
 ## Consequences
 

@@ -1,10 +1,6 @@
 import 'package:feature_account/feature_account.dart';
-import 'package:feedback_link/feedback_link.dart';
-import 'package:flutter/services.dart' show PlatformException;
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
-import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:testing/testing.dart';
@@ -13,8 +9,7 @@ import '../fake_account_navigator.dart';
 
 /// Drives the account screen on its own route, composed the way the app
 /// composes it: the utilities and this feature registered over a scripted
-/// Supabase, a fake navigator for what the app would do, and the consent
-/// bloc handed in from the route below, as the journal hands it.
+/// Supabase, and a fake navigator for what the app would do.
 class _AccountRobot(
   final WidgetTester tester, {
   required final SupabaseStub supabase,
@@ -34,15 +29,9 @@ class _AccountRobot(
   Finder get signOut => find.byKey(AccountView.signOutKey);
   Finder get failure => find.text(AccountView.failureMessage);
   Finder get busy => find.byType(CircularProgressIndicator);
-  Finder get withdraw => find.byKey(AccountView.withdrawConsentKey);
-  Finder get restore => find.byKey(AccountView.restoreConsentKey);
-  Finder get consentRetry => find.byKey(AccountView.consentRetryKey);
-  Finder get notice => find.byKey(AccountView.privacyNoticeKey);
-  Finder get imprint => find.byKey(AccountView.imprintKey);
-  Finder get feedback => find.byKey(AccountView.feedbackKey);
 
-  /// A launcher route that pushes the account screen with the consent bloc
-  /// it owns, as the journal does. Reading this composes the container.
+  /// A launcher route that pushes the account screen, as the More tab
+  /// does. Reading this composes the container.
   Widget get app {
     registerUtilitiesUnderTest(
       GetIt.I,
@@ -53,26 +42,15 @@ class _AccountRobot(
     registerAccount(GetIt.I);
     GetIt.I.registerSingleton<AccountNavigator>(navigator);
     return pageUnderTest(
-      BlocProvider(
-        create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
-        child: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: FilledButton(
-                key: openKey,
-                onPressed: () {
-                  final consent = context.read<ConsentBloc>();
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => BlocProvider.value(
-                        value: consent,
-                        child: const AccountPage(),
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Account'),
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: FilledButton(
+              key: openKey,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const AccountPage()),
               ),
+              child: const Text('Account'),
             ),
           ),
         ),
@@ -121,16 +99,10 @@ void main() {
       WidgetTester tester, {
       List<AuthRound> deletions = const [],
       AuthRound? logoutAnswer,
-      bool granted = true,
-      List<AuthRound> reads = const [],
-      List<AuthRound> withdrawals = const [],
     }) {
       final supabase = SupabaseStub()
         ..rest(deletion, deletions)
-        ..script(logout: [logoutAnswer ?? userGone])
-        ..rest(consentRead, reads)
-        ..always(consentRead, consentStands(granted: granted))
-        ..rest(consentWithdraw, withdrawals);
+        ..script(logout: [logoutAnswer ?? userGone]);
       return _AccountRobot(tester, supabase: supabase);
     }
 
@@ -289,184 +261,6 @@ void main() {
       expect(robot.account, findsNothing);
       expect(robot.analytics.events.last, event('account_deleted'));
       expect(robot.analytics.resets, 1);
-    });
-
-    testWidgets('the rows that leave the app span the whole width', (
-      tester,
-    ) async {
-      final robot = robotWith(tester);
-      await robot.launch();
-
-      // Each row is a button the width of the screen, so its highlight runs
-      // edge to edge and the label sits 16 in — not a strip inside the page
-      // margin that lights up narrower than the finger expects.
-      final screen = tester.getRect(
-        find.descendant(of: robot.account, matching: find.byType(Scaffold)),
-      );
-      for (final row in [robot.notice, robot.imprint, robot.feedback]) {
-        final rect = tester.getRect(row);
-        expect(rect.left, screen.left);
-        expect(rect.width, screen.width);
-      }
-      expect(
-        tester.getRect(find.text(privacyNoticeLabel)).left,
-        screen.left + 16,
-      );
-    });
-
-    group('consent', () {
-      const version = {'version': testConsentVersion};
-
-      testWidgets('is withdrawn in one tap, and can be given again', (
-        tester,
-      ) async {
-        final robot = robotWith(tester, withdrawals: [rpcReturned(null)]);
-        await robot.launch();
-
-        expect(find.text(withdrawConsentExplanation), findsOneWidget);
-
-        await robot.tap(robot.withdraw);
-
-        expect(robot.supabase.bodies('/rest/v1/rpc/withdraw_consent'), [
-          version,
-        ]);
-        expect(find.text(consentMissingExplanation), findsOneWidget);
-        expect(robot.analytics.events, [event('consent_withdrawn', version)]);
-
-        // Not a one-tap re-grant: the way back is the consent screen itself,
-        // which the app shows. Once it closes, the account asks the server
-        // again rather than trusting what it showed before — and the server
-        // here says consent stands.
-        await robot.tap(robot.restore);
-
-        expect(robot.navigator.consentRequests, 1);
-        expect(find.text(withdrawConsentExplanation), findsOneWidget);
-      });
-
-      testWidgets('shows progress while a withdrawal is written', (
-        tester,
-      ) async {
-        final robot = robotWith(
-          tester,
-          withdrawals: [delayedAuth(rpcReturned(null))],
-        );
-        await robot.launch();
-
-        await tester.tap(robot.withdraw);
-        await tester.pump();
-
-        expect(robot.busy, findsOneWidget);
-
-        await robot.settle();
-
-        expect(find.text(consentMissingExplanation), findsOneWidget);
-      });
-
-      testWidgets(
-        'a withdrawal that fails leaves consent standing, and says so',
-        (tester) async {
-          final robot = robotWith(
-            tester,
-            withdrawals: [restRefused(), rpcReturned(null)],
-          );
-          await robot.launch();
-
-          await robot.tap(robot.withdraw);
-
-          expect(find.text(withdrawFailureMessage), findsOneWidget);
-          expect(robot.analytics.events, isEmpty);
-
-          await robot.tap(robot.withdraw);
-
-          expect(robot.supabase.to(consentWithdraw), hasLength(2));
-          expect(find.text(consentMissingExplanation), findsOneWidget);
-        },
-      );
-
-      testWidgets('says so, and retries, when the answer cannot be read', (
-        tester,
-      ) async {
-        final robot = robotWith(tester, reads: [restRefused()]);
-        await robot.launch();
-
-        // A read that failed says nothing about whether consent stands, so
-        // neither button is offered — but never an empty section either.
-        expect(robot.withdraw, findsNothing);
-        expect(robot.restore, findsNothing);
-        expect(find.text(consentUnknownMessage), findsOneWidget);
-        expect(robot.deleteAccount, findsOneWidget);
-
-        await robot.tap(robot.consentRetry);
-
-        expect(robot.withdraw, findsOneWidget);
-        expect(find.text(consentUnknownMessage), findsNothing);
-      });
-    });
-
-    testWidgets('links the privacy notice and the imprint', (tester) async {
-      final launcher = UrlLauncherSpy.setup();
-      final robot = robotWith(tester);
-      await robot.launch();
-
-      await robot.tap(robot.notice);
-      await robot.tap(robot.imprint);
-
-      expect(launcher.launched, [privacyNoticeUrl, imprintUrl]);
-    });
-
-    testWidgets('opens a prefilled feedback mail beside the legal links', (
-      tester,
-    ) async {
-      final launcher = UrlLauncherSpy.setup();
-      final robot = robotWith(tester);
-      await robot.launch();
-
-      await robot.tap(robot.feedback);
-
-      final mail = Uri.parse(launcher.launched.single);
-      expect(mail.scheme, 'mailto');
-      expect(mail.path, feedbackAddress);
-      expect(
-        mail.queryParameters['subject'],
-        allOf(
-          contains(testBuildInfo.versionAndBuild),
-          contains(testBuildInfo.platform),
-        ),
-      );
-    });
-
-    testWidgets('reports a device with no mail app, and says nothing', (
-      tester,
-    ) async {
-      UrlLauncherSpy.setup().fails = true;
-      final robot = robotWith(tester);
-      await robot.launch();
-
-      await robot.tap(robot.feedback);
-
-      // The screen is unchanged: there is nothing useful to say, and the
-      // beta's one feedback channel dead-ending is ours to notice, not the
-      // user's to work around.
-      expect(robot.feedback, findsOneWidget);
-      expect(robot.analytics.exceptions, [
-        captured(withheld(PlatformException), {'step': 'feedback_mail'}),
-      ]);
-    });
-
-    testWidgets('tells the mail nothing about the user or their journal', (
-      tester,
-    ) async {
-      final launcher = UrlLauncherSpy.setup();
-      final robot = robotWith(tester);
-      await robot.launch();
-
-      await robot.tap(robot.feedback);
-
-      // The signed-in user's id and address are what this screen holds and
-      // the mail must not carry; the mail itself already says who sent it.
-      final user = robot.supabase.supabase.auth.currentUser!;
-      expect(launcher.launched.single, isNot(contains(user.id)));
-      expect(launcher.launched.single, isNot(contains(user.email)));
     });
 
     testWidgets('meets accessibility guidelines in every state', (

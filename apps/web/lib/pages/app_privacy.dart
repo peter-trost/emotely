@@ -200,8 +200,8 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         'says what is sent, to whom, and what it can contain, and nothing is '
         'sent until you tick the box and start. Declining is a real choice — '
         'nothing is sent, and the entries you already have stay readable. You '
-        'can take the consent back at any time on the account screen. It is '
-        'one tap, it does not require deleting anything, and it does not '
+        'can take the consent back at any time on the More tab of the app. '
+        'It is one tap, it does not require deleting anything, and it does not '
         'affect what happened while the consent stood. Taking it back is as '
         'easy as giving it, which is what Art. 7 (3) GDPR requires. Because '
         'the assistant is what writes your entry, no new session can run '
@@ -492,8 +492,8 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
     h2(id: 'deletion', [.text('Deleting your account')]),
     p([
       .text(
-        'In the app: Your journal → the account icon (top right) → Delete '
-        'account, then confirm. Without the app: the ',
+        'In the app: More → Your account → Delete account, then confirm. '
+        'Without the app: the ',
       ),
       a(href: '/delete-account', [.text('deletion page')]),
       .text(

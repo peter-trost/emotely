@@ -1,9 +1,10 @@
 import 'package:flutter/widgets.dart';
 
 /// What the journal asks of the app and cannot do itself, because a feature
-/// never knows another feature (ADR 0015): every screen it leads to belongs
-/// to someone else. The app implements this with the real pages and blocs;
-/// a test fakes it and records what was asked.
+/// never knows another feature (ADR 0015) and never knows a route
+/// (ADR 0016): every screen it leads to is the app's to show. The app
+/// implements this with its route table; a test fakes it and records what
+/// was asked.
 ///
 /// The methods take the [NavigatorState] rather than a context, because
 /// the journal captures it before it awaits the server and must not reach
@@ -25,10 +26,4 @@ abstract class JournalNavigator() {
   /// in hand, but only the id travels: the screen reads it back itself, so
   /// it can be reached from its location alone.
   void openEntry(NavigatorState navigator, {required String entryId});
-
-  /// Opens the account screen on its own route.
-  void openAccount(NavigatorState navigator);
-
-  /// Signs the user out; the root swaps to sign-in underneath.
-  void signOut(BuildContext context);
 }

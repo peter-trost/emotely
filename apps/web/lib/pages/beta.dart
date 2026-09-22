@@ -89,7 +89,7 @@ class const Beta({super.key}) extends StatelessComponent {
     p([
       .text('Use '),
       strong([.text('Send feedback')]),
-      .text(' on the account screen of the app, or write to '),
+      .text(' on the More tab of the app, or write to '),
       a(href: 'mailto:$contactEmail', [.text(contactEmail)]),
       .text(
         '. For a bug, the app version helps most — the feedback row fills '

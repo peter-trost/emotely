@@ -23,8 +23,6 @@ class JournalRobot(
   Finder get start => find.byKey(JournalView.startKey);
   Finder get continueSession => find.byKey(JournalView.continueKey);
   Finder get discard => find.byKey(JournalView.discardKey);
-  Finder get account => find.byKey(JournalView.accountKey);
-  Finder get signOut => find.byKey(JournalView.signOutKey);
   Finder get retry => find.byKey(JournalView.retryKey);
   Finder get empty => find.byKey(JournalView.emptyKey);
   Finder get entries => find.byType(ListTile);

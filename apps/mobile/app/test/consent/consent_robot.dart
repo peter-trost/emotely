@@ -1,3 +1,4 @@
+import 'package:emotely/app/shell.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
@@ -9,7 +10,8 @@ import '../helpers/helpers.dart';
 
 /// Drives the consent gate through the real app against a scripted Supabase:
 /// from the journal into the consent screen, through the box and the button,
-/// and into (or away from) a session.
+/// and into (or away from) a session; and over the More tab to the rows
+/// that take consent back and give it again.
 class ConsentRobot(
   final WidgetTester tester, {
   required final SupabaseStub supabase,
@@ -18,6 +20,7 @@ class ConsentRobot(
   final analytics = AnalyticsSpy();
 
   Finder get home => find.byType(JournalPage);
+  Finder get more => find.byType(MorePage);
   Finder get signIn => find.byType(SignInPage);
   Finder get signInNotice => find.byKey(SignInPage.privacyNoticeKey);
   Finder get consent => find.byType(ConsentPage);
@@ -26,7 +29,8 @@ class ConsentRobot(
 
   Finder get start => find.byKey(JournalView.startKey);
   Finder get continueSession => find.byKey(JournalView.continueKey);
-  Finder get openAccount => find.byKey(JournalView.accountKey);
+  Finder get journalTab => find.byKey(AppShell.journalTabKey);
+  Finder get moreTab => find.byKey(AppShell.moreTabKey);
 
   Finder get checkbox => find.byKey(ConsentView.checkboxKey);
   Finder get agree => find.byKey(ConsentView.agreeKey);
@@ -36,10 +40,10 @@ class ConsentRobot(
   Finder get consentFailure => find.text(consentFailureMessage);
   Finder get declined => find.text(consentDeclinedMessage);
 
-  Finder get withdraw => find.byKey(AccountView.withdrawConsentKey);
-  Finder get restore => find.byKey(AccountView.restoreConsentKey);
-  Finder get accountNotice => find.byKey(AccountView.privacyNoticeKey);
-  Finder get accountImprint => find.byKey(AccountView.imprintKey);
+  Finder get withdraw => find.byKey(MoreView.withdrawConsentKey);
+  Finder get restore => find.byKey(MoreView.restoreConsentKey);
+  Finder get moreNotice => find.byKey(MoreView.privacyNoticeKey);
+  Finder get moreImprint => find.byKey(MoreView.imprintKey);
   Finder get withdrawFailure => find.text(withdrawFailureMessage);
 
   Widget get app =>
