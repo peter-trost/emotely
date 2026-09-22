@@ -1,6 +1,8 @@
 import 'package:agent_client/agent_client.dart';
+import 'package:contract/contract.dart';
 import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:testing/testing.dart';
 
 import '../journal_robot.dart';
@@ -106,6 +108,45 @@ void main() {
     });
 
     group('the consent gate', () {
+      testWidgets('starts nothing for a page gone while the server answered', (
+        tester,
+      ) async {
+        // The tap's page is unmounted (a sign-out, say) while the consent
+        // read is in flight: nobody is left to ask, so nothing is asked.
+        final robot = robotWith(
+          tester,
+          consentReads: [delayedAuth(consentStands(granted: false))],
+        );
+        await robot.launch();
+
+        await tester.tap(robot.start);
+        await tester.pump();
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(robot.navigator.consentRequests, 0);
+        expect(robot.navigator.sessions, isEmpty);
+      });
+
+      testWidgets('starts nothing for a page gone while consent was asked', (
+        tester,
+      ) async {
+        // Consent is given, but the page that asked for it is gone by then.
+        final robot = robotWith(tester, consentGranted: false);
+        robot.navigator
+          ..consentGiven = true
+          ..consentTakes = const Duration(seconds: 1);
+        await robot.launch();
+
+        await tester.tap(robot.start);
+        await tester.pump();
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(robot.navigator.consentRequests, 1);
+        expect(robot.navigator.sessions, isEmpty);
+      });
+
       testWidgets('asks the server before every session, never a local flag', (
         tester,
       ) async {
@@ -240,24 +281,34 @@ void main() {
       expect(robot.start, findsOneWidget);
     });
 
-    testWidgets('asks the app to open an entry by its id', (tester) async {
-      final robot = robotWith(
-        tester,
-        entries: [
-          entryRow(
-            id: 'e-1',
-            summary: 'A seven kind of day.',
-            createdAt: newer,
-          ),
-        ],
+    testWidgets('opens an entry on its own route and reads it back', (
+      tester,
+    ) async {
+      final row = entryRow(
+        id: 'e-1',
+        summary: 'A seven kind of day.',
+        createdAt: newer,
+        answers: {rateQuestion.questionId: const Answer.rating(7)},
+        questions: [rateQuestion],
       );
+      final robot = robotWith(tester, entries: [row]);
+      // Only the id travels: the entry screen reads the entry back itself,
+      // from the same endpoint the list came from.
+      robot.supabase.always(entriesEndpoint, rows([row]));
       await robot.launch();
 
       await robot.tap(robot.entry('e-1'));
 
-      // Only the id travels: the entry screen reads the entry back itself.
-      expect(robot.navigator.entryOpens, ['e-1']);
+      expect(robot.entryPage, findsOneWidget);
+      expect(robot.supabase.to(entriesEndpoint).last.query['id'], 'eq.e-1');
+      expect(find.text(rateQuestion.question), findsOneWidget);
+      expect(find.text('7 / $ratingMax'), findsOneWidget);
       expect(robot.analytics.events.last, event('entry_opened'));
+
+      await robot.back();
+
+      expect(robot.home, findsOneWidget);
+      expect(robot.entryPage, findsNothing);
     });
 
     testWidgets('meets accessibility guidelines', (tester) async {

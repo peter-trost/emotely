@@ -4,6 +4,7 @@ import 'package:feature_account/src/account/bloc/account_bloc.dart';
 import 'package:feature_account/src/consent/bloc/consent_bloc.dart';
 import 'package:feature_account/src/consent/consent_text.dart';
 import 'package:feature_account/src/navigator.dart';
+import 'package:feature_account/src/routes.dart';
 import 'package:feedback_link/feedback_link.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -83,11 +84,9 @@ class const MoreView({super.key}) extends StatelessWidget {
                   title: const Text(accountLabel),
                   subtitle: const Text(accountExplanation),
                   trailing: const Icon(Icons.chevron_right),
-                  // Resolving the navigator is one of the two container
-                  // calls a widget may make (ADR 0015).
-                  onTap: () => GetIt.I<AccountNavigator>().openAccount(
-                    Navigator.of(context),
-                  ),
+                  // The feature's own screen, on the feature's own route
+                  // (ADR 0016).
+                  onTap: () => const AccountRoute().go(context),
                 ),
               ],
             ),
@@ -234,7 +233,7 @@ class const _Consent() extends StatelessWidget {
   /// what it showed before — the record is what counts.
   static Future<void> _askAgain(BuildContext context) async {
     final consent = context.read<ConsentBloc>();
-    await GetIt.I<AccountNavigator>().requestConsent(Navigator.of(context));
+    await GetIt.I<AccountNavigator>().requestConsent(context);
     consent.add(const ConsentEvent.loaded());
   }
 }

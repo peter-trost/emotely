@@ -1,5 +1,4 @@
 import 'package:emotely/app/router.dart';
-import 'package:emotely/app/routes.dart';
 import 'package:emotely/app/shell.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';

@@ -42,18 +42,23 @@ arguments, and tab stacks with independent histories — are exactly what the
 
 ## Decisions
 
-1. **The route table is the app's.** Features never import go_router. A
-   feature reaches another feature's screen — or one of its own, now that
-   routes exist — through its navigator (ADR 0015), which the app implements
-   with a route. `JournalNavigator.openEntry` is a method on the seam even
-   though `EntryPage` is the journal's own widget: the widget is the
-   feature's, the route is the app's.
+1. **Each feature declares the routes of its own screens; the app mounts
+   them.** (Amended 2026-09-21, below; the first cut kept the whole table in
+   the app.) A feature's `routes.dart` holds one typed route per screen,
+   generated in the feature package, and the feature moves between its own
+   screens itself — `EntryRoute(id:).go(context)` inside the journal. The
+   app's `routes.dart` composes those trees: sign-in alone, the journal and
+   More as the two tabs of the shell, the session and the consent screen at
+   the root. A feature reaches *another* feature's screen only through its
+   navigator (ADR 0015), which the app implements with that feature's route.
 
-2. **Navigator seams take the `NavigatorState`**, as before. The app's
-   implementation reaches the router through `navigator.context`, which
-   outlives any screen: the journal captures the navigator before it awaits
-   the server and must not reach back into a page that may have gone.
-   `InheritedGoRouter` sits above the navigator, so the lookup is exact.
+2. **Navigator seams take the `BuildContext` of the tap that asked**, and
+   a caller that awaits the server before asking checks `context.mounted`
+   first — a page gone by the time the answer arrives navigates nowhere.
+   (Amended 2026-09-21: the first cut passed a `NavigatorState` captured
+   before the await, a context in disguise with a longer lifetime, and
+   reached the router through `navigator.context`. The `mounted` guard is
+   what the lint asks for and says the right thing; the state was a dodge.)
 
 3. **No `extra`.** A route carries path and query parameters only, so every
    screen can be reached from its location alone. Where a screen used to be
@@ -131,3 +136,39 @@ arguments, and tab stacks with independent histories — are exactly what the
   a matter of registering a scheme when one is wanted.
 
 Decided on #62, 2026-09-20.
+
+## Amendment 2026-09-21: features own their routes
+
+The first cut kept every route in the app and made a feature ask the app
+even for its own screens (`JournalNavigator.openEntry`). Re-read against
+Tide's Project Miniclient, that is the one place it went against the
+reference: Tide's *flow* is "an entry point to a feature... the only class
+visible outside the feature", and "encapsulating navigation logic allows UX
+changes within a feature without affecting the overall application". With
+the table in the app, adding or reshaping a feature's screens touched the
+app every time.
+
+Tide's own mechanism for internal navigation — a state-driven page stack on
+`flow_builder` — was considered and rejected: the package is unmaintained
+(0.1.0, April 2024), it installs its own handler on
+`SystemChannels.navigation` and forwards only `popRoute` and `pushRoute`, so
+`pushRouteInformation` — how a deep link arrives while the app is running —
+is dropped whenever a flow is mounted (its issue #117, open since 2023), and
+screens inside a flow are invisible to the router's observers. A hand-rolled
+`Navigator.pages` flow avoids the hijack but still leaves inner screens with
+no location.
+
+So the decision is: **screens are routes the feature declares; steps are
+bloc state.** Anything with its own app bar and back button is a typed
+route in the feature's `routes.dart`, generated there, exported through the
+barrel (`hide $appRoutes`, since every part file generates one), and
+mounted by the app's `routes.dart`, which is now a plain list — sign-in,
+the shell with its two branches, the session and the consent screen at the
+root — with no codegen of its own. Sign-in's email-then-code, the
+session's questions and the consent screen's states stay one page whose
+bloc picks the widget: Tide's internal navigation with the page stack
+replaced by a `switch`. Features depend on go_router, a Flutter-team
+package; the seams shrink to cross-feature asks (`startSession`,
+`requestConsent`, `signOut`), and `openEntry` and `openAccount` are gone.
+A feature's paths are part of its contract, which is what makes every
+screen addressable from outside.

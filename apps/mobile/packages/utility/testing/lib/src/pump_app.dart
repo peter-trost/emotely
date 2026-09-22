@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Wraps [child] the way the app does: real themes, a scaffold, no mocked
@@ -25,6 +26,26 @@ Widget pageUnderTest(Widget page, {ThemeMode themeMode = ThemeMode.light}) =>
       themeMode: themeMode,
       home: page,
     );
+
+/// A feature's own routes under the app's themes and a router of their own,
+/// opened at [initialLocation] — the way the app mounts them (ADR 0016),
+/// without the app. [above] wraps the navigator, where the app puts what
+/// every screen needs over it (the auth bloc, the startup gate); tests
+/// hand in only what the routes under test read.
+Widget featureUnderTest({
+  required List<RouteBase> routes,
+  required String initialLocation,
+  Widget Function(BuildContext context, Widget child)? above,
+  ThemeMode themeMode = ThemeMode.light,
+}) => MaterialApp.router(
+  theme: lightTheme,
+  darkTheme: darkTheme,
+  themeMode: themeMode,
+  routerConfig: GoRouter(routes: routes, initialLocation: initialLocation),
+  builder: above == null
+      ? null
+      : (context, child) => above(context, child ?? const SizedBox.shrink()),
+);
 
 extension PumpApp on WidgetTester {
   /// Pumps [widget] inside a themed [MaterialApp] scaffold.

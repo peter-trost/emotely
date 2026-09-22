@@ -7,21 +7,29 @@ hand-rolled widgets.
 
 ## Routing (ADR 0016)
 
-- `lib/app/routes.dart` is the one route table: a `GoRouteData` class per
-  screen with a `@TypedGoRoute` annotation, generated into `routes.g.dart`
-  by go_router_builder (`dart run build_runner build` here after any
-  change; `melos run codegen:check` is the tripwire). Only the app depends
-  on go_router; a feature package never imports it.
+- Every feature declares the routes of its own screens in its
+  `lib/src/routes.dart`: a `GoRouteData` class per screen with a
+  `@TypedGoRoute` annotation, generated into `routes.g.dart` there (`dart
+  run build_runner build` in the feature; `melos run codegen:check` is the
+  tripwire), exported through the barrel with `hide $appRoutes`. The app's
+  `lib/app/routes.dart` is a plain list that mounts them — sign-in, the
+  shell with its two branches, the session and the consent screen at the
+  root — and generates nothing.
+- A feature moves between its own screens itself
+  (`EntryRoute(id:).go(context)`). It reaches another feature's screen
+  only through its navigator, and the app's implementation in
+  `lib/app/navigators.dart` answers with that feature's route: `.push<T>`
+  when the caller awaits an answer (the session's end, the consent
+  outcome). The seams take the `BuildContext` of the tap; a caller that
+  awaits the server before asking checks `context.mounted` first, and so
+  does an implementation that uses the context after its own await.
 - Nothing travels as `extra`. A route carries path and query parameters
   only (`EntryRoute(id:)`, `SessionRoute(resume:)`), and the screen reads
   what it shows by that. A screen that needs an object gets a bloc that
   loads it, not a constructor argument from the caller.
-- A feature reaches a screen through its navigator, and the app's
-  implementation in `lib/app/navigators.dart` answers with a route:
-  `const AccountRoute().go(navigator.context)`, or `.push<T>` when the
-  caller awaits an answer (the session's end, the consent outcome). The
-  navigator's context outlives any screen, which is why the seams take a
-  `NavigatorState` rather than a page's context.
+- Screens are routes; steps are bloc state. Sign-in's email-then-code, the
+  session's questions and the consent screen's states are one page whose
+  bloc picks the widget, not a page stack.
 - The signed-in/out guard is `authRedirect` in `lib/app/router.dart`, pure
   over "signed in?" and the matched location; `SignedInListenable` re-runs
   it only when that boolean flips. Never gate a screen on auth state
@@ -29,12 +37,12 @@ hand-rolled widgets.
 - The router is built once, in `_RouterState`, over the auth bloc above
   it. `ConfigGate` and `PostHogWidget` live in `MaterialApp.router`'s
   `builder`, over the navigator.
-- Signed in, the user lives in two tabs (`AppShellRoute`, a
-  `StatefulShellRoute` rendered by `lib/app/shell.dart`): the journal with
-  its entries, and More (`feature_account`'s `MorePage`) with the account
+- Signed in, the user lives in two tabs (a `StatefulShellRoute` in
+  `routes.dart`, rendered by `lib/app/shell.dart`): the journal with its
+  entries, and More (`feature_account`'s `MorePage`) with the account
   under it. A screen that must cover the tab bar — the session, the
-  consent screen — is declared outside the shell, at the root of the
-  table, and pushed.
+  consent screen — is declared by its feature with a root path (`/session`,
+  `/consent`), mounted outside the shell, and pushed.
 
 ## Dependencies (ADR 0015)
 

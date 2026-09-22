@@ -1,24 +1,14 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// What a tab of the shell shows in the bar. The route table's branch
-/// classes mix it in, so the bar's order is the branches' order and
-/// nothing has to be kept in step by hand.
-mixin TabDestination {
-  Key get key;
-  IconData get icon;
-  IconData get selectedIcon;
-  String get label;
-}
-
 /// The two tabs a signed-in user lives in (ADR 0016): the journal, and
 /// everything else under More. Each tab keeps its own stack — an entry
 /// open on the journal stays open while the user visits More — and the
 /// session and the consent screen are pushed above both, on the root
-/// navigator, so the bar goes away while they are up.
+/// navigator, so the bar goes away while they are up. The destinations
+/// are in the order of the shell's branches in `routes.dart`.
 class const AppShell({
   required final StatefulNavigationShell navigationShell,
-  required final List<TabDestination> tabs,
   super.key,
 }) extends StatelessWidget {
   static const journalTabKey = Key('app_shell.journal');
@@ -35,14 +25,18 @@ class const AppShell({
         index,
         initialLocation: index == navigationShell.currentIndex,
       ),
-      destinations: [
-        for (final tab in tabs)
-          NavigationDestination(
-            key: tab.key,
-            icon: Icon(tab.icon),
-            selectedIcon: Icon(tab.selectedIcon),
-            label: tab.label,
-          ),
+      destinations: const [
+        NavigationDestination(
+          key: journalTabKey,
+          icon: Icon(Icons.menu_book_outlined),
+          selectedIcon: Icon(Icons.menu_book),
+          label: 'Journal',
+        ),
+        NavigationDestination(
+          key: moreTabKey,
+          icon: Icon(Icons.more_horiz),
+          label: 'More',
+        ),
       ],
     ),
   );

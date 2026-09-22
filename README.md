@@ -32,7 +32,7 @@ The load-bearing decisions and their rationale live in [`docs/adr/`](docs/adr/):
 13. [Fastlane release pipeline](docs/adr/0013-fastlane-release-pipeline.md) — match signing, ASC API key, TestFlight and the Play internal track from CI
 14. [Explicit consent, append-only](docs/adr/0014-explicit-consent-as-an-append-only-record.md) — Art. 9 (2) (a) consent before the first session, every grant and withdrawal its own immutable row, wording versioned and CI-enforced
 15. [Lego package layering](docs/adr/0015-lego-package-layering.md) — utilities, features, app as glue; a pub workspace with melos, every gate per package and scoped to what changed
-16. [Declarative routing with go_router](docs/adr/0016-declarative-routing-with-go-router.md) — typed routes generated in the app, the auth guard as a redirect over the live bloc state, nothing as `extra`
+16. [Declarative routing with go_router](docs/adr/0016-declarative-routing-with-go-router.md) — each feature declares its own typed routes and the app mounts them, the auth guard as a redirect over the live bloc state, nothing as `extra`
 
 The project's language is defined in [`CONTEXT.md`](CONTEXT.md).
 

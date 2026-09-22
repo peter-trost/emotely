@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:feature_journal/src/bloc/journal_bloc.dart';
 import 'package:feature_journal/src/navigator.dart';
+import 'package:feature_journal/src/routes.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:journal_repository/journal_repository.dart';
@@ -125,13 +126,18 @@ class const _SessionCard({required final OpenSession? openSession})
     required String? resume,
   }) async {
     final journal = context.read<JournalBloc>();
-    final navigator = Navigator.of(context);
     final app = GetIt.I<JournalNavigator>();
-    if (!await journal.consentStands() &&
-        !await app.requestConsent(navigator)) {
+    // Each await is a server round trip; a page that is gone by the time
+    // the answer arrives navigates nowhere on its own behalf.
+    if (!await journal.consentStands()) {
+      if (!context.mounted || !await app.requestConsent(context)) {
+        return;
+      }
+    }
+    if (!context.mounted) {
       return;
     }
-    await app.startSession(navigator, resume: resume);
+    await app.startSession(context, resume: resume);
     journal.add(const JournalEvent.loaded());
   }
 }
@@ -152,13 +158,8 @@ class const _EntryTile({required final EntryRecord record})
     ),
     onTap: () {
       context.read<JournalBloc>().add(const JournalEvent.entryOpened());
-      // The entry screen is this feature's, but its route is the app's
-      // (ADR 0016); resolving the navigator is one of the two container
-      // calls a widget may make (ADR 0015).
-      GetIt.I<JournalNavigator>().openEntry(
-        Navigator.of(context),
-        entryId: record.id,
-      );
+      // The journal's own screen, on the journal's own route (ADR 0016).
+      EntryRoute(id: record.id).go(context);
     },
   );
 }

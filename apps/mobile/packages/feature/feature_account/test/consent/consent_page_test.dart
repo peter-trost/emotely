@@ -1,14 +1,14 @@
 import 'package:feature_account/feature_account.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:testing/testing.dart';
 
-/// Drives the consent screen on its own route, composed the way the app
-/// composes it, with the consent bloc handed in from the route below as the
-/// journal hands it — and records what the route popped with.
+/// Drives the consent screen on its own route, mounted the way the app
+/// mounts it and pushed from a launcher the way the journal pushes it —
+/// and records what the route popped with.
 class _ConsentRobot(
   final WidgetTester tester, {
   required final SupabaseStub supabase,
@@ -37,23 +37,19 @@ class _ConsentRobot(
       analytics: analytics,
     );
     registerAccount(GetIt.I);
-    return pageUnderTest(
-      BlocProvider(
-        create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
-        child: Builder(
-          builder: (context) => Scaffold(
+    // The consent route as the app mounts it, pushed from a launcher the
+    // way the journal pushes it; the route brings its own bloc.
+    return featureUnderTest(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
             body: Center(
               child: FilledButton(
                 key: openKey,
                 onPressed: () async {
-                  final consent = context.read<ConsentBloc>();
-                  result = await Navigator.of(context).push<ConsentOutcome>(
-                    MaterialPageRoute<ConsentOutcome>(
-                      builder: (_) => BlocProvider.value(
-                        value: consent,
-                        child: const ConsentPage(),
-                      ),
-                    ),
+                  result = await const ConsentRoute().push<ConsentOutcome>(
+                    context,
                   );
                 },
                 child: const Text('Start'),
@@ -61,7 +57,9 @@ class _ConsentRobot(
             ),
           ),
         ),
-      ),
+        $consentRoute,
+      ],
+      initialLocation: '/',
     );
   }
 

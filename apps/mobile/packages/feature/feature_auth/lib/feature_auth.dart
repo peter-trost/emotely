@@ -7,4 +7,7 @@ library;
 export 'src/bloc/auth_bloc.dart';
 export 'src/register.dart';
 export 'src/review_accounts.dart';
+// Every feature's part file generates a `$appRoutes`; the app composes
+// from the named routes instead, so the collision never reaches it.
+export 'src/routes.dart' hide $appRoutes;
 export 'src/view/sign_in_page.dart';
