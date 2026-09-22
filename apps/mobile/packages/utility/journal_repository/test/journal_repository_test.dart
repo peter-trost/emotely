@@ -45,6 +45,28 @@ void main() {
       expect(request.query['status'], 'eq.in_progress');
     });
 
+    test('reads one session in progress by its id', () async {
+      supabase.rest('GET /rest/v1/sessions', [
+        rows([
+          sessionRow(id: 's-1', pending: pending, questions: const [question]),
+        ]),
+      ]);
+
+      final open = await repository.session('s-1');
+
+      expect(open?.id, 's-1');
+      expect(open?.pending, pending);
+      final request = supabase.to('GET /rest/v1/sessions').single;
+      expect(request.query['id'], 'eq.s-1');
+      expect(request.query['status'], 'eq.in_progress');
+    });
+
+    test('has no session for an id that is finished or gone', () async {
+      supabase.rest('GET /rest/v1/sessions', [rows(const [])]);
+
+      expect(await repository.session('s-done'), isNull);
+    });
+
     test('has no session in progress when the journal holds none', () async {
       supabase.rest('GET /rest/v1/sessions', [rows(const [])]);
 
@@ -87,6 +109,42 @@ void main() {
       ]);
       final request = supabase.to('GET /rest/v1/entries').single;
       expect(request.query['order'], 'created_at.desc.nullslast');
+    });
+
+    test('reads one entry by its id', () async {
+      final written = DateTime.utc(2026, 9, 2, 8);
+      supabase.rest('GET /rest/v1/entries', [
+        rows([
+          entryRow(
+            id: 'e2',
+            summary: 'Newer',
+            createdAt: written,
+            answers: answers,
+            questions: const [question],
+          ),
+        ]),
+      ]);
+
+      final entry = await repository.entry('e2');
+
+      expect(
+        entry,
+        EntryRecord(
+          id: 'e2',
+          summary: 'Newer',
+          answers: answers,
+          questions: const [question],
+          createdAt: written,
+        ),
+      );
+      final request = supabase.to('GET /rest/v1/entries').single;
+      expect(request.query['id'], 'eq.e2');
+    });
+
+    test('has no entry for an id the journal does not hold', () async {
+      supabase.rest('GET /rest/v1/entries', [rows(const [])]);
+
+      expect(await repository.entry('gone'), isNull);
     });
 
     test('counts the entries without fetching any', () async {

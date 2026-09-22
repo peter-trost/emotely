@@ -1,18 +1,21 @@
 import 'package:feature_journal/feature_journal.dart';
 import 'package:flutter/widgets.dart';
-import 'package:journal_repository/journal_repository.dart';
 
 /// Records what the journal asked of the app, and answers the consent
 /// question the way a test says.
 class FakeJournalNavigator() extends JournalNavigator {
-  /// Every session the journal asked to run, with what it wanted resumed.
-  final sessions = <OpenSession?>[];
+  /// Every session the journal asked to run: the id to resume, or null for
+  /// a fresh one.
+  final sessions = <String?>[];
 
   /// How often the journal asked for consent.
   var consentRequests = 0;
 
   /// What a consent request answers.
   var consentGiven = false;
+
+  /// Every entry the journal asked to open, by id.
+  final entryOpens = <String>[];
 
   /// How often the journal opened the account screen.
   var accountOpens = 0;
@@ -21,7 +24,7 @@ class FakeJournalNavigator() extends JournalNavigator {
   var signOuts = 0;
 
   @override
-  Future<void> startSession(NavigatorState navigator, {OpenSession? resume}) {
+  Future<void> startSession(NavigatorState navigator, {String? resume}) {
     sessions.add(resume);
     return Future.value();
   }
@@ -31,6 +34,10 @@ class FakeJournalNavigator() extends JournalNavigator {
     consentRequests++;
     return Future.value(consentGiven);
   }
+
+  @override
+  void openEntry(NavigatorState navigator, {required String entryId}) =>
+      entryOpens.add(entryId);
 
   @override
   void openAccount(NavigatorState navigator) => accountOpens++;

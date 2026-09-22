@@ -3,7 +3,6 @@ import 'package:feature_session/feature_session.dart';
 import 'package:feature_session/src/bloc/session_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
-import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:testing/testing.dart';
 
@@ -18,7 +17,7 @@ class SessionRobot(
   final AgentStub agent, {
   final AnalyticsSpy? spy,
   final SupabaseStub? supabase,
-  final OpenSession? resume,
+  final String? resume,
 }) {
   /// Set up by [launch]; the spy every test can inspect.
   late final AnalyticsSpy analytics = spy ?? AnalyticsSpy();
@@ -128,6 +127,9 @@ class SessionRobot(
 
   /// The failure copy when the finished entry could not be filed.
   static const entrySaveFailedMessage = SessionBloc.entrySaveFailedMessage;
+
+  /// The failure copy when the session to resume could not be read.
+  static const sessionReadFailedMessage = SessionBloc.sessionReadFailedMessage;
 
   // The canned questions, shared with every package through `testing`.
   static const rate = rateQuestion;

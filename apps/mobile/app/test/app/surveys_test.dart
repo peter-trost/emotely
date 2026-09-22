@@ -34,12 +34,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // The observer is what `PosthogObserver.currentContext` reads; without
-      // it the SDK logs "Cannot show survey: No valid context found".
-      final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
-      expect(
-        app.navigatorObservers?.whereType<PosthogObserver>(),
-        hasLength(1),
-      );
+      // it the SDK logs "Cannot show survey: No valid context found". The
+      // router owns the navigator now, so it is the navigator that is asked.
+      final navigator = tester.widget<Navigator>(find.byType(Navigator));
+      expect(navigator.observers.whereType<PosthogObserver>(), hasLength(1));
     });
   });
 }

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:feature_account/src/account/bloc/account_bloc.dart';
 import 'package:feature_account/src/consent/bloc/consent_bloc.dart';
 import 'package:feature_account/src/consent/consent_text.dart';
-import 'package:feature_account/src/consent/view/consent_page.dart';
 import 'package:feature_account/src/navigator.dart';
 import 'package:feedback_link/feedback_link.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -130,14 +129,13 @@ class const _Consent() extends StatelessWidget {
         label: withdrawConsentLabel,
         buttonKey: AccountView.withdrawConsentKey,
       ),
-      ConsentWriteFailure() => const _ConsentFailed(
-        message: consentFailureMessage,
-        event: ConsentEvent.granted(),
-        label: giveConsentLabel,
-        buttonKey: AccountView.restoreConsentKey,
-      ),
       ConsentKnown(granted: true) => const _ConsentStanding(),
-      ConsentKnown(granted: false) => const _ConsentGone(),
+      // A grant is only ever written from the consent screen, on its own
+      // route with a bloc of its own; a failed write there is that screen's
+      // to say. Should this bloc ever hold one, consent does not stand, and
+      // the way back is the same screen.
+      ConsentKnown(granted: false) ||
+      ConsentWriteFailure() => const _ConsentGone(),
       // The answer is not in hand: the read failed, or (only if this screen
       // is somehow reached before the journal's eager load finished) has
       // not arrived. Rendering nothing would leave a user who came here to
@@ -219,16 +217,13 @@ class const _ConsentGone() extends StatelessWidget {
     ],
   );
 
-  /// The consent screen on its own route, carrying the bloc this screen
-  /// already has, so what it records is what this screen then shows.
-  static Future<void> _askAgain(BuildContext context) {
+  /// The consent screen on its own route, which the app shows (ADR 0015);
+  /// once it closes, this screen asks the server again rather than trusting
+  /// what it showed before — the record is what counts.
+  static Future<void> _askAgain(BuildContext context) async {
     final consent = context.read<ConsentBloc>();
-    return Navigator.of(context).push(
-      MaterialPageRoute<bool>(
-        builder: (_) =>
-            BlocProvider.value(value: consent, child: const ConsentPage()),
-      ),
-    );
+    await GetIt.I<AccountNavigator>().requestConsent(Navigator.of(context));
+    consent.add(const ConsentEvent.loaded());
   }
 }
 

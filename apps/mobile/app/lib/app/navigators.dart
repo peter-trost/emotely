@@ -1,10 +1,8 @@
+import 'package:emotely/app/routes.dart';
 import 'package:feature_account/feature_account.dart';
 import 'package:feature_auth/feature_auth.dart';
 import 'package:feature_journal/feature_journal.dart';
-import 'package:feature_session/feature_session.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
-import 'package:journal_repository/journal_repository.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// The app's side of every feature's navigator (ADR 0015): a feature says
@@ -17,42 +15,35 @@ class const AppAccountNavigator() implements AccountNavigator {
   @override
   void signOut(BuildContext context) =>
       context.read<AuthBloc>().add(const AuthEvent.signOutRequested());
+
+  /// The account screen reads the record again once the route closes, so
+  /// what the route answered is of no use to it here.
+  @override
+  Future<void> requestConsent(NavigatorState navigator) =>
+      const ConsentRoute().push<ConsentOutcome>(navigator.context);
 }
 
 /// Everything the journal leads to: the session, the consent gate, the
 /// account screen, signing out.
 class const AppJournalNavigator() implements JournalNavigator {
   @override
-  Future<void> startSession(NavigatorState navigator, {OpenSession? resume}) =>
-      navigator.push(
-        MaterialPageRoute<void>(builder: (_) => SessionPage(resume: resume)),
-      );
+  Future<void> startSession(NavigatorState navigator, {String? resume}) =>
+      SessionRoute(resume: resume).push<void>(navigator.context);
 
-  /// The consent screen on its own route with a bloc of its own, which is
-  /// the authority on the answer: `granted` only after the server recorded
-  /// it. A decline, a failed write and a dismissed route all leave it shut
-  /// and land the user back on the journal — but they are not the same
-  /// thing to say, so the message is chosen by what actually happened
-  /// rather than always reading as a refusal.
+  /// The consent screen on its own route ([ConsentRoute]), answering how
+  /// it was left. A decline, a failed write and a dismissed route all leave
+  /// the gate shut and land the user back on the journal — but they are
+  /// not the same thing to say, so the message is chosen by what actually
+  /// happened rather than always reading as a refusal.
   @override
   Future<bool> requestConsent(NavigatorState navigator) async {
-    // The route owns the bloc (the provider closes it when the route is
-    // disposed); this keeps a reference only to read the answer after the
-    // pop. Awaiting the close here instead would wait on the outgoing
-    // route, which still listens until its transition ends.
-    final consent = GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded());
-    await navigator.push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => BlocProvider<ConsentBloc>(
-          create: (_) => consent,
-          child: const ConsentPage(),
-        ),
-      ),
+    final outcome = await const ConsentRoute().push<ConsentOutcome>(
+      navigator.context,
     );
-    if (consent.state.allowsSession) {
+    if (outcome == ConsentOutcome.granted) {
       return true;
     }
-    _saySoFar(navigator, consent.state);
+    _saySoFar(navigator, outcome);
     return false;
   }
 
@@ -61,11 +52,11 @@ class const AppJournalNavigator() implements JournalNavigator {
   /// the box and hit a network error that they chose "Not now" is untrue.
   /// Dismissing the screen says nothing at all — the user left, and knows
   /// it — and so does a failed read, whose screen already said its piece.
-  static void _saySoFar(NavigatorState navigator, ConsentState state) {
-    final message = switch (state) {
-      ConsentWriteFailure() => consentFailureMessage,
-      ConsentKnown(justDeclined: true) => consentDeclinedMessage,
-      _ => null,
+  static void _saySoFar(NavigatorState navigator, ConsentOutcome? outcome) {
+    final message = switch (outcome) {
+      ConsentOutcome.writeFailed => consentFailureMessage,
+      ConsentOutcome.declined => consentDeclinedMessage,
+      ConsentOutcome.granted || null => null,
     };
     if (message == null) {
       return;
@@ -74,18 +65,17 @@ class const AppJournalNavigator() implements JournalNavigator {
         ?.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// The account screen owns a consent bloc of its own for the section that
-  /// takes consent back; the journal asks the server again before every
-  /// session, so nothing has to be shared between the two routes.
+  /// The router is reached through the navigator's own context, which
+  /// outlives any screen: the journal captures the navigator before it
+  /// awaits the server, and this must not reach back into a page that may
+  /// have gone.
   @override
-  void openAccount(NavigatorState navigator) => navigator.push(
-    MaterialPageRoute<void>(
-      builder: (_) => BlocProvider(
-        create: (_) => GetIt.I<ConsentBloc>()..add(const ConsentEvent.loaded()),
-        child: const AccountPage(),
-      ),
-    ),
-  );
+  void openAccount(NavigatorState navigator) =>
+      const AccountRoute().go(navigator.context);
+
+  @override
+  void openEntry(NavigatorState navigator, {required String entryId}) =>
+      EntryRoute(id: entryId).go(navigator.context);
 
   @override
   void signOut(BuildContext context) =>

@@ -26,6 +26,18 @@ class const JournalRepository({required final SupabaseClient supabase}) {
     return row == null ? null : OpenSession.fromJson(row);
   }
 
+  /// The session [id], if it is still in progress: what a route names when
+  /// it asks to continue one. Finished or discarded since, it is nothing.
+  Future<OpenSession?> session(String id) async {
+    final row = await supabase
+        .from(_sessions)
+        .select()
+        .eq('id', id)
+        .eq('status', _inProgress)
+        .maybeSingle();
+    return row == null ? null : OpenSession.fromJson(row);
+  }
+
   /// Every filed entry, newest first.
   Future<List<EntryRecord>> entries() async {
     final rows = await supabase
@@ -33,6 +45,18 @@ class const JournalRepository({required final SupabaseClient supabase}) {
         .select()
         .order('created_at', ascending: false);
     return [for (final row in rows) EntryRecord.fromJson(row)];
+  }
+
+  /// One filed entry by its [id], or nothing if the journal holds no such
+  /// entry — deleted since, or never this user's, which RLS answers the
+  /// same way (ADR 0010).
+  Future<EntryRecord?> entry(String id) async {
+    final row = await supabase
+        .from(_entries)
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+    return row == null ? null : EntryRecord.fromJson(row);
   }
 
   /// How many entries the user has filed. Asked for the count alone — the
