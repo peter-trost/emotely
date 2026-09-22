@@ -1,7 +1,8 @@
 # State management stays on bloc, with four conditions to revisit
 
-The Flutter client keeps `flutter_bloc` (9.1.1, `bloc` 9.2.1) for state
-management. We weighed a move to Riverpod on 2026-09-22 and decided against
+The Flutter client keeps `flutter_bloc` for state management, at the
+versions `apps/mobile/pubspec.lock` resolves: `flutter_bloc` 9.1.1 and
+`bloc` 9.2.1. We weighed a move to Riverpod on 2026-09-22 and decided against
 it for now. The decision is not permanent: it is revisited as soon as any one
 of the four conditions below holds.
 
@@ -25,6 +26,9 @@ can write ourselves, the way we already did for freezed and our tests.
 
 ## Signals, as of 2026-09-22
 
+Every number below was measured on 2026-09-22 from the sources listed at the
+end. Download counts are pub.dev's 30-day window.
+
 For Riverpod:
 
 - **Adoption and release cadence.** Over the last 30 days `riverpod` had
@@ -39,18 +43,19 @@ For Riverpod:
   2023. Recent commits are mostly dependency bumps and docs. If bloc
   breaks, assume we fix it ourselves.
 - **Riverpod has features a journaling app could use:** automatic dispose
-  and caching, retry, pause and resume, and offline persistence with
-  mutations. The last two are still experimental. With bloc we would build
-  offline drafts by hand.
+  and caching, retry, and pause and resume are stable. Offline persistence
+  and mutations exist too, but are still experimental. With bloc we would
+  build offline drafts by hand.
 - **Switching will never be cheaper.** There are seven Blocs, all small.
   Only `AuthBloc` holds a stream subscription, and none uses an event
   transformer, so the unmerged `bloc_concurrency` fix does not affect us.
 
 For bloc:
 
-- **Riverpod's API keeps changing, and that costs agents.** Its 3.0 release
-  (2025-09-10) calls itself "a transition version… quite possible that a
-  4.0.0 will be released relatively soon". 3.2 deprecated
+- **Riverpod's API keeps changing, and that costs agents.** The 3.0 line
+  announced itself, in `3.0.0-dev.12` (2025-04-30), as "a transition
+  version… quite possible that a 4.0.0 will be released relatively soon".
+  The stable 3.0.0 followed on 2025-09-10. 3.2 deprecated
   `family.overrideWith`, 3.4 deprecated `SyncProviderTransformerMixin`, and
   offline persistence and mutations are "subject to breaking changes".
   `flutter_riverpod` loses 20 of pub.dev's static analysis points, partly
@@ -102,3 +107,24 @@ Any one of these reopens the decision:
   `bloc_lint` would sit on our side, not upstream.
 - Whoever reopens this decision re-measures the signals above instead of
   trusting these numbers, which date from 2026-09-22.
+
+## Sources
+
+Measured on 2026-09-22:
+
+- Felix Angelov's posts: [Bluesky profile](https://bsky.app/profile/felangel.bsky.social),
+  read through the public `app.bsky.feed.getAuthorFeed` API.
+- The Dart package-skills proposal he answered:
+  [design doc](https://docs.google.com/document/d/1k_X-Sp4GQyZP6k9lvZ1Itj0GvzQZuWl3iKzi5AIa69Q/edit?tab=t.0);
+  what shipped: [Skills CLI 1.0](https://dart.dev/blog/skills-cli-1-0-bundle-and-distribute-ai-agent-skills-for-your-packages).
+- Downloads, versions and scores: the pub.dev API
+  (`https://pub.dev/api/packages/<name>` and `/score`) for `bloc`,
+  `flutter_bloc`, `riverpod` and `flutter_riverpod`, and the
+  [flutter_riverpod score page](https://pub.dev/packages/flutter_riverpod/score).
+- Changelogs: [riverpod](https://pub.dev/packages/riverpod/changelog),
+  [bloc](https://pub.dev/packages/bloc/changelog).
+- Open pull requests: [felangel/bloc](https://github.com/felangel/bloc/pulls?q=is%3Apr+is%3Aopen).
+- Repository contents: [felangel/bloc](https://github.com/felangel/bloc),
+  [rrousselGit/riverpod](https://github.com/rrousselGit/riverpod),
+  [rrousselGit/riverpod#4758](https://github.com/rrousselGit/riverpod/issues/4758),
+  [serverpod/skills-registry](https://github.com/serverpod/skills-registry).
