@@ -1,0 +1,14 @@
+{
+  "name": "@emotely/tripwire",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --build",
+    "test": "node --test \"src/*.test.ts\"",
+    "check": "node src/cli.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0"
+  }
+}

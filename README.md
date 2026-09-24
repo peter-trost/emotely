@@ -64,7 +64,8 @@ emotely/
 │  │                        go_router route table
 │  └─ web/        Jaspr (Dart) · getemotely.com landing page + waitlist · static, deploys to Vercel
 ├─ packages/
-│  └─ contract/   the tool-call schema — single source of truth for both sides
+│  ├─ contract/   the tool-call schema — single source of truth for both sides
+│  └─ tripwire/   CI check: no workaround comments, no suppression without a reason
 ├─ supabase/     Postgres schema + RLS tests (pgTAP) + auth config · deploys on merge
 └─ README.md
 ```

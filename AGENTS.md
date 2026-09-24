@@ -27,6 +27,7 @@ handling. If a step is only documented for humans, move it into a skill.
   with `flutter analyze --fatal-infos`. Disabling any rule requires an
   in-config justification comment next to the override. Never fix a
   diagnostic by weakening a rule without that justification.
+- Deferred work goes into an issue, not a comment: CI's tripwire (`packages/tripwire`) fails on a TODO or workaround comment and on a suppression without its reason.
 
 ## Billing
 

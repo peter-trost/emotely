@@ -662,6 +662,9 @@ printf '    %-14s %s\n' "docker"   "${docker_version_output:-not available}"
 if [ "$VERIFY" -eq 1 ]; then
   step "Verifying (the CI jobs, minus the ones that need a secret)"
 
+  info "tripwire: no workaround comments, no suppression without a reason"
+  (cd "$REPO_ROOT" && node packages/tripwire/src/cli.ts)
+
   info "agent: lint, typecheck, tests, contract tripwire"
   (cd "$REPO_ROOT" && pnpm lint && pnpm typecheck && pnpm -r --if-present test)
   (cd "$REPO_ROOT" && pnpm --filter @emotely/contract schema \
