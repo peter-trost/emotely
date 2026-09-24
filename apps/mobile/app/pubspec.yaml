@@ -60,7 +60,7 @@ dependencies:
   package_info_plus: 10.2.1
   posthog_flutter: 5.39.0
   pub_semver: 2.2.1
-  supabase_flutter: 3.0.0-dev.4
+  supabase_flutter: 3.0.0-dev.7
   url_launcher: 6.3.2
 
 dev_dependencies:

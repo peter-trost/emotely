@@ -116,16 +116,13 @@ class AuthBloc({
     if (state case AuthPasswordRequired(:final email)) {
       emit(AuthState.checkingPassword(email: email));
       try {
-        final response = await _supabase.auth.signInWithPassword(
+        // Always a session: an answer without one throws, like a refusal.
+        final session = await _supabase.auth.signInWithPassword(
           email: email,
           password: event.password,
         );
-        if (response.session case final session?) {
-          unawaited(_analytics.signedIn());
-          _signedIn(session.user.id, session.user.email, emit);
-        } else {
-          _passwordRefused(email, wrongPasswordMessage, emit);
-        }
+        unawaited(_analytics.signedIn());
+        _signedIn(session.user.id, session.user.email, emit);
       } on Exception catch (error, stackTrace) {
         unawaited(_errors.passwordSignInFailed(error, stackTrace));
         _passwordRefused(

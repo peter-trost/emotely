@@ -47,6 +47,10 @@ jobs:
               - '.github/workflows/ci.yml'
             supabase:
               - 'supabase/**'
+              # The typed tables generated from the schema, and the pin of their
+              # generator (see the supabase job).
+              - 'apps/mobile/packages/utility/journal_repository/lib/src/supabase_schema.g.dart'
+              - 'apps/mobile/packages/utility/journal_repository/pubspec.yaml'
               - '.github/workflows/ci.yml'
             web:
               - 'apps/web/**'
@@ -193,6 +197,19 @@ jobs:
       - run: supabase db start
       - run: supabase test db --local
       - run: supabase db lint --local --fail-on warning
+      # The app's typed tables are generated from this database
+      # (supabase_typegen); a migration without a regenerated file fails here.
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version-file: apps/mobile/app/.fvmrc
+          cache: true
+      - run: flutter pub get
+        working-directory: apps/mobile
+      - run: dart pub global activate melos 8.7.0
+      - run: melos run schema:generate
+        working-directory: apps/mobile
+      - run: git diff --exit-code -- apps/mobile/packages/utility/journal_repository/lib/src/supabase_schema.g.dart
 
   # Merging is deploying for the schema too: migrations and auth config go to
   # the hosted project from main, never by hand (ADR 0010). Secrets live in the

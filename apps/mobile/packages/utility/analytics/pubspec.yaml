@@ -15,7 +15,7 @@ dependencies:
   http: 1.6.0
   meta: ^1.19.0
   posthog_flutter: 5.39.0
-  supabase_flutter: 3.0.0-dev.4
+  supabase_flutter: 3.0.0-dev.7
 
 dev_dependencies:
   analysis: any
