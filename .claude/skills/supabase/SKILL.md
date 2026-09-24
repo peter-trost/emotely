@@ -48,6 +48,19 @@ supabase stop
    supabase db lint --local --fail-on warning
    ```
 
+4. Regenerate the app's typed tables from the migrated local database and
+   commit the result; CI regenerates from a fresh database and fails on any
+   difference:
+
+   ```bash
+   (cd apps/mobile && melos run schema:generate)
+   ```
+
+   It writes `journal_repository/lib/src/supabase_schema.g.dart` with
+   `supabase_typegen` (pinned as that package's dev dependency). `jsonb`
+   columns come out as `Object?` and `check` constraints as plain `String`,
+   so the freezed models still own those shapes.
+
 Rules: grant privileges explicitly (nothing inherits from defaults), enable
 RLS on every table, `(select auth.uid())` in policies, never a service-role
 path in the app, the agent, CI or Vercel. The one carve-out is operator-run

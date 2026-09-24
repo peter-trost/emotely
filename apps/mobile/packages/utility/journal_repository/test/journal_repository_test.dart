@@ -108,7 +108,8 @@ void main() {
         ),
       ]);
       final request = supabase.to('GET /rest/v1/entries').single;
-      expect(request.query['order'], 'created_at.desc.nullslast');
+      // `created_at` is not null, so no null placement is asked for.
+      expect(request.query['order'], 'created_at.desc');
     });
 
     test('reads one entry by its id', () async {
@@ -219,6 +220,24 @@ void main() {
         'questions': [question.toJson()],
         'app_version': '2.0.0',
       });
+    });
+
+    test('a later round writes the question now pending', () async {
+      supabase.rest('PATCH /rest/v1/sessions', [rowsChanged()]);
+
+      await repository.saveRound(
+        sessionId: 's1',
+        transcript: const ['t1', 't2'],
+        signature: 'sig2',
+        pending: pending,
+        questions: const [question],
+        appVersion: '2.0.0',
+      );
+
+      expect(
+        supabase.to('PATCH /rest/v1/sessions').single.body,
+        containsPair('pending', pending.toJson()),
+      );
     });
 
     test('files the entry and closes the session in one call', () async {

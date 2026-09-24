@@ -44,7 +44,7 @@ void main() {
       await robot.launch();
 
       final read = robot.supabase.to(entriesEndpoint).single;
-      expect(read.query['order'], 'created_at.desc.nullslast');
+      expect(read.query['order'], 'created_at.desc');
       expect(robot.entries, findsNWidgets(2));
       expect(
         tester.getTopLeft(robot.entry('e-new')).dy,

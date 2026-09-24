@@ -31,7 +31,7 @@ dependencies:
   mockito: 5.8.1
   plugin_platform_interface: 2.1.8
   posthog_flutter: 5.39.0
-  supabase_flutter: 3.0.0-dev.4
+  supabase_flutter: 3.0.0-dev.7
   url_launcher_platform_interface: 2.3.2
 
 dev_dependencies:
