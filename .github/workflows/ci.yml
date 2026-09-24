@@ -80,12 +80,18 @@ jobs:
       - run: pnpm --filter @emotely/contract schema && git diff --exit-code packages/contract/contract.schema.json
       # Live-model protocol eval (deterministic assertions; judged behavior
       # evals run nightly). Fork PRs have no secrets and skip; anywhere else
-      # a missing key is a broken 'ci' environment and fails loudly.
+      # a missing key is a broken secret and fails loudly. Dependabot runs
+      # never see environment secrets, only Dependabot secrets, so theirs is
+      # a Dependabot secret of the same name — a dependency bump is exactly
+      # what this eval should gate.
       - run: |
           if [ -n "$AI_GATEWAY_API_KEY" ]; then
             pnpm --filter @emotely/agent eval
           elif [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
             echo "eval skipped: fork PR has no gateway key"
+          elif [ "${{ github.actor }}" = "dependabot[bot]" ]; then
+            echo "::error::AI_GATEWAY_API_KEY is missing — check the repo's Dependabot secret"
+            exit 1
           else
             echo "::error::AI_GATEWAY_API_KEY is missing — check the 'ci' environment secret"
             exit 1
