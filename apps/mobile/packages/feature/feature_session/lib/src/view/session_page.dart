@@ -23,6 +23,28 @@ class const SessionPage({final String? resume, super.key})
 class const SessionView({super.key}) extends StatelessWidget {
   static const retryKey = Key('session_view.retry');
   static const questionKey = Key('session_view.question');
+  static const startOverKey = Key('session_view.start_over');
+
+  /// The words for each [SessionFailureReason], the one place the session's
+  /// failure copy lives, so each becomes one localized string.
+  static String describe(SessionFailureReason reason) => switch (reason) {
+    SessionFailureReason.unreachable =>
+      'Could not reach the journaling assistant.',
+    // It is us and not their connection, what they wrote is safe, and
+    // waiting is what helps (#107).
+    SessionFailureReason.modelUnavailable =>
+      'The journaling assistant is unavailable right now. This is not your '
+          'connection, and your entry is safe. Please try again later.',
+    SessionFailureReason.refused =>
+      'Something went wrong on our side. Please try again.',
+    SessionFailureReason.cannotContinue =>
+      'This session can no longer be continued. Start a new one; your '
+          'saved entries are not affected.',
+    SessionFailureReason.entrySaveFailed =>
+      'Your entry could not be saved. Please try again.',
+    SessionFailureReason.sessionReadFailed =>
+      'Could not load your unfinished session. Please try again.',
+  };
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -41,7 +63,7 @@ class const SessionView({super.key}) extends StatelessWidget {
               entry: entry,
               questions: questions,
             ),
-            SessionFailure(:final message) => _Failure(message: message),
+            SessionFailure(:final reason) => _Failure(reason: reason),
           },
         ),
       ),
@@ -91,20 +113,30 @@ class const _Question({
   }
 }
 
-class const _Failure({required final String message}) extends StatelessWidget {
+class const _Failure({required final SessionFailureReason reason})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(
       mainAxisSize: MainAxisSize.min,
       spacing: 16,
       children: [
-        Text(message, textAlign: TextAlign.center),
-        FilledButton(
-          key: SessionView.retryKey,
-          onPressed: () =>
-              context.read<SessionBloc>().add(const SessionEvent.retried()),
-          child: const Text('Try again'),
-        ),
+        Text(SessionView.describe(reason), textAlign: TextAlign.center),
+        // Resending cannot help a session the agent will not continue.
+        if (reason == SessionFailureReason.cannotContinue)
+          FilledButton(
+            key: SessionView.startOverKey,
+            onPressed: () =>
+                context.read<SessionBloc>().add(const SessionEvent.restarted()),
+            child: const Text('Start over'),
+          )
+        else
+          FilledButton(
+            key: SessionView.retryKey,
+            onPressed: () =>
+                context.read<SessionBloc>().add(const SessionEvent.retried()),
+            child: const Text('Try again'),
+          ),
       ],
     ),
   );

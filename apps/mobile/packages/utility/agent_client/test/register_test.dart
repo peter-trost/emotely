@@ -18,6 +18,7 @@ void main() {
         configUrl: ConfigStub.endpoint,
         appVersion: '2.0.0',
         accessToken: () => 'jwt-123',
+        refreshAccessToken: Future.value,
       );
 
       final agentClient = getIt<AgentClient>();
@@ -40,6 +41,7 @@ void main() {
         configUrl: ConfigStub.endpoint,
         appVersion: '2.0.0',
         accessToken: () => null,
+        refreshAccessToken: Future.value,
       );
 
       expect(getIt<AgentClient>(), same(getIt<AgentClient>()));

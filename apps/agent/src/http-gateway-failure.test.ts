@@ -51,7 +51,10 @@ describe("a model round the gateway refused", () => {
   it("answers 502, not a generic 500", async () => {
     const res = await refusing()(post({}));
     assert.equal(res.status, 502);
-    assert.deepEqual(await res.json(), { error: "model unavailable" });
+    assert.deepEqual(await res.json(), {
+      code: "model_unavailable",
+      error: "model unavailable",
+    });
   });
 
   it("reports the failure as its own signal", async () => {

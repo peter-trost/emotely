@@ -39,6 +39,17 @@ transcript-shape parse sits *behind* the signature check on purpose — a failur
 there is a server bug and should 500 loudly, not be silently absorbed as bad
 input.
 
+### Amendment 2026-09-24: every refusal carries a code
+
+Two refusals shared a status: a missing or lapsed sign-in and a bad transcript
+signature are both 401, told apart only by their English text. Every error
+response is now `{ code, error }` (`errorResponse` in `packages/contract`):
+`code` is a closed set the app acts on and words itself, `error` stays English
+for logs and for app versions that predate `code`. The app renews its token
+and resends once on `unauthorized`, and offers a fresh session instead of a
+retry on `invalid_signature` and `transcript_too_long`. No server text reaches
+a screen, so every message can be localized.
+
 ## Cost backstops
 
 - A per-round output-token cap and a round guard derived from the transcript

@@ -22,6 +22,33 @@ sealed class SessionState with _$SessionState {
     required Map<String, AskQuestion> questions,
   }) = SessionCompleted;
 
-  /// The last round failed with [message]; the screen offers a retry.
-  const factory failure({required String message}) = SessionFailure;
+  /// The last step failed for [reason]; the screen words it and offers the
+  /// way out: a retry, or a fresh session when retrying cannot work.
+  const factory failure({required SessionFailureReason reason}) =
+      SessionFailure;
+}
+
+/// Why a session step failed, as the user needs to know it. The bloc names
+/// the reason, the screen owns the words, so every message is localizable
+/// and no server text ever reaches a screen.
+enum SessionFailureReason() {
+  /// No answer from the agent at all: offline, timed out, or not the agent.
+  unreachable,
+
+  /// The agent's model is unavailable; waiting is what helps.
+  modelUnavailable,
+
+  /// The agent refused the round for a reason retrying may fix.
+  refused,
+
+  /// The agent will never continue this session (its transcript is not one
+  /// the agent signed, or it is past the message cap): only a fresh session
+  /// helps.
+  cannotContinue,
+
+  /// The finished entry could not be filed.
+  entrySaveFailed,
+
+  /// The unfinished session could not be read back.
+  sessionReadFailed,
 }
