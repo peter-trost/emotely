@@ -89,7 +89,7 @@ class _TextListInputState() extends State<TextListInput> {
           onSubmitted: (_) => _fields[index + 1].focus.requestFocus(),
         ),
       SubmitButton(
-        key: TextListInput.submitKey,
+        buttonKey: TextListInput.submitKey,
         onPressed: _answer.isEmpty
             ? null
             : () => widget.onSubmit(Answer.textList(_answer)),

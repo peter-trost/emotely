@@ -40,7 +40,7 @@ class _LongtextInputState() extends State<LongtextInput> {
         onChanged: (_) => setState(() {}),
       ),
       SubmitButton(
-        key: LongtextInput.submitKey,
+        buttonKey: LongtextInput.submitKey,
         onPressed: _text.isEmpty
             ? null
             : () => widget.onSubmit(Answer.longtext(_text)),
