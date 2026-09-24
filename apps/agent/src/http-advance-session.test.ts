@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { advanceSessionResponse } from "@emotely/contract";
 import { createAdvanceSessionHandler } from "./http-advance-session.ts";
 import type { AdvanceResult } from "./session-core.ts";
+import { storedAsJsonb } from "./test-helpers.ts";
 import { signTranscript } from "./transcript-auth.ts";
 
 type HandlerBody = {
@@ -20,18 +21,32 @@ async function bodyOf(res: Response): Promise<HandlerBody> {
 
 const SECRET = "handler-secret";
 
+const asked = {
+  question_id: "q1",
+  question: "Q?",
+  answer_type: "rating",
+} as const;
+
 const awaiting: AdvanceResult = {
   status: "awaiting_answer",
   messages: [
     { role: "user", content: "I am ready to start my journaling session." },
+    {
+      role: "assistant",
+      content: [
+        {
+          type: "tool-call",
+          toolCallId: "c1",
+          toolName: "ask_question",
+          input: asked,
+        },
+      ],
+    },
   ],
   usage: { inputTokens: 1, cacheReadTokens: 0, outputTokens: 1 },
   roundLatenciesMs: [1],
   promptId: "session/v1",
-  pending: {
-    toolCallId: "c1",
-    input: { question_id: "q1", question: "Q?", answer_type: "rating" },
-  },
+  pending: { toolCallId: "c1", input: asked },
 };
 
 const signedIn = async () => ({ userId: "user-1" });
@@ -138,6 +153,18 @@ describe("advance-session handler", () => {
     const res = await handler()(
       post({
         transcript: first.transcript,
+        signature: first.signature,
+        answer: { tool_call_id: "c1", value: 7 },
+      }),
+    );
+    assert.equal(res.status, 200);
+  });
+
+  it("resumes a transcript that was stored in Postgres jsonb", async () => {
+    const first = await bodyOf(await handler()(post({})));
+    const res = await handler()(
+      post({
+        transcript: storedAsJsonb(first.transcript),
         signature: first.signature,
         answer: { tool_call_id: "c1", value: 7 },
       }),

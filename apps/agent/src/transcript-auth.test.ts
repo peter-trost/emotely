@@ -1,11 +1,33 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { storedAsJsonb } from "./test-helpers.ts";
 import { signTranscript, verifyTranscript } from "./transcript-auth.ts";
 
 const SECRET = "test-secret";
 const transcript = [
   { role: "user", content: "I am ready to start my journaling session." },
   { role: "assistant", content: [{ type: "text", text: "Hi!" }] },
+];
+
+type AskedMessage = {
+  content: [{ input: Record<string, unknown> } & Record<string, unknown>];
+} & Record<string, unknown>;
+
+// A round as the agent hands it out: the tool call's keys are in the order
+// jsonb does not keep.
+const asked = [
+  transcript[0],
+  {
+    role: "assistant",
+    content: [
+      {
+        type: "tool-call",
+        toolCallId: "c1",
+        toolName: "ask_question",
+        input: { question_id: "q1", question: "Q?", answer_type: "rating" },
+      },
+    ],
+  },
 ];
 
 describe("transcript signing", () => {
@@ -26,6 +48,29 @@ describe("transcript signing", () => {
   it("rejects a signature made with a different secret", () => {
     const signature = signTranscript(transcript, "other-secret");
     assert.equal(verifyTranscript(transcript, signature, SECRET), false);
+  });
+
+  it("accepts the transcript back from Postgres jsonb, keys reordered at every depth", () => {
+    const stored = storedAsJsonb(asked);
+    // Precondition, or this test proves nothing: the stored copy really is
+    // a different JSON text.
+    assert.notEqual(JSON.stringify(stored), JSON.stringify(asked));
+    const signature = signTranscript(asked, SECRET);
+    assert.equal(verifyTranscript(stored, signature, SECRET), true);
+  });
+
+  it("still rejects a changed value once the keys are reordered", () => {
+    const signature = signTranscript(asked, SECRET);
+    const [user, assistant] = storedAsJsonb(asked) as [unknown, AskedMessage];
+    const [call] = assistant.content;
+    const tampered = [
+      user,
+      {
+        ...assistant,
+        content: [{ ...call, input: { ...call.input, question_id: "q2" } }],
+      },
+    ];
+    assert.equal(verifyTranscript(tampered, signature, SECRET), false);
   });
 
   it("rejects garbage signatures without throwing", () => {
