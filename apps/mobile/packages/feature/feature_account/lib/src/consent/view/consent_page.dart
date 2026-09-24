@@ -91,13 +91,7 @@ class _AskState() extends State<_Ask> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 16,
       children: [
-        _Margin(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 16,
-            children: [for (final point in consentPoints) _Point(point: point)],
-          ),
-        ),
+        const _Margin(child: _Points()),
         TextButton(
           key: ConsentView.noticeKey,
           onPressed: () => unawaited(openPrivacyNotice()),
@@ -115,47 +109,58 @@ class _AskState() extends State<_Ask> {
           controlAffinity: ListTileControlAffinity.leading,
           onChanged: (ticked) => setState(() => _ticked = ticked ?? false),
         ),
-        _Margin(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 16,
-            children: [
-              // A disabled button reads as just "dimmed" to a screen
-              // reader, which leaves someone who cannot see the checkbox
-              // with no way to know why the button does nothing. The hint
-              // says what to do.
-              Semantics(
-                enabled: _ticked,
-                hint: _ticked ? null : consentAgreeBlockedHint,
-                child: FilledButton(
-                  key: ConsentView.agreeKey,
-                  // Disabled until the box is ticked: the button alone is
-                  // not the affirmative act, the pair is.
-                  onPressed: _ticked
-                      ? () => context.read<ConsentBloc>().add(
-                          const ConsentEvent.granted(),
-                        )
-                      : null,
-                  child: const Text(consentAgreeLabel),
-                ),
-              ),
-              TextButton(
-                key: ConsentView.declineKey,
-                onPressed: () {
-                  context.read<ConsentBloc>().add(
-                    const ConsentEvent.declined(),
-                  );
-                  // Declining is an answer, not a dead end: back to the
-                  // journal, which stays entirely usable.
-                  Navigator.of(context).pop(ConsentOutcome.declined);
-                },
-                child: const Text(consentDeclineLabel),
-              ),
-            ],
-          ),
-        ),
+        _Margin(child: _Answers(ticked: _ticked)),
       ],
     ),
+  );
+}
+
+/// What is sent where: every point of [consentPoints], one under the other.
+class const _Points() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: 16,
+    children: [for (final point in consentPoints) _Point(point: point)],
+  );
+}
+
+/// Agree, enabled only once [ticked], and decline.
+class const _Answers({required final bool ticked}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: 16,
+    children: [
+      // A disabled button reads as just "dimmed" to a screen reader, which
+      // leaves someone who cannot see the checkbox with no way to know why
+      // the button does nothing. The hint says what to do.
+      Semantics(
+        enabled: ticked,
+        hint: ticked ? null : consentAgreeBlockedHint,
+        child: FilledButton(
+          key: ConsentView.agreeKey,
+          // Disabled until the box is ticked: the button alone is not the
+          // affirmative act, the pair is.
+          onPressed: ticked
+              ? () => context.read<ConsentBloc>().add(
+                  const ConsentEvent.granted(),
+                )
+              : null,
+          child: const Text(consentAgreeLabel),
+        ),
+      ),
+      TextButton(
+        key: ConsentView.declineKey,
+        onPressed: () {
+          context.read<ConsentBloc>().add(const ConsentEvent.declined());
+          // Declining is an answer, not a dead end: back to the journal,
+          // which stays entirely usable.
+          Navigator.of(context).pop(ConsentOutcome.declined);
+        },
+        child: const Text(consentDeclineLabel),
+      ),
+    ],
   );
 }
 

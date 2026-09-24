@@ -67,78 +67,93 @@ class const MoreView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('More')),
-    body: SafeArea(
+    body: const SafeArea(
       // A handful of rows, all built at once rather than as they scroll
       // into view: a screen reader, and a test, can reach every row
       // without scrolling first.
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: sectionGap),
+        padding: EdgeInsets.only(bottom: sectionGap),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Section(
-              title: accountSection,
-              children: [
-                ListTile(
-                  key: accountKey,
-                  title: const Text(accountLabel),
-                  subtitle: const Text(accountExplanation),
-                  trailing: const Icon(Icons.chevron_right),
-                  // The feature's own screen, on the feature's own route
-                  // (ADR 0016).
-                  onTap: () => const AccountRoute().go(context),
-                ),
-              ],
-            ),
-            const _Section(title: consentSection, children: [_Consent()]),
+            _Section(title: accountSection, children: [_AccountRow()]),
+            _Section(title: consentSection, children: [_Consent()]),
+            // The privacy notice and the imprint are required to be
+            // reachable from inside the app — Apple guideline 5.1.1 (i) and
+            // Google Play's User Data policy for the notice, § 5 DDG for the
+            // imprint of a German provider.
             _Section(
               title: legalSection,
-              children: [
-                // The privacy notice and the imprint are required to be
-                // reachable from inside the app — Apple guideline 5.1.1 (i)
-                // and Google Play's User Data policy for the notice, § 5 DDG
-                // for the imprint of a German provider.
-                ListTile(
-                  key: privacyNoticeKey,
-                  title: const Text(privacyNoticeLabel),
-                  trailing: const Icon(Icons.open_in_new),
-                  onTap: () => unawaited(openPrivacyNotice()),
-                ),
-                ListTile(
-                  key: imprintKey,
-                  title: const Text(imprintLabel),
-                  trailing: const Icon(Icons.open_in_new),
-                  onTap: () => unawaited(openImprint()),
-                ),
-              ],
+              children: [_PrivacyNoticeRow(), _ImprintRow()],
             ),
-            _Section(
-              title: feedbackSection,
-              children: [
-                ListTile(
-                  key: feedbackKey,
-                  title: const Text(feedbackLabel),
-                  subtitle: const Text(feedbackExplanation),
-                  trailing: const Icon(Icons.mail_outline),
-                  onTap: () => context.read<AccountBloc>().add(
-                    const AccountEvent.feedbackRequested(),
-                  ),
-                ),
-              ],
-            ),
+            _Section(title: feedbackSection, children: [_FeedbackRow()]),
             // Last, on its own, below everything the user might want first.
-            Padding(
-              padding: const EdgeInsets.only(top: sectionGap),
-              child: ListTile(
-                key: signOutKey,
-                leading: const Icon(Icons.logout),
-                title: const Text(signOutLabel),
-                onTap: () => GetIt.I<AccountNavigator>().signOut(context),
-              ),
-            ),
+            _SignOutRow(),
           ],
         ),
       ),
+    ),
+  );
+}
+
+/// The account screen, on the feature's own route (ADR 0016).
+class const _AccountRow() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: MoreView.accountKey,
+    title: const Text(MoreView.accountLabel),
+    subtitle: const Text(MoreView.accountExplanation),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: () => const AccountRoute().go(context),
+  );
+}
+
+/// The privacy notice, opened in the browser.
+class const _PrivacyNoticeRow() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: MoreView.privacyNoticeKey,
+    title: const Text(privacyNoticeLabel),
+    trailing: const Icon(Icons.open_in_new),
+    onTap: () => unawaited(openPrivacyNotice()),
+  );
+}
+
+/// The imprint, opened in the browser.
+class const _ImprintRow() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: MoreView.imprintKey,
+    title: const Text(imprintLabel),
+    trailing: const Icon(Icons.open_in_new),
+    onTap: () => unawaited(openImprint()),
+  );
+}
+
+/// The feedback mail, which the [AccountBloc] composes because it carries
+/// the build the app runs.
+class const _FeedbackRow() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: MoreView.feedbackKey,
+    title: const Text(feedbackLabel),
+    subtitle: const Text(MoreView.feedbackExplanation),
+    trailing: const Icon(Icons.mail_outline),
+    onTap: () =>
+        context.read<AccountBloc>().add(const AccountEvent.feedbackRequested()),
+  );
+}
+
+/// Signing out, set off from the last section by [MoreView.sectionGap].
+class const _SignOutRow() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: MoreView.sectionGap),
+    child: ListTile(
+      key: MoreView.signOutKey,
+      leading: const Icon(Icons.logout),
+      title: const Text(MoreView.signOutLabel),
+      onTap: () => GetIt.I<AccountNavigator>().signOut(context),
     ),
   );
 }
