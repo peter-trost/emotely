@@ -743,7 +743,12 @@ void main() {
         expect(robot.passwordField, findsOneWidget);
         expect(robot.errorText, SignInPage.wrongPasswordMessage);
         expect(robot.analytics.events, [event('sign_in_password_failed')]);
-        expect(robot.analytics.exceptions, isEmpty);
+        // supabase_auth 3 throws rather than answer without a session; a
+        // 200 that signs no one in is the server misbehaving, so it is
+        // reported like any other failed password grant.
+        expect(robot.analytics.exceptions, [
+          captured(withheld(AuthException), {'step': 'sign_in_password'}),
+        ]);
       });
 
       testWidgets('is told when Supabase is unreachable', (tester) async {

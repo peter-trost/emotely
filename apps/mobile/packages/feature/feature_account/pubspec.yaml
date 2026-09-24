@@ -18,7 +18,7 @@ dependencies:
   go_router: 18.0.1
   legal_links: any
   material_ui: ^1.1.0
-  supabase_flutter: 3.0.0-dev.4
+  supabase_flutter: 3.0.0-dev.7
 
 dev_dependencies:
   analysis: any
