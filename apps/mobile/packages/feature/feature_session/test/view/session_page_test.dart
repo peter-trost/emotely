@@ -147,14 +147,13 @@ void main() {
       expect(isSubmitEnabled(tester, LongtextInput.submitKey), isFalse);
     });
 
-    testWidgets('shows the server message and retries the same round', (
+    testWidgets('words a refusal itself and retries the same round', (
       tester,
     ) async {
-      const serverMessage = 'rate limited';
       final agent = AgentStub()
         ..script([
           awaiting(toolCallId: 'c1', question: SessionRobot.rate),
-          refused(429, serverMessage),
+          refused(400, AgentErrorCode.answerMismatch),
           awaiting(toolCallId: 'c2', question: SessionRobot.grateful),
         ]);
       final robot = SessionRobot(tester, agent);
@@ -163,7 +162,8 @@ void main() {
 
       await robot.answerRating(5);
 
-      expect(find.text(serverMessage), findsOneWidget);
+      expect(find.text(SessionRobot.refusedMessage), findsOneWidget);
+      expect(find.text(AgentErrorCode.answerMismatch.wire), findsNothing);
       expect(robot.retry, findsOneWidget);
 
       await robot.tapRetry();
@@ -186,7 +186,8 @@ void main() {
     testWidgets('a refused model says the assistant is unavailable', (
       tester,
     ) async {
-      final agent = AgentStub()..script([refused(502, 'model unavailable')]);
+      final agent = AgentStub()
+        ..script([refused(502, AgentErrorCode.modelUnavailable)]);
       final robot = SessionRobot(tester, agent);
       await robot.launch();
       await robot.settle();
@@ -194,7 +195,7 @@ void main() {
       expect(find.text(SessionRobot.unavailableMessage), findsOneWidget);
       // Neither the server's wording nor the connection story the user would
       // otherwise act on: retrying now cannot work, and their entry is safe.
-      expect(find.text('model unavailable'), findsNothing);
+      expect(find.text(AgentErrorCode.modelUnavailable.wire), findsNothing);
       expect(find.text(SessionRobot.unreachableMessage), findsNothing);
       // The round never completed, so the same round is still the retry.
       expect(robot.retry, findsOneWidget);
@@ -206,7 +207,7 @@ void main() {
       final agent = AgentStub()
         ..script([
           awaiting(toolCallId: 'c1', question: SessionRobot.rate),
-          refused(502, 'model unavailable'),
+          refused(502, AgentErrorCode.modelUnavailable),
           awaiting(toolCallId: 'c2', question: SessionRobot.grateful),
         ]);
       final robot = SessionRobot(tester, agent);
@@ -226,16 +227,37 @@ void main() {
       expect(robot.questionText, SessionRobot.grateful.question);
     });
 
-    testWidgets('a server error still shows the server message', (
+    testWidgets('a lapsed sign-in is renewed and the round goes through', (
+      tester,
+    ) async {
+      final agent = AgentStub()
+        ..script([
+          refused(401, AgentErrorCode.unauthorized),
+          awaiting(toolCallId: 'c1', question: SessionRobot.rate),
+        ]);
+      final supabase = SupabaseStub()..script(password: [sessionGranted()]);
+      final robot = SessionRobot(tester, agent, supabase: supabase);
+      await robot.launch();
+      await robot.settle();
+
+      final renewal = supabase.to('POST /auth/v1/token').single;
+      expect(renewal.query['grant_type'], 'refresh_token');
+      expect(agent.requests, hasLength(2));
+      expect(robot.questionText, SessionRobot.rate.question);
+      expect(robot.analytics.events, isNot(contains(event('session_failed'))));
+    });
+
+    testWidgets("a server error gets our own words, never the server's", (
       tester,
     ) async {
       const serverMessage = 'boom';
-      final agent = AgentStub()..script([refused(500, serverMessage)]);
+      final agent = AgentStub()..script([raw(serverMessage, 500)]);
       final robot = SessionRobot(tester, agent);
       await robot.launch();
       await robot.settle();
 
-      expect(find.text(serverMessage), findsOneWidget);
+      expect(find.text(SessionRobot.refusedMessage), findsOneWidget);
+      expect(find.text(serverMessage), findsNothing);
       expect(find.text(SessionRobot.unavailableMessage), findsNothing);
       expect(robot.retry, findsOneWidget);
     });
@@ -397,7 +419,7 @@ void main() {
       ) async {
         final agent = AgentStub()
           ..script([
-            refused(429, 'rate limited'),
+            raw('rate limited', 429),
             unreachable(),
             awaiting(toolCallId: 'c1', question: SessionRobot.rate),
           ]);
@@ -425,7 +447,11 @@ void main() {
           captured(
             isA<AgentException>()
                 .having((error) => error.statusCode, 'statusCode', 429)
-                .having((error) => error.message, 'message', 'rate limited'),
+                .having(
+                  (error) => error.message,
+                  'message',
+                  'unexpected response',
+                ),
             {'step': 'session_round', 'status_code': 429},
           ),
           captured(
@@ -442,7 +468,8 @@ void main() {
       testWidgets('reports a refused model under its own status code', (
         tester,
       ) async {
-        final agent = AgentStub()..script([refused(502, 'model unavailable')]);
+        final agent = AgentStub()
+          ..script([refused(502, AgentErrorCode.modelUnavailable)]);
         final robot = SessionRobot(tester, agent);
         await robot.launch();
         await robot.settle();
@@ -460,7 +487,7 @@ void main() {
                 .having(
                   (error) => error.message,
                   'message',
-                  'model unavailable',
+                  AgentErrorCode.modelUnavailable.wire,
                 ),
             {'step': 'session_round', 'status_code': 502},
           ),
@@ -591,6 +618,40 @@ void main() {
         expect(robot.analytics.events.first, event('session_started'));
       });
 
+      testWidgets('a stored session the agent no longer accepts starts over '
+          'instead of retrying', (tester) async {
+        final agent = AgentStub()
+          ..script([
+            refused(401, AgentErrorCode.invalidSignature),
+            awaiting(toolCallId: 'c9', question: SessionRobot.grateful),
+          ]);
+        final robot = SessionRobot(
+          tester,
+          agent,
+          supabase: storing(pending: pending),
+          resume: SupabaseStub.sessionId,
+        );
+        await robot.launch();
+        await robot.settle();
+        await robot.answerRating(7);
+
+        expect(find.text(SessionRobot.cannotContinueMessage), findsOneWidget);
+        expect(find.textContaining('signature'), findsNothing);
+        // Resending the same transcript can never succeed.
+        expect(robot.retry, findsNothing);
+
+        await robot.tapStartOver();
+
+        // A fresh session: no transcript, and its first save replaces the
+        // stored one the agent refused.
+        expect(agent.lastRequest, isNot(contains('transcript')));
+        final replaced = robot.supabaseStub.to('DELETE /rest/v1/sessions');
+        expect(replaced.single.query['status'], 'eq.in_progress');
+        expect(robot.supabaseStub.to('POST /rest/v1/sessions'), hasLength(1));
+        expect(robot.questionText, SessionRobot.grateful.question);
+        expect(find.text('Question 1'), findsOneWidget);
+      });
+
       testWidgets('says so when the stored session cannot be read, and '
           'retries', (tester) async {
         final agent = AgentStub()..script([finished]);
@@ -653,7 +714,18 @@ void main() {
       });
 
       testWidgets('on failure', (tester) async {
-        final agent = AgentStub()..script([refused(500, 'boom')]);
+        final agent = AgentStub()..script([raw('boom', 500)]);
+
+        final robot = SessionRobot(tester, agent);
+        await tester.expectMeetsAccessibilityGuidelines(
+          robot.app,
+          prepare: (tester) => robot.settle(),
+        );
+      });
+
+      testWidgets('when the session cannot continue', (tester) async {
+        final agent = AgentStub()
+          ..script([refused(401, AgentErrorCode.invalidSignature)]);
 
         final robot = SessionRobot(tester, agent);
         await tester.expectMeetsAccessibilityGuidelines(

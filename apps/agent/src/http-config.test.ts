@@ -84,7 +84,10 @@ describe("config handler", () => {
     for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
       const res = await createConfigHandler(CONFIG)(get(method));
       assert.equal(res.status, 405, method);
-      assert.deepEqual(await res.json(), { error: "GET only" });
+      assert.deepEqual(await res.json(), {
+        code: "method_not_allowed",
+        error: "GET only",
+      });
     }
   });
 

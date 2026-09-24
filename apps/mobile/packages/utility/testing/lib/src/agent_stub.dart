@@ -21,6 +21,10 @@ class AgentStub() {
   /// Supabase session, a bare stub sends none.
   String? Function() accessToken = () => null;
 
+  /// How the client renews a lapsed token; the app harness points this at
+  /// the Supabase session, a bare stub renews nothing.
+  Future<void> Function() refreshAccessToken = Future.value;
+
   /// The endpoint the stub answers on; any URL works, it never leaves the
   /// process.
   static final Uri endpoint = Uri.parse(
@@ -38,6 +42,7 @@ class AgentStub() {
     endpoint: endpoint,
     appVersion: appVersion,
     accessToken: () => accessToken(),
+    refreshAccessToken: () => refreshAccessToken(),
   );
 
   /// The last request body, decoded.
@@ -99,9 +104,10 @@ Round completed({
       },
     });
 
-/// The server refused the round with [statusCode] and [message].
-Round refused(int statusCode, String message) =>
-    () async => _response({'error': message}, statusCode);
+/// The agent refused the round with [statusCode] and [code], the way it
+/// does: the code to act on, English beside it for logs.
+Round refused(int statusCode, AgentErrorCode code) =>
+    () async => _response({'code': code.wire, 'error': code.wire}, statusCode);
 
 /// A raw server response, for bodies that are not the JSON envelope.
 Round raw(String body, int statusCode) =>

@@ -28,28 +28,8 @@ class SessionBloc({
     on<SessionStarted>(_onStarted);
     on<SessionAnswered>(_onAnswered);
     on<SessionRetried>(_onRetried);
+    on<SessionRestarted>(_onRestarted);
   }
-
-  /// The failure copy when the finished entry could not be filed.
-  static const entrySaveFailedMessage =
-      'Your entry could not be saved. Please try again.';
-
-  /// The failure copy when the session to resume could not be read back.
-  static const sessionReadFailedMessage =
-      'Could not load your unfinished session. Please try again.';
-
-  /// What the server answers when the gateway refused the round: the model
-  /// could not be reached, so no amount of retrying now will help.
-  static const modelUnavailableStatus = 502;
-
-  /// The failure copy for [modelUnavailableStatus]. Says the three things
-  /// the user needs and nothing more: it is us and not their connection,
-  /// what they have written is safe, and waiting is the thing that helps.
-  /// The server's own message never reaches here — it names models and
-  /// providers the client has no business showing (#107).
-  static const modelUnavailableMessage =
-      'The journaling assistant is unavailable right now. This is not your '
-      'connection, and your entry is safe. Please try again later.';
 
   List<Object?>? _transcript;
   String? _signature;
@@ -72,9 +52,12 @@ class SessionBloc({
       try {
         stored = await _repository.session(id);
       } on Exception catch (error, stackTrace) {
-        unawaited(_analytics.sessionFailed());
-        unawaited(_errors.sessionFailed(error, stackTrace));
-        emit(const SessionState.failure(message: sessionReadFailedMessage));
+        _failed(
+          error,
+          stackTrace,
+          SessionFailureReason.sessionReadFailed,
+          emit,
+        );
         return;
       }
       // Gone in the meantime — discarded on another device, or finished
@@ -162,26 +145,50 @@ class SessionBloc({
       unawaited(
         _errors.sessionFailed(error, stackTrace, statusCode: error.statusCode),
       );
-      // A refused model is the one refusal the user can act on differently:
-      // retrying now cannot succeed, so it gets copy of our own rather than
-      // the server's. Every other status keeps the server's message, which
-      // is written for the user (a rate limit, a bad request).
-      emit(
-        SessionState.failure(
-          message: error.statusCode == modelUnavailableStatus
-              ? modelUnavailableMessage
-              : error.message,
-        ),
-      );
+      emit(SessionState.failure(reason: _reasonFor(error.code)));
     } on Exception catch (error, stackTrace) {
-      unawaited(_analytics.sessionFailed());
-      unawaited(_errors.sessionFailed(error, stackTrace));
-      emit(
-        const SessionState.failure(
-          message: 'Could not reach the journaling assistant.',
-        ),
-      );
+      _failed(error, stackTrace, SessionFailureReason.unreachable, emit);
     }
+  }
+
+  /// Reports a step that failed without an answer from the agent, and says
+  /// so on screen.
+  void _failed(
+    Exception error,
+    StackTrace stackTrace,
+    SessionFailureReason reason,
+    Emitter<SessionState> emit,
+  ) {
+    unawaited(_analytics.sessionFailed());
+    unawaited(_errors.sessionFailed(error, stackTrace));
+    emit(SessionState.failure(reason: reason));
+  }
+
+  /// What a refusal means for the user; the agent's words never reach the
+  /// screen, only its code does. A lapsed sign-in never gets here as such:
+  /// the client renews it and resends before giving up.
+  static SessionFailureReason _reasonFor(AgentErrorCode? code) =>
+      switch (code) {
+        AgentErrorCode.modelUnavailable =>
+          SessionFailureReason.modelUnavailable,
+        AgentErrorCode.invalidSignature ||
+        AgentErrorCode.transcriptTooLong => SessionFailureReason.cannotContinue,
+        _ => SessionFailureReason.refused,
+      };
+
+  /// Drops the session the agent will not continue and begins a fresh one.
+  /// Nothing is deleted here: the fresh session's first save replaces the
+  /// unfinished row, as every new session does.
+  Future<void> _onRestarted(
+    SessionRestarted event,
+    Emitter<SessionState> emit,
+  ) {
+    _transcript = null;
+    _signature = null;
+    _sessionId = null;
+    _asked.clear();
+    unawaited(_analytics.sessionStarted());
+    return _round(emit, _agentClient.advance);
   }
 
   SessionState _await(PendingQuestion pending) {
@@ -255,7 +262,11 @@ class SessionBloc({
       unawaited(
         _errors.entrySaveFailed(error, stackTrace, sessionId: _sessionId),
       );
-      emit(const SessionState.failure(message: entrySaveFailedMessage));
+      emit(
+        const SessionState.failure(
+          reason: SessionFailureReason.entrySaveFailed,
+        ),
+      );
       return;
     }
     unawaited(_analytics.sessionCompleted(answers: entry.answers.length));

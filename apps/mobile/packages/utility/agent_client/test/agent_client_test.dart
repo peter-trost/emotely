@@ -90,41 +90,106 @@ void main() {
       expect(stub.lastHeaders['authorization'], 'Bearer jwt-123');
     });
 
-    test('surfaces the server error message on a non-200', () async {
-      const message = 'invalid signature';
-      final stub = AgentStub()..script([refused(401, message)]);
+    test('surfaces the code of a refusal, and its message for logs', () async {
+      final stub = AgentStub()
+        ..script([refused(401, AgentErrorCode.invalidSignature)]);
 
       await expectLater(
         stub.agentClient.advance(),
         throwsA(
           isA<AgentException>()
               .having((e) => e.statusCode, 'statusCode', 401)
-              .having((e) => e.message, 'message', message)
+              .having((e) => e.code, 'code', AgentErrorCode.invalidSignature)
               .having(
                 (e) => e.toString(),
                 'toString',
-                'AgentException(401): $message',
+                'AgentException(401): invalid_signature',
               ),
         ),
       );
     });
 
+    test('renews the sign-in once and resends when it has lapsed', () async {
+      var token = 'expired';
+      final stub = AgentStub()
+        ..accessToken = (() => token)
+        ..refreshAccessToken = (() => Future.sync(() => token = 'renewed'))
+        ..script([
+          refused(401, AgentErrorCode.unauthorized),
+          awaiting(toolCallId: toolCallId, question: question),
+        ]);
+
+      final response = await stub.agentClient.advance(
+        transcript: AgentStub.transcript,
+        signature: AgentStub.signature,
+      );
+
+      expect(response, isA<AwaitingAnswer>());
+      expect(stub.headers.map((h) => h['authorization']), [
+        'Bearer expired',
+        'Bearer renewed',
+      ]);
+      expect(stub.requests[1], stub.requests[0]);
+    });
+
+    test('gives up when the renewed sign-in is refused too', () async {
+      var renewals = 0;
+      final stub = AgentStub()
+        ..refreshAccessToken = (() => Future.sync(() => renewals++))
+        ..script([
+          refused(401, AgentErrorCode.unauthorized),
+          refused(401, AgentErrorCode.unauthorized),
+        ]);
+
+      await expectLater(
+        stub.agentClient.advance(),
+        throwsA(
+          isA<AgentException>().having(
+            (e) => e.code,
+            'code',
+            AgentErrorCode.unauthorized,
+          ),
+        ),
+      );
+      expect(renewals, 1);
+      expect(stub.requests, hasLength(2));
+    });
+
     test(
-      'falls back to a generic message when the error is not JSON',
+      'renews nothing for a refusal that is not about the sign-in',
+      () async {
+        var renewals = 0;
+        final stub = AgentStub()
+          ..refreshAccessToken = (() => Future.sync(() => renewals++))
+          ..script([refused(401, AgentErrorCode.invalidSignature)]);
+
+        await expectLater(
+          stub.agentClient.advance(),
+          throwsA(isA<AgentException>()),
+        );
+        expect(renewals, 0);
+        expect(stub.requests, hasLength(1));
+      },
+    );
+
+    test(
+      'has no code when the error is not the envelope or the code is new',
       () async {
         final stub = AgentStub()
           ..script([
             raw('<html>Bad Gateway</html>', 502),
             raw(jsonEncode({'detail': 'nope'}), 500),
+            raw(jsonEncode({'code': 'added_later', 'error': 'new'}), 400),
           ]);
 
-        for (final code in [502, 500]) {
+        for (final status in [502, 500, 400]) {
           await expectLater(
             stub.agentClient.advance(),
             throwsA(
               isA<AgentException>()
-                  .having((e) => e.statusCode, 'statusCode', code)
-                  .having((e) => e.message, 'message', 'unexpected response'),
+                  .having((e) => e.statusCode, 'statusCode', status)
+                  .having((e) => e.code, 'code', isNull)
+                  .having((e) => e.toString(), 'toString', contains('$status')),
             ),
           );
         }
@@ -144,6 +209,7 @@ void main() {
         endpoint: AgentStub.endpoint,
         appVersion: AgentStub.appVersion,
         accessToken: () => null,
+        refreshAccessToken: Future.value,
         timeout: const Duration(milliseconds: 10),
       );
 
