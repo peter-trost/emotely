@@ -185,6 +185,8 @@ jobs:
   # that has to work where nothing else does yet; the skills' scripts are what
   # agents run to release and to verify. shellcheck is the lint for all of
   # them, and the verification CLI validates its own flows (no device needed).
+  # release-status.sh gates what app-release writes to the public badge file,
+  # so its refusals are tested here, before a release depends on them.
   # Runners ship shellcheck, jq and yq preinstalled.
   scripts:
     needs: changes
@@ -193,6 +195,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: shellcheck --external-sources --severity=style scripts/*.sh .claude/skills/*/scripts/*.sh
+      - run: bash scripts/release-status.test.sh
       - run: .claude/skills/run-app/scripts/run-app.sh check
 
   # The schema gate: migrations apply to a fresh Postgres, and the pgTAP suite
