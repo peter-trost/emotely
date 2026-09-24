@@ -9,6 +9,23 @@ agent end to end — building, running, testing, deploying, verifying — with a
 human in the loop only for critical steps such as production access and secret
 handling. If a step is only documented for humans, move it into a skill.
 
+## Corrections go up a layer
+
+Each human correction should be the last of its kind. When one reveals a *kind* of mistake — the
+same comment would apply outside this diff — fix it in the strongest layer
+that can hold it, not only in the code at hand:
+
+1. **Structure** — types, package boundaries or one blessed way make the
+   mistake impossible to write. Agents copy what they see, so this layer
+   teaches as well as blocks.
+2. **Static analysis** — a lint rule, a compiler flag, a CI gate.
+3. **Guidance** — the nearest `AGENTS.md`, a skill, or `.coderabbit.yaml`.
+4. **Human review only** — last resort; the PR says why nothing stronger fits.
+
+A kind of mistake ends as a change in the same PR or a linked follow-up issue
+labelled `enhancement`, never as an acknowledgement alone. A correction made
+twice was held too low: move it up a layer. A one-off needs only its fix.
+
 ## Conventions
 
 - Research the latest version and current API of any dependency, model, or action
