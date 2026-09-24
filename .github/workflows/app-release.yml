@@ -5,7 +5,8 @@ name: App release
 # Every merge to main that touches the app uploads to the internal stage of
 # both stores: the TestFlight `Team` group (it has access to all builds) and
 # the Play `internal` track. No outside tester sees those. Both jobs share
-# one monotonic build number.
+# one monotonic build number, and the `status` job records what they
+# uploaded for the README badges.
 #
 # A manual run (workflow_dispatch) is the beta release: it builds nothing and
 # promotes a build already on the internal stage — the newest, or the one
@@ -35,6 +36,10 @@ concurrency:
   group: app-release
   cancel-in-progress: false
 
+# Read-only by default; only the `status` job, which holds no secret, writes.
+permissions:
+  contents: read
+
 jobs:
   ios-internal:
     if: github.event_name == 'push'
@@ -42,6 +47,10 @@ jobs:
     # which this image carries by default.
     runs-on: macos-26
     environment: release
+    # What the lane uploaded, for the `status` job.
+    outputs:
+      version: ${{ steps.lane.outputs.version }}
+      build: ${{ steps.lane.outputs.build }}
     defaults:
       run:
         working-directory: apps/mobile/app
@@ -64,7 +73,8 @@ jobs:
       # Monotonic, and above anything the legacy app shipped (ADR 0012).
       # Expressions cannot do arithmetic, hence the shell.
       - run: echo "BUILD_NUMBER=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-      - run: bundle exec fastlane ios internal
+      - id: lane
+        run: bundle exec fastlane ios internal
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -76,6 +86,9 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: release
+    outputs:
+      version: ${{ steps.lane.outputs.version }}
+      build: ${{ steps.lane.outputs.build }}
     defaults:
       run:
         working-directory: apps/mobile/app
@@ -106,10 +119,75 @@ jobs:
           ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
       - run: flutter pub get
       - run: echo "BUILD_NUMBER=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-      - run: bundle exec fastlane android internal
+      - id: lane
+        run: bundle exec fastlane android internal
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+
+  # Records what the internal jobs uploaded in status.json on the `status` branch (README badges).
+  # The only job that can write: keep it free of secrets, builds and third-party actions.
+  status:
+    needs: [ios-internal, android-internal]
+    if: >-
+      !cancelled() && github.event_name == 'push' &&
+      (needs.ios-internal.result == 'success' || needs.android-internal.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/release-status.sh
+          sparse-checkout-cone-mode: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          IOS_RESULT: ${{ needs.ios-internal.result }}
+          IOS_VERSION: ${{ needs.ios-internal.outputs.version }}
+          IOS_BUILD: ${{ needs.ios-internal.outputs.build }}
+          ANDROID_RESULT: ${{ needs.android-internal.result }}
+          ANDROID_VERSION: ${{ needs.android-internal.outputs.version }}
+          ANDROID_BUILD: ${{ needs.android-internal.outputs.build }}
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY}"
+          now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # The branch head, or nothing on the very first run.
+          head="$(gh api "repos/${repo}/git/matching-refs/heads/status" \
+            --jq '.[] | select(.ref == "refs/heads/status") | .object.sha')"
+          if [[ -n "${head}" ]]; then
+            gh api -H 'Accept: application/vnd.github.raw+json' \
+              "repos/${repo}/contents/status.json?ref=${head}" >status.json
+          else
+            printf '{}\n' >status.json
+          fi
+
+          # A job that failed keeps its last badge.
+          if [[ "${IOS_RESULT}" == success ]]; then
+            scripts/release-status.sh status.json ios internal \
+              "${IOS_VERSION}" "${IOS_BUILD}" "${GITHUB_SHA}" "${now}"
+          fi
+          if [[ "${ANDROID_RESULT}" == success ]]; then
+            scripts/release-status.sh status.json android internal \
+              "${ANDROID_VERSION}" "${ANDROID_BUILD}" "${GITHUB_SHA}" "${now}"
+          fi
+
+          tree="$(jq -n --rawfile content status.json \
+            '{tree: [{path: "status.json", mode: "100644", type: "blob", content: $content}]}' |
+            gh api "repos/${repo}/git/trees" --input - --jq .sha)"
+          commit="$(jq -n --arg tree "${tree}" --arg head "${head}" \
+            --arg message "internal builds of ${GITHUB_SHA} (app-release run ${GITHUB_RUN_ID})" \
+            '{message: $message, tree: $tree, parents: [$head | select(. != "")]}' |
+            gh api "repos/${repo}/git/commits" --input - --jq .sha)"
+          if [[ -n "${head}" ]]; then
+            gh api --method PATCH "repos/${repo}/git/refs/heads/status" \
+              -f sha="${commit}" -F force=false >/dev/null
+          else
+            gh api "repos/${repo}/git/refs" \
+              -f ref=refs/heads/status -f sha="${commit}" >/dev/null
+          fi
 
   # The beta stage: store API calls only, so no Xcode, no Flutter, no macOS.
   ios-beta:
