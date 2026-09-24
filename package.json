@@ -12,7 +12,7 @@
     "typecheck": "tsc --build"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.5",
+    "@biomejs/biome": "2.5.14",
     "typescript": "7.0.2"
   }
 }
