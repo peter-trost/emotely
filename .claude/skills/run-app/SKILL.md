@@ -110,14 +110,15 @@ the background: press HOME and give it ~45 s before querying.
 ## Unit gate (what CI runs)
 
 Every package in the workspace, each in its own directory — codegen
-tripwire, format, analyze, the 100% coverage gate:
+tripwire, format, analyze, complexity and size limits, the 100% coverage
+gate:
 
 ```bash
 cd apps/mobile && melos run ci
 ```
 
 One gate at a time is `melos run codegen:check` / `format` / `analyze` /
-`test`. To run only what changed since `main` plus its dependents, as a
+`complexity` / `test`. To run only what changed since `main` plus its dependents, as a
 pull request's CI does:
 
 ```bash
