@@ -79,6 +79,18 @@ void main() {
     });
   });
 
+  group('error_response', () {
+    test('code enum equals the wire names of the AgentErrorCode values', () {
+      final errorResponse = schema['error_response'] as Map<String, dynamic>;
+      final code = object(errorResponse)['code'] as Map<String, dynamic>;
+
+      expect(
+        code['enum'],
+        unorderedEquals(AgentErrorCode.values.map((c) => c.wire)),
+      );
+    });
+  });
+
   group('advance_session envelope', () {
     test(
       'request: what AgentClient posts is what the schema describes',

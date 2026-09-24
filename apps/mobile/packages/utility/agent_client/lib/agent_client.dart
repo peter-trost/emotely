@@ -6,6 +6,7 @@ library;
 
 export 'src/advance_response.dart';
 export 'src/agent_client.dart';
+export 'src/agent_error_code.dart';
 export 'src/config_client.dart';
 export 'src/register.dart';
 export 'src/startup_config.dart';

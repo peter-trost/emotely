@@ -47,6 +47,9 @@ void registerApp(
     appVersion: appVersion,
     // Read on every round: the token the app holds now, not at registration.
     accessToken: () => supabase.auth.currentSession?.accessToken,
+    // When the agent says it lapsed; a refresh that cannot happen signs the
+    // user out through the auth stream, and the router takes it from there.
+    refreshAccessToken: supabase.auth.refreshSession,
   );
   registerAnalytics(getIt, posthog: posthog, consentVersion: consentVersion);
   registerJournalRepository(getIt, supabase: supabase);

@@ -2,6 +2,8 @@ import {
   type AdvanceSessionRequest,
   type AdvanceSessionResponse,
   advanceSessionRequest,
+  type ErrorCode,
+  type ErrorResponse,
 } from "@emotely/contract";
 import { classifyModelFailure } from "./error-tracking.ts";
 import type { VerifyCaller } from "./request-auth.ts";
@@ -32,6 +34,11 @@ function json(status: number, body: unknown): Response {
   });
 }
 
+/** An error response: the [code] the app acts on, [error] for logs only. */
+function fail(status: number, code: ErrorCode, error: string): Response {
+  return json(status, { code, error } satisfies ErrorResponse);
+}
+
 function validate(
   parsed: AdvanceSessionRequest,
   secret: string,
@@ -45,18 +52,26 @@ function validate(
     signature === undefined ||
     !verifyTranscript(transcript, signature, secret, previousSecret)
   ) {
-    return { error: json(HTTP_UNAUTHORIZED, { error: "invalid signature" }) };
+    return {
+      error: fail(HTTP_UNAUTHORIZED, "invalid_signature", "invalid signature"),
+    };
   }
   if (transcript.length > MAX_TRANSCRIPT_MESSAGES) {
     return {
-      error: json(HTTP_PAYLOAD_TOO_LARGE, { error: "transcript too long" }),
+      error: fail(
+        HTTP_PAYLOAD_TOO_LARGE,
+        "transcript_too_long",
+        "transcript too long",
+      ),
     };
   }
   if (
     answer !== undefined &&
     JSON.stringify(answer.value).length > MAX_ANSWER_BYTES
   ) {
-    return { error: json(HTTP_BAD_REQUEST, { error: "answer too large" }) };
+    return {
+      error: fail(HTTP_BAD_REQUEST, "answer_too_large", "answer too large"),
+    };
   }
   return { transcript };
 }
@@ -87,7 +102,7 @@ async function runAdvance(opts: {
       error instanceof Error &&
       error.message.includes("does not match the pending question")
     ) {
-      return json(HTTP_BAD_REQUEST, { error: "answer mismatch" });
+      return fail(HTTP_BAD_REQUEST, "answer_mismatch", "answer mismatch");
     }
     // The gateway refused the round — most sharply when no provider satisfies
     // the fail-closed privacy filters, which breaks *every* session rather
@@ -102,7 +117,7 @@ async function runAdvance(opts: {
     // The gateway's message stays server-side: it names models and providers
     // the client has no business seeing, and the client only ever needed to
     // know the round is not retryable by resending.
-    return json(failure.status, { error: "model unavailable" });
+    return fail(failure.status, "model_unavailable", "model unavailable");
   }
 }
 
@@ -134,24 +149,24 @@ export function createAdvanceSessionHandler(deps: {
 }) {
   return async (request: Request): Promise<Response> => {
     if (request.method !== "POST") {
-      return json(HTTP_METHOD_NOT_ALLOWED, { error: "POST only" });
+      return fail(HTTP_METHOD_NOT_ALLOWED, "method_not_allowed", "POST only");
     }
     const caller = await deps.verifyCaller(request);
     if (caller === undefined) {
-      return json(HTTP_UNAUTHORIZED, { error: "unauthorized" });
+      return fail(HTTP_UNAUTHORIZED, "unauthorized", "unauthorized");
     }
     let parsed: AdvanceSessionRequest;
     try {
       parsed = advanceSessionRequest.parse(await request.json());
     } catch {
-      return json(HTTP_BAD_REQUEST, { error: "malformed request" });
+      return fail(HTTP_BAD_REQUEST, "malformed_request", "malformed request");
     }
     // A fresh session must not smuggle an oversized answer either.
     if (
       parsed.answer !== undefined &&
       JSON.stringify(parsed.answer.value).length > MAX_ANSWER_BYTES
     ) {
-      return json(HTTP_BAD_REQUEST, { error: "answer too large" });
+      return fail(HTTP_BAD_REQUEST, "answer_too_large", "answer too large");
     }
     const checked = validate(parsed, deps.secret, deps.previousSecret);
     if (checked.error) {

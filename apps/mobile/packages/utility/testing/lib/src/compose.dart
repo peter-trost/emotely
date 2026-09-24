@@ -57,6 +57,7 @@ void registerUtilitiesUnderTest(
     configUrl: ConfigStub.endpoint,
     appVersion: appVersion,
     accessToken: () => supabase.supabase.auth.currentSession?.accessToken,
+    refreshAccessToken: supabase.supabase.auth.refreshSession,
   );
   registerAnalytics(
     getIt,
