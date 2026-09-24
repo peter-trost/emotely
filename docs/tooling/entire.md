@@ -34,8 +34,10 @@ i.e. one git ref per checkpoint under `refs/entire/checkpoints/*` (strings in th
 ([store-checkpoint-data](https://docs.entire.io/guides/checkpoints/store-checkpoint-data.md)).
 Either way metadata lives **outside your branch** — no extra commits on the
 working branch. Untracked local state (`.entire/logs/`, `metadata/`, `tmp/`,
-`settings.local.json`) is ignored via `.entire/.gitignore`; `.claude/settings.json`
-also denies reads of `.entire/metadata/**`.
+`settings.local.json`) is ignored via `.entire/.gitignore`. The old
+`Read(./.entire/metadata/**)` deny rule in `.claude/settings.json` is retired:
+`entire doctor` flags it as stale (it blocked recursive greps and guarded a
+file that is removed on condense) and removes it.
 
 **Transcripts are private.** This repo is public, so checkpoint refs do not go
 to `origin`: `strategy_options.checkpoint_remote` in `.entire/settings.json`
@@ -46,6 +48,36 @@ points them at the private
 docs: [store-checkpoints-in-another-repo](https://docs.entire.io/guides/checkpoints/store-checkpoints-in-another-repo.md)).
 If that remote is unreachable the code push still succeeds and Entire keeps the
 checkpoint local with a warning. Never push `refs/entire/*` to `origin`.
+
+**entire.io only shows mirrored repos.** Having the Entire GitHub App installed
+makes a repo *visible* on entire.io, but it stays "Inactive" and the backend
+ingests nothing until the repo is onboarded, i.e. has a mirror placement.
+Before 2026-09-22 neither repo was mirrored, so the dashboard showed zero
+checkpoints for weeks although 175 refs sat in the checkpoint repo. Symptoms:
+Home says "Onboarded 0 / Capturing 0", the repo page redirects to Settings
+("Connected to GitHub, no mirrors yet"), and `entire search` fails with
+"no matching repositories found … (is the repo mirrored to Entire?)". **Both**
+repos need a mirror, in the account's home jurisdiction (`us`, see
+`entire auth status`):
+
+- `emotely` — commits and the `Entire-Checkpoint` trailers that name the
+  checkpoints. Alone, entire.io lists the checkpoint IDs with no sessions.
+- `emotely-checkpoints` — the checkpoint refs holding the transcripts.
+
+Both were mirrored on 2026-09-22 into `aws-us-east-2.entire.io`
+(`entire repo mirror create github.com/peter-trost/<repo> aws-us-east-2.entire.io`;
+check with `entire repo mirror get peter-trost/<repo>`). That means Entire now
+holds a copy of the transcripts. entire.io access follows GitHub collaborator
+permissions, so they stay as private as the private repo. Sessions show on
+the Home dashboard and under `gh/peter-trost/emotely-checkpoints/session/<id>`.
+The `emotely` repo's own Sessions tab stays empty: entire.io does not join the
+two repos yet, even though the committed `checkpoint_remote` setting names
+the link. The same goes for search: a plain `entire search` here scopes to
+`emotely` and finds commits only; pass `--all-repos` (or
+`--repo peter-trost/emotely-checkpoints`) to reach the sessions. No upstream
+issue tracked the split as of 2026-09-22; the closest is
+[entireio/cli#1195](https://github.com/entireio/cli/issues/1195) (search
+empty with a checkpoint remote and both mirrors ready).
 
 Redaction runs before every write
 ([privacy-and-redaction](https://docs.entire.io/guides/configuration/privacy-and-redaction.md)):
@@ -94,17 +126,20 @@ State-changing, **the user's call — suggest, don't run**: `enable`, `disable`,
   [troubleshooting](https://docs.entire.io/guides/checkpoints/troubleshooting.md):
   "Some Git hosts can remove commit trailers during squash merges. If the
   `Entire-Checkpoint` trailer is removed, Entire cannot link the squashed commit
-  back to its checkpoint metadata." The branch commits keep their checkpoints;
-  the squashed `main` commit may not. Recovery is
-  `entire session attach <SESSION_ID> -a <AGENT>`. Worth verifying against a real
-  merged PR, and worth an ADR if the team wants the link guaranteed on `main`.
+  back to its checkpoint metadata." Verified 2026-09-22: GitHub keeps each
+  branch commit's `Entire-Checkpoint:` line inside the squash body (82 of 90
+  `main` commits in the last month), but after them it appends a final
+  `Co-authored-by:` paragraph, so `git log --format=%(trailers)` sees only 7.
+  entire.io still linked 151 checkpoints to `emotely` commits, so it reads the
+  lines anywhere in the body. Recovery for an unlinked commit is
+  `entire session attach <SESSION_ID> -a <AGENT>`.
 - **`pre-push` pushes checkpoints to the private checkpoint repo** on every
   push, so anyone whose sessions should be captured needs write access there
   too. Contributors without it still push code fine; their checkpoints stay
   local.
 - Telemetry is on (`"telemetry": true` in `.entire/settings.json`).
-- `entire search` requires `entire login` (GitHub device flow); the local
-  inspection commands do not.
+- `entire search` requires `entire login` (GitHub device flow) and a mirrored
+  repo (see above); the local inspection commands need neither.
 - Checkpoints that reached the public `origin` before the private remote
   existed (57 refs, up to 2026-09-06) were pushed to the checkpoint repo and
   deleted from `origin`. Deleted refs can linger in GitHub's object store until
@@ -112,5 +147,4 @@ State-changing, **the user's call — suggest, don't run**: `enable`, `disable`,
   possibly cached.
 - Every clone runs `entire enable` once; git hooks are not versioned. If
   `entire status` says hooks are out of date, `entire enable --force` reinstalls
-  them — check its diff of `.claude/settings.json` afterwards, it has dropped
-  the `permissions.deny` block before.
+  them — check its diff of `.claude/settings.json` afterwards.
