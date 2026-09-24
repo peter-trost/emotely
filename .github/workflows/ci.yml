@@ -47,10 +47,12 @@ jobs:
               - '.github/workflows/ci.yml'
             supabase:
               - 'supabase/**'
-              # The typed tables generated from the schema, and the pin of their
-              # generator (see the supabase job).
+              # The typed tables generated from the schema, the pin of their
+              # generator, and the melos script that runs it with its flags
+              # (see the supabase job).
               - 'apps/mobile/packages/utility/journal_repository/lib/src/supabase_schema.g.dart'
               - 'apps/mobile/packages/utility/journal_repository/pubspec.yaml'
+              - 'apps/mobile/pubspec.yaml'
               - '.github/workflows/ci.yml'
             web:
               - 'apps/web/**'
