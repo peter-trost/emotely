@@ -1,0 +1,95 @@
+# Version updates for every ecosystem in the repo. Security updates are
+# enabled on the repo separately and ignore the schedule and cooldown below.
+#
+# Each ecosystem batches its minor and patch bumps into one weekly PR; majors
+# arrive one per PR, since those are the ones that break. The PRs are gated
+# by `ci-ok` like any other. Dependabot runs get no Actions or environment
+# secrets, only Dependabot secrets, so the agent job's live eval reads
+# AI_GATEWAY_API_KEY from a Dependabot secret of the same name.
+#
+# The 7-day cooldown lets a compromised or yanked release surface before we
+# take it. For npm it also has to be at least pnpm's own minimumReleaseAge
+# (1 day by default in pnpm 11): shorter, and pnpm refuses to resolve a
+# version Dependabot picked (dependabot-core #16375).
+version: 2
+
+updates:
+  # Actions are pinned to commit SHAs with a trailing version comment;
+  # Dependabot moves the SHA and rewrites the comment together. All of them
+  # in one PR, majors included: an action major is mostly a runtime bump,
+  # and CI running the workflows is the test.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns: ['*']
+
+  # The pnpm workspace (apps/agent, packages/*), resolved from the root.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      npm:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  # The Flutter pub workspace: Dependabot only runs pub from its root, which
+  # resolves every member into the one pubspec.lock. A merge here triggers
+  # app-release to the internal store tracks, like any change under
+  # apps/mobile.
+  - package-ecosystem: pub
+    directory: /apps/mobile
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      mobile:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  # The landing page, a standalone pub package with its own lock.
+  - package-ecosystem: pub
+    directory: /apps/web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      web:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  # fastlane and CocoaPods for the release pipeline (ADR 0013).
+  - package-ecosystem: bundler
+    directory: /apps/mobile/app
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      release-tooling:
+        patterns: ['*']
+        update-types: [minor, patch]
