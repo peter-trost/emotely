@@ -17,12 +17,7 @@ on purpose: `dart` is the standalone SDK `apps/web` is pinned to, and
 `flutter-dart` is Flutter's bundled one — the only one that resolves
 `sdk: flutter` packages, so it is what `apps/mobile/app` uses wherever CI says `dart`.
 
-`release-status.sh` records one store channel's version and build in
-`status.json`, the file on the orphan `status` branch the README badges read.
-The `status` job of [`app-release.yml`](../.github/workflows/app-release.yml)
-calls it; its strict refusals are the security boundary for that public file,
-so widen the channel allowlist or a value's shape only together with a test in
-`release-status.test.sh` (plain bash, runs on the bash 3.2 macOS ships).
+`release-status.sh` records one store channel's version and build in the README badges' `status.json`.
 
 Shell here is linted by the `scripts` CI job: `shellcheck --external-sources
 --severity=style scripts/*.sh`, clean; the same job runs

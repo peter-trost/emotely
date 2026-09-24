@@ -60,35 +60,7 @@ Two waits follow a beta run, and neither is inside it:
 - **Google's review of every closed-testing release.** The `internal` copy is
   live immediately; the `alpha` copy waits for review.
 
-## Version badges (README)
-
-The README shows what each channel last received, e.g. `TestFlight internal |
-2.0.0 (1042)`. It is pushed, not polled: a lane calls `report_shipped` after
-its upload, which writes `version` and `build` to the step's `$GITHUB_OUTPUT`;
-the internal jobs expose them as job outputs; the workflow's `status` job
-runs `scripts/release-status.sh` on `status.json` and commits it to the
-orphan **`status`** branch through the git data API. shields.io's dynamic
-JSON badge reads `raw.githubusercontent.com/.../status/status.json` (about
-5-10 min of caching end to end).
-
-- **What a badge means:** uploaded to that channel, not processed or
-  reviewed. Internal builds are usable minutes later, so that is exact
-  enough; a failed job leaves its badge on the last good build.
-- **History:** `git log origin/status` or
-  `gh api repos/peter-trost/emotely/commits?sha=status`. A ruleset
-  (`status branch: append-only`) blocks force pushes and deletion.
-- **Only `ios/internal` and `android/internal` exist so far.** To add a
-  channel (the beta lanes, later a store lane): call `report_shipped` at the
-  end of that lane with what it actually promoted, give its job `outputs`
-  and an `id: lane` step, add it to `needs` and the script of the `status`
-  job, widen the allowlist in `release-status.sh` with a test, and add a
-  badge to the README with the query `$.<platform>.<track>.label`.
-- **Security:** `status` is the only job with `contents: write` (the
-  workflow default is `contents: read`). It holds no secret (no `release`
-  environment), runs no build and no third-party action, and
-  `release-status.sh` refuses any value that is not an exact `x.y.z`,
-  build number, commit SHA or UTC timestamp. Keep it that way: never give
-  this job the `release` environment or check out more than the script.
+The README version badges are fed by the `status` job; how they work and how to add a channel: [references/version-badges.md](references/version-badges.md).
 
 ## Signing
 

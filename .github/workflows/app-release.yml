@@ -125,15 +125,8 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
 
-  # The README badges: what each internal job just uploaded, recorded in
-  # status.json on the orphan `status` branch, which holds nothing else. The
-  # only job that can write to the repo, so it is kept bare: no `release`
-  # environment (no secret), no build, no third-party action, and a checkout
-  # of the one validating script without a persisted token. Values travel as
-  # env, never interpolated into the script, and release-status.sh refuses
-  # anything but an exact version, build and commit. Writing through the git
-  # data API moves the branch fast-forward only, and a ruleset on `status`
-  # forbids force pushes and deletion, so its log is the badge history.
+  # Records what the internal jobs uploaded in status.json on the `status` branch (README badges).
+  # The only job that can write: keep it free of secrets, builds and third-party actions.
   status:
     needs: [ios-internal, android-internal]
     if: >-
