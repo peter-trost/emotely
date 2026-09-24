@@ -175,10 +175,17 @@ layers in the root `AGENTS.md`:
   Layer 4 also goes in the PR description, with why nothing stronger fits.
 
 A kind of mistake closes only with a commit or a linked issue; a reply alone
-leaves it to be made again. When the layer that should have caught it already
-exists — an `AGENTS.md` line the change ignored — the correction has now been
-made twice: go one layer higher. Unsure whether it is a kind at all? Treat it
-as an ambiguous comment and bring it to the user with your guess.
+leaves it to be made again. Before picking the layer, look for an earlier
+record of the same kind:
+
+- **A rule that should have caught it** — an `AGENTS.md` line, a skill step, a
+  lint that misses this case. The correction has now been made twice: go one
+  layer above that rule.
+- **An open follow-up** — `gh issue list --label enhancement --search '<keywords>'`.
+  Link it instead of opening a second.
+
+Unsure whether it is a kind at all? Treat it as an ambiguous comment and bring
+it to the user with your guess.
 
 Record the call on the thread, then resolve it:
 
