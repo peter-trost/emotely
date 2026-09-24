@@ -464,5 +464,31 @@
       "min_app_version",
       "store_url"
     ]
+  },
+  "error_response": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string",
+        "enum": [
+          "unauthorized",
+          "invalid_signature",
+          "transcript_too_long",
+          "answer_too_large",
+          "answer_mismatch",
+          "malformed_request",
+          "method_not_allowed",
+          "model_unavailable"
+        ]
+      },
+      "error": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "code",
+      "error"
+    ]
   }
 }

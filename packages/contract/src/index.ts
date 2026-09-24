@@ -101,6 +101,33 @@ export const advanceSessionResponse = z.discriminatedUnion("status", [
 ]);
 export type AdvanceSessionResponse = z.infer<typeof advanceSessionResponse>;
 
+// Every non-200 answer of the agent. `code` is what the app acts on and turns
+// into its own, localized copy; `error` is English for logs and for apps that
+// predate `code`, and never reaches a screen once the app reads `code`. The set
+// is closed: a new failure is a new code, added before the app that reads it
+// (ADR 0009 rule 3).
+export const errorCodes = [
+  // No live sign-in on the request: the app renews its token and resends.
+  "unauthorized",
+  // The transcript is not one this server signed: the session cannot go on.
+  "invalid_signature",
+  // Past the message cap: the session cannot go on either.
+  "transcript_too_long",
+  "answer_too_large",
+  "answer_mismatch",
+  "malformed_request",
+  "method_not_allowed",
+  // The gateway refused the round; waiting is what helps.
+  "model_unavailable",
+] as const;
+
+export const errorResponse = z.object({
+  code: z.enum(errorCodes),
+  error: z.string(),
+});
+export type ErrorResponse = z.infer<typeof errorResponse>;
+export type ErrorCode = ErrorResponse["code"];
+
 // The startup config the app fetches once, before its first session
 // (`GET /api/config`). It carries what the app must know before it may run and
 // what no session round should have to repeat: the force-update threshold and

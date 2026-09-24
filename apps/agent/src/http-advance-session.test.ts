@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { advanceSessionResponse } from "@emotely/contract";
+import { advanceSessionResponse, errorResponse } from "@emotely/contract";
 import { createAdvanceSessionHandler } from "./http-advance-session.ts";
 import type { AdvanceResult } from "./session-core.ts";
 import { storedAsJsonb } from "./test-helpers.ts";
@@ -17,6 +17,11 @@ type HandlerBody = {
 
 async function bodyOf(res: Response): Promise<HandlerBody> {
   return (await res.json()) as HandlerBody;
+}
+
+/** The machine-readable reason of an error response. */
+async function codeOf(res: Response): Promise<string> {
+  return errorResponse.parse(await res.json()).code;
 }
 
 const SECRET = "handler-secret";
@@ -80,7 +85,7 @@ describe("advance-session handler", () => {
     });
     const res = await anonymous(post({}));
     assert.equal(res.status, 401);
-    assert.deepEqual(await res.json(), { error: "unauthorized" });
+    assert.equal(await codeOf(res), "unauthorized");
     assert.equal(advanced, false);
   });
 
@@ -121,7 +126,7 @@ describe("advance-session handler", () => {
     assert.equal(res.status, 400);
   });
 
-  it("rejects a transcript without a valid signature", async () => {
+  it("rejects a transcript without a valid signature, apart from a sign-in the app can renew", async () => {
     const res = await handler()(
       post({
         transcript: awaiting.messages,
@@ -130,6 +135,7 @@ describe("advance-session handler", () => {
       }),
     );
     assert.equal(res.status, 401);
+    assert.equal(await codeOf(res), "invalid_signature");
   });
 
   it("rejects a tampered transcript", async () => {

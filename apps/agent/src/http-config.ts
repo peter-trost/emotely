@@ -1,4 +1,8 @@
-import { type ConfigResponse, configResponse } from "@emotely/contract";
+import {
+  type ConfigResponse,
+  configResponse,
+  type ErrorResponse,
+} from "@emotely/contract";
 
 const HTTP_OK = 200;
 const HTTP_METHOD_NOT_ALLOWED = 405;
@@ -89,12 +93,7 @@ export function createConfigHandler(config: {
     // directly, and it must not answer a POST there either — the same
     // belt-and-braces check `createAdvanceSessionHandler` makes.
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return Promise.resolve(
-        new Response(JSON.stringify({ error: "GET only" }), {
-          status: HTTP_METHOD_NOT_ALLOWED,
-          headers: { "content-type": "application/json" },
-        }),
-      );
+      return Promise.resolve(getOnly());
     }
     // The app names its own platform; anything unrecognised gets the neutral
     // link rather than an error. Someone blocked by the version gate cannot
@@ -113,4 +112,18 @@ export function createConfigHandler(config: {
       }),
     );
   };
+}
+
+/** The 405 for anything but GET/HEAD, in the agent's error envelope. */
+function getOnly(): Response {
+  return new Response(
+    JSON.stringify({
+      code: "method_not_allowed",
+      error: "GET only",
+    } satisfies ErrorResponse),
+    {
+      status: HTTP_METHOD_NOT_ALLOWED,
+      headers: { "content-type": "application/json" },
+    },
+  );
 }
