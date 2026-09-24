@@ -30,6 +30,7 @@ class SessionRobot(
   Finder get answerInput => find.byType(AnswerInput);
   Finder get summary => find.byKey(EntryView.summaryKey);
   Finder get retry => find.byKey(SessionView.retryKey);
+  Finder get startOver => find.byKey(SessionView.startOverKey);
 
   String get questionText => tester.widget<Text>(question).data!;
 
@@ -112,6 +113,11 @@ class SessionRobot(
     await settle();
   }
 
+  Future<void> tapStartOver() async {
+    await tester.tap(startOver);
+    await settle();
+  }
+
   /// The answer value the app posted in its most recent round.
   Object? get lastPostedValue =>
       (agent.lastRequest['answer'] as Map<String, dynamic>)['value'];
@@ -121,18 +127,26 @@ class SessionRobot(
       (agent.lastRequest['answer'] as Map<String, dynamic>)['tool_call_id']
           as String;
 
-  /// The failure copy for anything that is not a server-refused round.
-  static const unreachableMessage = 'Could not reach the journaling assistant.';
-
-  /// The failure copy when the server refused the round because the model
-  /// could not be reached.
-  static const unavailableMessage = SessionBloc.modelUnavailableMessage;
-
-  /// The failure copy when the finished entry could not be filed.
-  static const entrySaveFailedMessage = SessionBloc.entrySaveFailedMessage;
-
-  /// The failure copy when the session to resume could not be read.
-  static const sessionReadFailedMessage = SessionBloc.sessionReadFailedMessage;
+  /// The copy the screen shows for each failure; the agent's own words never
+  /// reach it.
+  static final unreachableMessage = SessionView.describe(
+    SessionFailureReason.unreachable,
+  );
+  static final unavailableMessage = SessionView.describe(
+    SessionFailureReason.modelUnavailable,
+  );
+  static final refusedMessage = SessionView.describe(
+    SessionFailureReason.refused,
+  );
+  static final cannotContinueMessage = SessionView.describe(
+    SessionFailureReason.cannotContinue,
+  );
+  static final entrySaveFailedMessage = SessionView.describe(
+    SessionFailureReason.entrySaveFailed,
+  );
+  static final sessionReadFailedMessage = SessionView.describe(
+    SessionFailureReason.sessionReadFailed,
+  );
 
   // The canned questions, shared with every package through `testing`.
   static const rate = rateQuestion;

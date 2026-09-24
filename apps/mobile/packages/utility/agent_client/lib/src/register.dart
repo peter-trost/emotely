@@ -9,7 +9,8 @@ import 'package:http/http.dart' as http;
 /// The http clients are the seams a test replaces (one scripted client per
 /// endpoint); production passes the same client twice, one connection pool
 /// for one host. [accessToken] is read on every session round, so the token
-/// the app holds *now* travels, never the one it held at registration.
+/// the app holds *now* travels, never the one it held at registration;
+/// [refreshAccessToken] renews it when the agent says it lapsed.
 void registerAgentClient(
   GetIt getIt, {
   required http.Client agentHttpClient,
@@ -18,6 +19,7 @@ void registerAgentClient(
   required Uri configUrl,
   required String appVersion,
   required String? Function() accessToken,
+  required Future<void> Function() refreshAccessToken,
 }) {
   getIt
     ..registerSingleton(
@@ -26,6 +28,7 @@ void registerAgentClient(
         endpoint: agentUrl,
         appVersion: appVersion,
         accessToken: accessToken,
+        refreshAccessToken: refreshAccessToken,
       ),
     )
     ..registerSingleton(
