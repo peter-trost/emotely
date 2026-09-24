@@ -120,6 +120,13 @@ Set blind, never echoed: `gh secret set NAME -R peter-trost/emotely --env releas
 The list is in ADR 0013. `PLAY_SERVICE_ACCOUNT_JSON` is the JSON key of
 `google-play-upload-konto@pc-api-5174249003608815741-70.iam.gserviceaccount.com`.
 
+The environment only deploys from **`main`** (a custom deployment branch
+policy, set 2026-09-24): a job on any other branch that names
+`environment: release` fails before it sees a secret. So a beta run is
+always `gh workflow run app-release.yml` on `main`; `--ref <branch>` is
+refused by design. Check with
+`gh api repos/peter-trost/emotely/environments/release/deployment-branch-policies`.
+
 ## Privacy policy URL (store requirements)
 
 Both stores have a field for it, and both are **human steps in the console**.
