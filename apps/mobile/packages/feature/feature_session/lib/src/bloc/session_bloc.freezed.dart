@@ -56,13 +56,14 @@ extension SessionEventPatterns on SessionEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SessionStarted value)?  started,TResult Function( SessionAnswered value)?  answered,TResult Function( SessionRetried value)?  retried,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SessionStarted value)?  started,TResult Function( SessionAnswered value)?  answered,TResult Function( SessionRetried value)?  retried,TResult Function( SessionRestarted value)?  restarted,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SessionStarted() when started != null:
 return started(_that);case SessionAnswered() when answered != null:
 return answered(_that);case SessionRetried() when retried != null:
-return retried(_that);case _:
+return retried(_that);case SessionRestarted() when restarted != null:
+return restarted(_that);case _:
   return orElse();
 
 }
@@ -80,13 +81,14 @@ return retried(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SessionStarted value)  started,required TResult Function( SessionAnswered value)  answered,required TResult Function( SessionRetried value)  retried,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SessionStarted value)  started,required TResult Function( SessionAnswered value)  answered,required TResult Function( SessionRetried value)  retried,required TResult Function( SessionRestarted value)  restarted,}){
 final _that = this;
 switch (_that) {
 case SessionStarted():
 return started(_that);case SessionAnswered():
 return answered(_that);case SessionRetried():
-return retried(_that);}
+return retried(_that);case SessionRestarted():
+return restarted(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -100,13 +102,14 @@ return retried(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SessionStarted value)?  started,TResult? Function( SessionAnswered value)?  answered,TResult? Function( SessionRetried value)?  retried,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SessionStarted value)?  started,TResult? Function( SessionAnswered value)?  answered,TResult? Function( SessionRetried value)?  retried,TResult? Function( SessionRestarted value)?  restarted,}){
 final _that = this;
 switch (_that) {
 case SessionStarted() when started != null:
 return started(_that);case SessionAnswered() when answered != null:
 return answered(_that);case SessionRetried() when retried != null:
-return retried(_that);case _:
+return retried(_that);case SessionRestarted() when restarted != null:
+return restarted(_that);case _:
   return null;
 
 }
@@ -123,12 +126,13 @@ return retried(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? resume)?  started,TResult Function( Answer answer)?  answered,TResult Function()?  retried,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? resume)?  started,TResult Function( Answer answer)?  answered,TResult Function()?  retried,TResult Function()?  restarted,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SessionStarted() when started != null:
 return started(_that.resume);case SessionAnswered() when answered != null:
 return answered(_that.answer);case SessionRetried() when retried != null:
-return retried();case _:
+return retried();case SessionRestarted() when restarted != null:
+return restarted();case _:
   return orElse();
 
 }
@@ -146,12 +150,13 @@ return retried();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? resume)  started,required TResult Function( Answer answer)  answered,required TResult Function()  retried,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? resume)  started,required TResult Function( Answer answer)  answered,required TResult Function()  retried,required TResult Function()  restarted,}) {final _that = this;
 switch (_that) {
 case SessionStarted():
 return started(_that.resume);case SessionAnswered():
 return answered(_that.answer);case SessionRetried():
-return retried();}
+return retried();case SessionRestarted():
+return restarted();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -165,12 +170,13 @@ return retried();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? resume)?  started,TResult? Function( Answer answer)?  answered,TResult? Function()?  retried,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? resume)?  started,TResult? Function( Answer answer)?  answered,TResult? Function()?  retried,TResult? Function()?  restarted,}) {final _that = this;
 switch (_that) {
 case SessionStarted() when started != null:
 return started(_that.resume);case SessionAnswered() when answered != null:
 return answered(_that.answer);case SessionRetried() when retried != null:
-return retried();case _:
+return retried();case SessionRestarted() when restarted != null:
+return restarted();case _:
   return null;
 
 }
@@ -356,6 +362,38 @@ String toString() {
 
 
 /// @nodoc
+
+
+class SessionRestarted implements SessionEvent {
+  const SessionRestarted();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionRestarted);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'SessionEvent.restarted()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
 mixin _$SessionState {
 
 
@@ -472,14 +510,14 @@ return failure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function( int answered)?  loading,TResult Function( PendingQuestion pending,  int answered)?  awaitingAnswer,TResult Function( JournalEntry entry,  Map<String, AskQuestion> questions)?  completed,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function( int answered)?  loading,TResult Function( PendingQuestion pending,  int answered)?  awaitingAnswer,TResult Function( JournalEntry entry,  Map<String, AskQuestion> questions)?  completed,TResult Function( SessionFailureReason reason)?  failure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SessionInitial() when initial != null:
 return initial();case SessionLoading() when loading != null:
 return loading(_that.answered);case SessionAwaitingAnswer() when awaitingAnswer != null:
 return awaitingAnswer(_that.pending,_that.answered);case SessionCompleted() when completed != null:
 return completed(_that.entry,_that.questions);case SessionFailure() when failure != null:
-return failure(_that.message);case _:
+return failure(_that.reason);case _:
   return orElse();
 
 }
@@ -497,14 +535,14 @@ return failure(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function( int answered)  loading,required TResult Function( PendingQuestion pending,  int answered)  awaitingAnswer,required TResult Function( JournalEntry entry,  Map<String, AskQuestion> questions)  completed,required TResult Function( String message)  failure,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function( int answered)  loading,required TResult Function( PendingQuestion pending,  int answered)  awaitingAnswer,required TResult Function( JournalEntry entry,  Map<String, AskQuestion> questions)  completed,required TResult Function( SessionFailureReason reason)  failure,}) {final _that = this;
 switch (_that) {
 case SessionInitial():
 return initial();case SessionLoading():
 return loading(_that.answered);case SessionAwaitingAnswer():
 return awaitingAnswer(_that.pending,_that.answered);case SessionCompleted():
 return completed(_that.entry,_that.questions);case SessionFailure():
-return failure(_that.message);}
+return failure(_that.reason);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -518,14 +556,14 @@ return failure(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function( int answered)?  loading,TResult? Function( PendingQuestion pending,  int answered)?  awaitingAnswer,TResult? Function( JournalEntry entry,  Map<String, AskQuestion> questions)?  completed,TResult? Function( String message)?  failure,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function( int answered)?  loading,TResult? Function( PendingQuestion pending,  int answered)?  awaitingAnswer,TResult? Function( JournalEntry entry,  Map<String, AskQuestion> questions)?  completed,TResult? Function( SessionFailureReason reason)?  failure,}) {final _that = this;
 switch (_that) {
 case SessionInitial() when initial != null:
 return initial();case SessionLoading() when loading != null:
 return loading(_that.answered);case SessionAwaitingAnswer() when awaitingAnswer != null:
 return awaitingAnswer(_that.pending,_that.answered);case SessionCompleted() when completed != null:
 return completed(_that.entry,_that.questions);case SessionFailure() when failure != null:
-return failure(_that.message);case _:
+return failure(_that.reason);case _:
   return null;
 
 }
@@ -801,10 +839,10 @@ $JournalEntryCopyWith<$Res> get entry {
 
 
 class SessionFailure implements SessionState {
-  const SessionFailure({required this.message});
+  const SessionFailure({required this.reason});
   
 
- final  String message;
+ final  SessionFailureReason reason;
 
 /// Create a copy of SessionState
 /// with the given fields replaced by the non-null parameter values.
@@ -816,18 +854,18 @@ $SessionFailureCopyWith<SessionFailure> get copyWith => _$SessionFailureCopyWith
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionFailure&&(identical(other.message, message) || other.message == message));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionFailure&&(identical(other.reason, reason) || other.reason == reason));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,message);
+    return Object.hash(runtimeType,reason);
 }
 
 @override
 String toString() {
-    return 'SessionState.failure(message: $message)';
+    return 'SessionState.failure(reason: $reason)';
 }
 
 
@@ -838,7 +876,7 @@ abstract mixin class $SessionFailureCopyWith<$Res> implements $SessionStateCopyW
   factory $SessionFailureCopyWith(SessionFailure value, $Res Function(SessionFailure) _then) = _$SessionFailureCopyWithImpl;
 @useResult
 $Res call({
- String message
+ SessionFailureReason reason
 });
 
 
@@ -855,10 +893,10 @@ class _$SessionFailureCopyWithImpl<$Res>
 
 /// Create a copy of SessionState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? reason = null,}) {
   return _then(SessionFailure(
-message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
-as String,
+reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as SessionFailureReason,
   ));
 }
 

@@ -14,4 +14,7 @@ sealed class SessionEvent with _$SessionEvent {
 
   /// Repeat the round that failed.
   const factory retried() = SessionRetried;
+
+  /// Give up a session the agent will not continue and begin a fresh one.
+  const factory restarted() = SessionRestarted;
 }
