@@ -1,0 +1,20 @@
+{
+  "ios": {
+    "internal": {
+      "version": "2.0.0",
+      "build": 1037,
+      "label": "2.0.0 (1037)",
+      "commit": "af9b354a3415e432430417d8775a5a6d59d21a89",
+      "updated_at": "2026-09-24T20:35:45Z"
+    }
+  },
+  "android": {
+    "internal": {
+      "version": "2.0.0",
+      "build": 1037,
+      "label": "2.0.0 (1037)",
+      "commit": "af9b354a3415e432430417d8775a5a6d59d21a89",
+      "updated_at": "2026-09-24T20:35:45Z"
+    }
+  }
+}
