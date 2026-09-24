@@ -1,4 +1,5 @@
 import 'package:contract/contract.dart';
+import 'package:feature_session/src/widgets/answer_length.dart';
 import 'package:feature_session/src/widgets/submit_button.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -18,6 +19,10 @@ class _LongtextInputState() extends State<LongtextInput> {
   final _controller = TextEditingController();
 
   String get _text => _controller.text.trim();
+
+  Answer get _answer => Answer.longtext(_text);
+
+  bool get _submittable => _text.isNotEmpty && _answer.fits;
 
   @override
   void dispose() {
@@ -39,11 +44,10 @@ class _LongtextInputState() extends State<LongtextInput> {
         decoration: const InputDecoration(hintText: 'Write freely…'),
         onChanged: (_) => setState(() {}),
       ),
+      AnswerLength(answer: _answer),
       SubmitButton(
         key: LongtextInput.submitKey,
-        onPressed: _text.isEmpty
-            ? null
-            : () => widget.onSubmit(Answer.longtext(_text)),
+        onPressed: _submittable ? () => widget.onSubmit(_answer) : null,
       ),
     ],
   );

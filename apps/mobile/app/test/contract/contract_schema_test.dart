@@ -92,6 +92,12 @@ void main() {
   });
 
   group('advance_session envelope', () {
+    test('the answer limit the inputs enforce is the one the agent does', () {
+      final limits = schema['limits'] as Map<String, dynamic>;
+
+      expect(limits['max_answer_length'], maxAnswerLength);
+    });
+
     test(
       'request: what AgentClient posts is what the schema describes',
       () async {
