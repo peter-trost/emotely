@@ -22,10 +22,11 @@ for it.
 
 ## Duplication
 
-`dart run dedupe` finds clones across the workspace; it reports, it does not
-gate. Run it from here before extracting a shared helper, and before a pull
-request as `dart run dedupe --git-diff=origin/main --only-changed`, which
-lists only the clones the change introduces. Fold a clone into a shared
+`dart run dedupe .` finds clones across the workspace; it reports, it does
+not gate. Run it from here before extracting a shared helper, and before a
+pull request as `dart run dedupe --git-diff=origin/main --only-changed .`,
+which lists only the clones the change introduces. Keep the `.`: without a
+target, dedupe analyzes zero files here and reports a clean result. Fold a clone into a shared
 helper in `lib/`. In tests, fold one only when a file repeats the same setup
 often enough that a robot or `setUp` reads better; one explicit arrange block
 per test is the norm there.
