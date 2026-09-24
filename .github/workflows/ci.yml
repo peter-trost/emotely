@@ -182,6 +182,8 @@ jobs:
   # The machine-setup script bootstraps every other job, so it is the one file
   # that has to work where nothing else does yet — and the only one CI could not
   # see before. shellcheck is the lint for it; runners ship it preinstalled.
+  # release-status.sh gates what app-release writes to the public badge file,
+  # so its refusals are tested here, before a release depends on them.
   scripts:
     needs: changes
     if: needs.changes.outputs.scripts == 'true'
@@ -189,6 +191,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: shellcheck --external-sources --severity=style scripts/*.sh
+      - run: bash scripts/release-status.test.sh
 
   # The schema gate: migrations apply to a fresh Postgres, and the pgTAP suite
   # proves row-level security holds (ADR 0010). Only the database container
