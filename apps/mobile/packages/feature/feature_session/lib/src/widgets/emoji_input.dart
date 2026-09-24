@@ -140,8 +140,6 @@ class const _EmojiSheet({required final bool canClear})
     extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final background = scheme.surfaceContainerLow;
     final navigator = Navigator.of(context);
     // The picker still builds on package:flutter/material.dart, so the
     // bridge hands it this app's material_ui theme and localizations; the
@@ -155,48 +153,55 @@ class const _EmojiSheet({required final bool canClear})
           onBackspacePressed: canClear
               ? () => navigator.pop(const _Cleared())
               : null,
-          config: Config(
-            viewOrderConfig: const ViewOrderConfig(
-              top: EmojiPickerItem.searchBar,
-              bottom: EmojiPickerItem.categoryBar,
-            ),
-            emojiViewConfig: EmojiViewConfig(
-              backgroundColor: background,
-              columns: 7,
-              // Issue: https://github.com/flutter/flutter/issues/28894
-              emojiSizeMax:
-                  28 * (defaultTargetPlatform == TargetPlatform.iOS ? 1.2 : 1),
-              buttonMode: defaultTargetPlatform == TargetPlatform.iOS
-                  ? ButtonMode.CUPERTINO
-                  : ButtonMode.MATERIAL,
-            ),
-            categoryViewConfig: CategoryViewConfig(
-              initCategory: Category.SMILEYS,
-              backgroundColor: background,
-              indicatorColor: scheme.primary,
-              iconColorSelected: scheme.primary,
-              iconColor: scheme.outline,
-              dividerColor: background,
-            ),
-            bottomActionBarConfig: BottomActionBarConfig(
-              backgroundColor: background,
-              buttonColor: background,
-              buttonIconColor: scheme.primary,
-              showBackspaceButton: canClear,
-            ),
-            customBackspaceIcon: Icon(
-              Icons.clear,
-              key: EmojiInput.clearKey,
-              color: scheme.error,
-              semanticLabel: 'Clear emoji',
-            ),
-            searchViewConfig: SearchViewConfig(
-              backgroundColor: background,
-              buttonIconColor: scheme.primary,
-              hintText: 'Smile, heart, …',
-            ),
-          ),
+          config: _config(Theme.of(context).colorScheme),
         ),
+      ),
+    );
+  }
+
+  /// The picker in this screen's colours: search on top, categories below,
+  /// and the clear button only when there is an emoji to clear.
+  Config _config(ColorScheme scheme) {
+    final background = scheme.surfaceContainerLow;
+    return Config(
+      viewOrderConfig: const ViewOrderConfig(
+        top: EmojiPickerItem.searchBar,
+        bottom: EmojiPickerItem.categoryBar,
+      ),
+      emojiViewConfig: EmojiViewConfig(
+        backgroundColor: background,
+        columns: 7,
+        // Issue: https://github.com/flutter/flutter/issues/28894
+        emojiSizeMax:
+            28 * (defaultTargetPlatform == TargetPlatform.iOS ? 1.2 : 1),
+        buttonMode: defaultTargetPlatform == TargetPlatform.iOS
+            ? ButtonMode.CUPERTINO
+            : ButtonMode.MATERIAL,
+      ),
+      categoryViewConfig: CategoryViewConfig(
+        initCategory: Category.SMILEYS,
+        backgroundColor: background,
+        indicatorColor: scheme.primary,
+        iconColorSelected: scheme.primary,
+        iconColor: scheme.outline,
+        dividerColor: background,
+      ),
+      bottomActionBarConfig: BottomActionBarConfig(
+        backgroundColor: background,
+        buttonColor: background,
+        buttonIconColor: scheme.primary,
+        showBackspaceButton: canClear,
+      ),
+      customBackspaceIcon: Icon(
+        Icons.clear,
+        key: EmojiInput.clearKey,
+        color: scheme.error,
+        semanticLabel: 'Clear emoji',
+      ),
+      searchViewConfig: SearchViewConfig(
+        backgroundColor: background,
+        buttonIconColor: scheme.primary,
+        hintText: 'Smile, heart, …',
       ),
     );
   }
