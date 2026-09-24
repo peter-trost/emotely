@@ -21,6 +21,15 @@ before #7 delivers one, and a per-id store is itself an abuse surface (unbounded
 session creation). Signing costs nothing and moves the state to the party that
 already has it. Server-side resume comes with #7, on top of the same signing.
 
+### Amendment 2026-09-24: sign the canonical JSON
+
+"Over the JSON" meant `JSON.stringify` of the transcript as received, which
+made the signature depend on key order. The app stores an unfinished session
+in a Postgres `jsonb` column (ADR 0010), and `jsonb` does not keep key order,
+so every resumed session failed its signature check. The HMAC now covers the
+transcript's canonical JSON, with the keys of every object sorted: any faithful
+re-encoding verifies, any changed value does not.
+
 ## Caps before compute
 
 Validation runs in cost order, cheapest first, and every failure returns before a

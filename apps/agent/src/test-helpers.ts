@@ -79,3 +79,29 @@ export function scriptedSessionModel(steps: ScriptStep[]): MockLanguageModelV4 {
     },
   });
 }
+
+/**
+ * [value] as it comes back out of a Postgres `jsonb` column, which is where
+ * the app keeps an unfinished session (ADR 0010). `jsonb` "does not preserve
+ * the order of object keys" (PostgreSQL docs, § 8.14 JSON Types): it stores
+ * them shortest first, then bytewise. Every other value survives unchanged.
+ */
+export function storedAsJsonb(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(storedAsJsonb);
+  }
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  const keys = Object.keys(value).sort((a, b) =>
+    a.length === b.length
+      ? Buffer.compare(Buffer.from(a), Buffer.from(b))
+      : a.length - b.length,
+  );
+  return Object.fromEntries(
+    keys.map((key) => [
+      key,
+      storedAsJsonb((value as Record<string, unknown>)[key]),
+    ]),
+  );
+}

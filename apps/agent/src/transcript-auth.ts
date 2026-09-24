@@ -6,11 +6,38 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * what keeps an open, unauthenticated endpoint from being a generic LLM
  * proxy — the only client-authored content in a session is the widget
  * answer, which enters as a tool result (data, never instructions).
+ *
+ * What is signed is the transcript's canonical JSON, not the JSON it happened
+ * to be sent as: the app keeps an unfinished session in a Postgres `jsonb`
+ * column (ADR 0010), which does not preserve the order of object keys, so a
+ * resumed transcript comes back with the same values in a different order.
  */
 export function signTranscript(transcript: unknown, secret: string): string {
   return createHmac("sha256", secret)
-    .update(JSON.stringify(transcript))
+    .update(canonicalJson(transcript))
     .digest("base64url");
+}
+
+/**
+ * [value] as JSON with every object's keys sorted, so two encodings of the
+ * same data serialize alike. Normalized through `JSON.stringify` first, so a
+ * key holding `undefined` is dropped here exactly as it is on the wire.
+ */
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(
+    sortedKeys(JSON.parse(JSON.stringify(value) ?? "null")),
+  );
+}
+
+function sortedKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortedKeys);
+  }
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  const entries = Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1));
+  return Object.fromEntries(entries.map(([key, v]) => [key, sortedKeys(v)]));
 }
 
 /** Constant-time comparison against one secret; malformed signatures are false. */
