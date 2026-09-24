@@ -1,0 +1,75 @@
+# Start a session and answer its first question, whichever kind the agent
+# asks first. Like every flow it begins on the journal, signed in as the smoke
+# account: the CLI signs in itself and records none of it.
+#
+# The answers are made up and say so. This repository and its attachments are
+# public (ADR 0005): never type anything a real person wrote.
+summary: Start a session and answer its first question, then discard it.
+steps:
+  # A session left open by an earlier run that died half way.
+  - tap: {key: journal_view.discard}
+    optional: true
+  - wait: {key: journal_view.start}
+  - screenshot: journal
+  - tap: {key: journal_view.start}
+  # The consent screen only while the smoke account's consent is missing or
+  # out of date. Both controls sit below the fold.
+  - scroll-to: {key: consent_view.checkbox}
+    optional: true
+  - tap: {key: consent_view.checkbox}
+    optional: true
+  - scroll-to: {key: consent_view.agree}
+    optional: true
+  - tap: {key: consent_view.agree}
+    optional: true
+  # One live model round.
+  - wait: {key: session_view.question}
+    timeout: 90
+  - screenshot: first-question
+  - branch:
+      - when: {key: text_list_input.field.0}
+        steps:
+          - enter-text: {key: text_list_input.field.0}
+            input: Made-up item one from the verification CLI
+          - enter-text: {key: text_list_input.field.1}
+            input: Made-up item two
+          - enter-text: {key: text_list_input.field.2}
+            input: Made-up item three
+          - screenshot: answer-text-list
+          - tap: {key: text_list_input.submit}
+      - when: {key: longtext_input.field}
+        steps:
+          - enter-text: {key: longtext_input.field}
+            input: A made-up answer, typed by the verification CLI on a simulator.
+          - screenshot: answer-longtext
+          - tap: {key: longtext_input.submit}
+      - when: {key: rating_input.slider}
+        steps:
+          # The slider's centre is a 5.
+          - tap: {key: rating_input.slider}
+          - screenshot: answer-rating
+          - tap: {key: rating_input.submit}
+      - when: {key: emoji_input.slot.0}
+        steps:
+          - tap: {key: emoji_input.slot.0}
+          # The picker is a third-party sheet; its emoji are only text.
+          - tap: {text: 😊}
+          - screenshot: answer-emoji
+          - tap: {key: emoji_input.submit}
+      - when: {key: color_input.slot.0}
+        steps:
+          - tap: {key: color_input.slot.0}
+          # The picker opens on a colour; select takes it.
+          - tap: {key: color_input.select}
+          - screenshot: answer-color
+          - tap: {key: color_input.submit}
+  # The answer went through when the agent asks the next question.
+  - wait: {text: Question 2}
+    timeout: 90
+  - screenshot: second-question
+  # Leave no open session behind: the nightly live smoke starts a new one.
+  - back: true
+  - tap: {key: journal_view.discard}
+    timeout: 30
+  - wait: {key: journal_view.start}
+  - screenshot: journal-after
