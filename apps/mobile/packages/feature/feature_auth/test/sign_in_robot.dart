@@ -13,6 +13,7 @@ class SignInRobot(
   final WidgetTester tester, {
   required final SupabaseStub supabase,
   required final AgentStub agent,
+  final Set<String> passwordAccounts = const {},
 }) {
   final analytics = AnalyticsSpy();
 
@@ -50,7 +51,7 @@ class SignInRobot(
       supabase: supabase,
       analytics: analytics,
     );
-    registerAuth(GetIt.I);
+    registerAuth(GetIt.I, passwordAccounts: passwordAccounts);
     return pageUnderTest(
       BlocProvider(
         create: (_) => GetIt.I<AuthBloc>(),

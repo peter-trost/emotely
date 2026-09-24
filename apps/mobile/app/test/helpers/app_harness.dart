@@ -48,6 +48,9 @@ Widget appUnderTest({
     build: testBuildInfo,
     agentUrl: AgentStub.endpoint,
     configUrl: ConfigStub.endpoint,
+    // The release shape: every address outside the review accounts gets a
+    // code (feature_auth's tests cover the password accounts).
+    passwordAccounts: const {},
   );
   return const EmotelyApp();
 }
