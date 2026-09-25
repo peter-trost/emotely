@@ -134,6 +134,14 @@ tracking**: contact info (email), user content (the journal), identifiers
 If the page gains or loses a category — a new event, a new provider, a
 dropped identifier — change the declarations in the same release, not later.
 
+Google sign-in (#51) added one: Google's ID token carries the account's
+**name** (and a profile picture link), and Supabase stores both with the
+sign-in record, so both consoles must declare a name as collected — ASC
+**Contact Info → Name** (Linked, App Functionality, no tracking) and Play
+**Data safety → Personal info → Name** (collected, not shared, optional,
+account management). The picture link is a URL on Google's servers, not a
+photo the app holds, and needs no category of its own.
+
 ## Account deletion (store requirements)
 
 - **App Store** (guideline 5.1.1(v)): deletion is in the app. Put the path
