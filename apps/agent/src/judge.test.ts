@@ -14,32 +14,35 @@ const verdictJson = JSON.stringify({
   ],
 });
 
-const model = new MockLanguageModelV4({
-  doGenerate: async () => ({
-    content: [{ type: "text" as const, text: verdictJson }],
-    finishReason: { unified: "stop" as const, raw: undefined },
-    usage: {
-      inputTokens: {
-        total: 1,
-        noCache: 1,
-        cacheRead: undefined,
-        cacheWrite: undefined,
+const replyingWith = (text: string) =>
+  new MockLanguageModelV4({
+    doGenerate: async () => ({
+      content: [{ type: "text" as const, text }],
+      finishReason: { unified: "stop" as const, raw: undefined },
+      usage: {
+        inputTokens: {
+          total: 1,
+          noCache: 1,
+          cacheRead: undefined,
+          cacheWrite: undefined,
+        },
+        outputTokens: { total: 1, text: 1, reasoning: undefined },
       },
-      outputTokens: { total: 1, text: 1, reasoning: undefined },
-    },
-    warnings: [],
-  }),
-});
+      warnings: [],
+    }),
+  });
+
+const rubrics = [
+  "greets the user by name",
+  "asks only about the current question",
+];
 
 describe("judgeSession", () => {
   it("returns one validated verdict per rubric from a single model call", async () => {
     const verdicts = await judgeSession({
-      model,
+      model: replyingWith(verdictJson),
       transcript: "assistant: Hi Peter! ...",
-      rubrics: [
-        "greets the user by name",
-        "asks only about the current question",
-      ],
+      rubrics,
     });
 
     assert.equal(verdicts.length, 2);
@@ -48,5 +51,18 @@ describe("judgeSession", () => {
       [true, false],
     );
     assert.equal(verdicts[1]?.reason, "Drifted into unrelated advice.");
+  });
+
+  it("rejects a reply that does not match the verdict schema", async () => {
+    const malformed = JSON.stringify({
+      verdicts: [{ rubric: "x", pass: "yes" }],
+    });
+    await assert.rejects(
+      judgeSession({
+        model: replyingWith(malformed),
+        transcript: "assistant: Hi Peter! ...",
+        rubrics,
+      }),
+    );
   });
 });
