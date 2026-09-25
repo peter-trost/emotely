@@ -237,9 +237,10 @@ Build-time configuration is `--dart-define`s read in `apps/mobile/app/lib/app/en
 uncaught-error autocapture is off in debug builds regardless). How to build, run,
 drive the app on a simulator, and run the on-device acceptance session is an
 agent skill: [`.claude/skills/run-app`](.claude/skills/run-app/SKILL.md). Its
-verification CLI (`scripts/run-app.sh run <flow>`) drives a debug build with
-[marionette](https://github.com/leancodepl/marionette_mcp) through a named flow
-and writes an evidence bundle: screenshots, a video, logs and PostHog events.
+CLI (`scripts/run-app.sh up`) sets a debug build up on a simulator, signed in,
+for an agent to drive with plain [marionette](https://github.com/leancodepl/marionette_mcp)
+commands, then collects an evidence bundle: screenshots, a video, logs and
+PostHog events.
 
 ## Verify-at-build-time (do NOT pin from memory)
 

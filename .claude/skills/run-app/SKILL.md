@@ -1,66 +1,116 @@
 ---
 name: run-app
-description: How to run, drive and verify the Flutter app (apps/mobile/app) on an iOS simulator with the verification CLI, which runs a named flow with marionette and writes an evidence bundle (screenshots, video, logs, PostHog events); plus the on-device acceptance session and the unit gate. Use whenever asked to run the app, see a screen, verify a change on a device, collect evidence for a pull request, add a flow, or run integration_test.
+description: How to run, drive and verify the Flutter app (apps/mobile/app) on an iOS simulator — run-app.sh sets it up signed in against the deployed agent, the agent drives it with plain marionette commands, and the CLI records and collects an evidence bundle (screenshots, video, logs, PostHog events); plus the on-device acceptance session and the unit gate. Use whenever asked to run the app, see a screen, verify a change on a device, collect evidence for a pull request, or run integration_test.
 ---
 
 # Running apps/mobile/app
 
-## The verification CLI
+## Verify on the simulator: up → drive → collect → down
 
-One command builds a debug app, starts it on a fresh iOS simulator against the
-deployed agent, signs in as the smoke account, runs a named flow and writes an
-evidence bundle:
+`.claude/skills/run-app/scripts/run-app.sh` sets the app up and collects the
+evidence; you drive it in between with plain `marionette` commands. Run
+`run-app.sh help` first: it prints the CLI's usage followed by marionette's
+own reference (`marionette help-ai`).
+
+1. **Up.** `run-app.sh up` builds a debug app, boots a fresh iOS simulator,
+   launches the app with `flutter run` against the deployed agent, registers
+   it with marionette and signs in as the smoke account. It ends on the
+   signed-in journal and prints the **instance** and the **bundle**:
+
+   ```
+   instance  emotely-verify-12345
+   device    <udid>
+   bundle    …/apps/mobile/app/build/evidence/20260925-101500
+   drive     marionette -i emotely-verify-12345 get-interactive-elements
+   ```
+
+   About three minutes (build, boot, sign-in). `run-app.sh status` prints the
+   same again. Attach the Claude Code iOS Simulator panel to the device to
+   watch. Any command that fails exits non-zero and names its step
+   (`preflight`, `build`, `simulator`, `launch`, `register`, `sign-in`, …).
+2. **Drive** with `marionette -i <instance> <command>`. Look before acting:
+   `get-interactive-elements` lists what is on screen with its keys. Match by
+   **key** first (`--key journal_view.start`), by visible `--text` only where a
+   widget has none, and never by coordinates: a widget the task needs gets a
+   `Key('<screen>.<thing>')` like its neighbours. Marionette taps the centre
+   of what a key names, so the key belongs on the tappable widget itself (see
+   `SubmitButton.buttonKey`), never on a full-width row around it. A model
+   round takes a few seconds: poll `get-interactive-elements` until the next
+   key shows up. Screenshots go into the bundle:
+   `take-screenshots --output <bundle>/NN-<name>.png`. For video, wrap the
+   part worth watching in `run-app.sh record start` / `record stop`.
+3. **Collect.** `run-app.sh collect` stops a running recording and writes
+   `app.log` (marionette `get-logs`: every `debugPrint`),
+   `posthog-events.json` (the smoke user's events since `up`, `$`
+   properties dropped) and `summary.json`, next to `flutter-run.log` and your
+   screenshots. It briefly backgrounds the app so PostHog flushes (up to two
+   and a half minutes while events arrive), then brings it back; drive on and
+   collect again if you need to.
+4. **Down.** `run-app.sh down` stops the app and deletes the simulator `up`
+   created. The bundle stays. Attach what a reviewer needs to the pull
+   request with `gh pr create --attach` / `gh pr edit --attach`.
+
+`up --device <udid>` reuses a simulator (the app is uninstalled first, so it
+still starts signed out); `up --skip-build` reuses the last `Runner.app` that
+`up` built.
+
+### Worked example: start a session and answer the first question
 
 ```bash
-.claude/skills/run-app/scripts/run-app.sh run first-answer
+S=.claude/skills/run-app/scripts/run-app.sh
+$S up                                   # prints instance and bundle
+I=emotely-verify-12345                  # from up's output
+B=/…/build/evidence/20260925-101500     # from up's output
+m() { marionette -i "$I" "$@"; }
+
+$S record start
+m get-interactive-elements              # a leftover session shows journal_view.discard
+m tap --key journal_view.discard        # only if it is there
+m take-screenshots --output "$B/01-journal.png"
+m tap --key journal_view.start
+# The consent screen, only while the smoke account's consent is missing or
+# out of date: m scroll-to --key consent_view.checkbox; m tap --key
+# consent_view.checkbox; m scroll-to --key consent_view.agree; m tap --key
+# consent_view.agree
+m get-interactive-elements              # repeat until session_view.question shows
+m take-screenshots --output "$B/02-first-question.png"
+# The keys tell the kind of question; this one was a text list:
+m enter-text --key text_list_input.field.0 --input "Made-up item one"
+m enter-text --key text_list_input.field.1 --input "Made-up item two"
+m tap --key text_list_input.submit
+m get-interactive-elements              # repeat until Text: "Question 2" shows
+m take-screenshots --output "$B/03-second-question.png"
+m press-back-button                     # leave no open session behind
+m get-interactive-elements              # repeat until journal_view.discard shows
+m tap --key journal_view.discard
+$S collect
+$S down
 ```
 
-It exits non-zero and names the step that failed (`preflight`, `build`,
-`simulator`, `launch`, `register`, `sign-in`, `record`, `flow: <step>`,
-`evidence`). A failed flow still writes its bundle, with a `failure.png`.
-`run-app.sh help` prints the options, the flow format and marionette's own
-reference (`marionette help-ai`); read it before writing a flow.
+The other kinds: `longtext_input.field` then `longtext_input.submit`;
+`tap --key rating_input.slider` (its centre is a 5) then
+`rating_input.submit`; `emoji_input.slot.0`, `tap --text 😊` (the
+third-party picker has no keys) then `emoji_input.submit`;
+`color_input.slot.0`, `color_input.select` then `color_input.submit`.
+Discard what you open: the nightly live smoke starts a new session and fails
+on an unfinished one.
 
-Expect about four minutes on a fresh simulator: two for the build, one for
-the boot, the flow itself, and up to two and a half waiting for PostHog to
-ingest. To watch, attach the Claude Code iOS Simulator panel once the
-`simulator` step has printed the device.
+### Privacy
 
-**Evidence bundle** (`apps/mobile/app/build/evidence/<time>-<flow>/`, ignored
-by git): `NN-<name>.png` per screenshot step, `video.webm` from sign-in on,
-`app.log` (marionette `get-logs`: every `debugPrint`), `flutter-run.log`,
-`posthog-events.json` (this run's events for the smoke user, `$` properties
-dropped), `steps.log` and `summary.json` (every step with its status and
-seconds). Attach what a reviewer needs to a pull request with
-`gh pr create --attach` / `gh pr edit --attach`.
-
-**Privacy.** The repository and its attachments are public (ADR 0005). The
-CLI signs in only as the smoke account from `apps/agent/.env.local` (read
-blind, from the main checkout when run in a worktree) and refuses an address
-outside the reserved test domains. It records nothing of the sign-in, and it
-scrubs the address, password and user id from every text file in the bundle.
-A flow types made-up content only, and says so.
-
-**Adding a flow** is a new `flows/<name>.yaml`, then
-`run-app.sh check` (CI runs it too). A step the app cannot be driven through
-by key or text needs a key on the widget, not a coordinate: give it a
-`Key('<screen>.<thing>')` like its neighbours. Marionette taps the centre of
-what the key names, so the key goes on the tappable widget itself (see
-`SubmitButton.buttonKey`), never on a full-width row around it.
-
-**Driving by hand.** `run-app.sh run <flow> --keep` leaves the app running and
-prints its VM service URI, device and `flutter run` pid; then any marionette
-command works against it (`marionette --uri <uri> get-interactive-elements`,
-`tap --key …`). The flow backgrounds the app to flush PostHog:
-`xcrun simctl launch <udid> de.emotely.emotely` brings it back. Afterwards
-kill the pid and `xcrun simctl delete <udid>`.
+The repository and its attachments are public (ADR 0005). `up` signs in only
+as the smoke account from `apps/agent/.env.local` (read blind, from the main
+checkout when run in a worktree), refuses an address outside the reserved
+test domains, and signs in before any recording. `collect` scrubs the smoke
+address, password and user id from every text file in the bundle. What you
+type is yours to keep clean: made-up content only, and say so. Never sign in
+as anyone else on a driven app.
 
 How it fits together: `main.dart` initialises `MarionetteBinding` only under
 `kDebugMode`, so profile and release builds never contain it. The debug
 build carries `SMOKE_EMAIL`, which makes the sign-in screen ask that one
-account for a password instead of a code (it has no mailbox). The CLI's
-`marionette_cli` must match the app's `marionette_flutter` version; preflight
-says which to activate.
+account for a password instead of a code (it has no mailbox). The installed
+`marionette_cli` must match the app's `marionette_flutter` version; `up`'s
+preflight says which to activate.
 
 ## Build-time configuration
 
@@ -111,12 +161,12 @@ cd apps/mobile/app && fvm flutter test integration_test/live_session_test.dart -
 ```
 
 Expect ~25 s after the build (about ten live model rounds). It starts a new
-session, so it needs the smoke account without an unfinished one; every CLI
-flow discards what it leaves open.
+session, so it needs the smoke account without an unfinished one: discard
+what a driven session leaves open (above).
 
 ## PostHog by hand
 
-The CLI already fetches a run's events. For anything else, the personal key
+`run-app.sh collect` already fetches a session's events. For anything else, the personal key
 (also read blind) reads the events API; properties must be ids, types, counts
 and status codes only — never content (ADR 0005):
 
