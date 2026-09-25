@@ -47,7 +47,14 @@ twice was held too low: move it up a layer. A one-off needs only its fix.
   with `flutter analyze --fatal-infos`. Disabling any rule requires an
   in-config justification comment next to the override. Never fix a
   diagnostic by weakening a rule without that justification.
-- Deferred work goes into an issue, not a comment: CI's tripwire (`packages/tripwire`) fails on a TODO or workaround comment and on a suppression without its reason.
+- Deferred work goes into an issue, not a comment: CI's tripwire (ast-grep rules in `ast-grep/rules/tripwire`) fails on a TODO or workaround comment and on a suppression without its reason.
+- A new custom check is rules for an existing engine, never a hand-rolled
+  tool: ast-grep (`ast-grep/rules`, each with a test in `ast-grep/tests`)
+  when it depends only on syntax, a Dart analyzer rule only when it needs
+  types, and a prebuilt Rust binary only when no rule can express it. Never
+  reimplement what the analyzer, biome or shellcheck already do, and size a
+  tool for hundreds of pull requests a day
+  ([ADR 0018](docs/adr/0018-custom-checks-are-engine-rules-first.md)).
 
 ## Billing
 

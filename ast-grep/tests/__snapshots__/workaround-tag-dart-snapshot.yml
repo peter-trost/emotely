@@ -1,0 +1,40 @@
+id: workaround-tag-dart
+snapshots:
+  ? |
+    /* outer /* inner */ still a comment: TODO */ void f() {}
+  : labels:
+    - source: '/* outer /* inner */ still a comment: TODO */'
+      style: primary
+      start: 0
+      end: 45
+  ? |
+    // todo(peter): later
+    void f() {}
+  : labels:
+    - source: '// todo(peter): later'
+      style: primary
+      start: 0
+      end: 21
+  ? |
+    /// TODO: document
+    void f() {}
+  : labels:
+    - source: '/// TODO: document'
+      style: primary
+      start: 0
+      end: 18
+  ? |
+    final u = 'https://x'; // TODO
+  : labels:
+    - source: // TODO
+      style: primary
+      start: 23
+      end: 30
+  ? |
+    void f() {}
+    // TODO: handle later
+  : labels:
+    - source: '// TODO: handle later'
+      style: primary
+      start: 12
+      end: 33

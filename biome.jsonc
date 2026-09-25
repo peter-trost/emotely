@@ -87,19 +87,6 @@
       }
     },
     {
-      // The tripwire's fixtures are Dart and shell source held in strings:
-      // `${` is those languages' interpolation, not a mistyped template
-      // literal, and rule names and shell lines trip the entropy heuristic
-      // without being secrets.
-      "includes": ["packages/tripwire/src/*.test.ts"],
-      "linter": {
-        "rules": {
-          "security": { "noSecrets": "off" },
-          "suspicious": { "noTemplateCurlyInString": "off" }
-        }
-      }
-    },
-    {
       // Vercel functions must default-export their handler; function entry
       // points and ops scripts are env-driven and speak via stdout.
       "includes": ["apps/agent/api/**", "apps/agent/scripts/**"],

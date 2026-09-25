@@ -193,20 +193,24 @@ jobs:
       - run: shellcheck --external-sources --severity=style scripts/*.sh
       - run: bash scripts/release-status.test.sh
 
-  # The comment tripwire (packages/tripwire): hand-written Dart, TypeScript
-  # and shell must not announce a workaround (TODO, FIXME, HACK, XXX,
-  # "workaround", "for now", "temporary") or suppress a diagnostic without a
-  # reason; deferred work goes into an issue. It reads every tracked source on
-  # every run, needs no install and takes seconds, so it has no paths filter.
-  # Its own tests run in the agent job, with the other workspace packages.
+  # The comment tripwire (ast-grep rules, ADR 0018): hand-written Dart,
+  # TypeScript and shell must not announce a workaround (TODO, FIXME, HACK,
+  # XXX, "workaround", "for now", "temporary") or suppress a diagnostic
+  # without a reason; deferred work goes into an issue. It installs only the
+  # root package, whose ast-grep is a prebuilt binary, and reads every tracked
+  # source in well under a second, so it has no paths filter.
   tripwire:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
-      - run: node packages/tripwire/src/cli.ts --github
+      - run: pnpm install --frozen-lockfile --filter emotely
+      - run: pnpm exec ast-grep test
+      - run: pnpm exec bash scripts/tripwire.test.sh
+      - run: pnpm exec bash scripts/tripwire.sh --format github
 
   # The schema gate: migrations apply to a fresh Postgres, and the pgTAP suite
   # proves row-level security holds (ADR 0010). Only the database container

@@ -577,7 +577,7 @@ fi
 
 step "Workspace dependencies"
 
-info "pnpm install (agent + contract)"
+info "pnpm install (root tools incl. ast-grep, agent, contract)"
 (cd "$REPO_ROOT" && pnpm install --frozen-lockfile)
 
 # A pub workspace: one resolution for the app and every package in it.
@@ -663,7 +663,7 @@ if [ "$VERIFY" -eq 1 ]; then
   step "Verifying (the CI jobs, minus the ones that need a secret)"
 
   info "tripwire: no workaround comments, no suppression without a reason"
-  (cd "$REPO_ROOT" && node packages/tripwire/src/cli.ts)
+  (cd "$REPO_ROOT" && pnpm tripwire)
 
   info "agent: lint, typecheck, tests, contract tripwire"
   (cd "$REPO_ROOT" && pnpm lint && pnpm typecheck && pnpm -r --if-present test)

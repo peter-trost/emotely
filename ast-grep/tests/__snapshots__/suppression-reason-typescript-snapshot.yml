@@ -1,0 +1,59 @@
+id: suppression-reason-typescript
+snapshots:
+  ? |
+    // @ts-expect-error
+    f(1);
+  : labels:
+    - source: // @ts-expect-error
+      style: primary
+      start: 0
+      end: 19
+  ? |
+    x;
+    /*
+     * @ts-ignore
+     */
+    f(4);
+  : labels:
+    - source: |-
+        /*
+         * @ts-ignore
+         */
+      style: primary
+      start: 3
+      end: 23
+  ? |
+    x;
+    /* @ts-ignore */ f(3);
+  : labels:
+    - source: /* @ts-ignore */
+      style: primary
+      start: 3
+      end: 19
+  ? |
+    x;
+    // biome-ignore lint/security/noSecrets: ok
+    y;
+  : labels:
+    - source: '// biome-ignore lint/security/noSecrets: ok'
+      style: primary
+      start: 3
+      end: 46
+  ? |
+    x;
+    // biome-ignore lint/style/noMagicNumbers
+    y;
+  : labels:
+    - source: // biome-ignore lint/style/noMagicNumbers
+      style: primary
+      start: 3
+      end: 44
+  ? |
+    x;
+    // biome-ignore-start lint/style/noMagicNumbers: <explanation>
+    y;
+  : labels:
+    - source: '// biome-ignore-start lint/style/noMagicNumbers: <explanation>'
+      style: primary
+      start: 3
+      end: 65
