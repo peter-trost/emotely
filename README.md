@@ -1,5 +1,8 @@
 # emotely
 
+[![TestFlight internal](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeter-trost%2Femotely%2Fstatus%2Fstatus.json&query=%24.ios.internal.label&label=TestFlight%20internal&logo=apple&color=blue)](https://github.com/peter-trost/emotely/commits/status)
+[![Play internal](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeter-trost%2Femotely%2Fstatus%2Fstatus.json&query=%24.android.internal.label&label=Play%20internal&logo=googleplay&color=blue)](https://github.com/peter-trost/emotely/commits/status)
+
 A daily journaling app with an AI **Journaling Assistant** that walks you through
 a structured reflection — walking a chosen question set — and produces a summarized
 journal entry. This is a ground-up rebuild of the original emotely (a shipped
@@ -114,7 +117,7 @@ The old `ColorText` / `ColorTextEditingController` feature becomes just one
 Adopted day one (all free at our scale, ~0€ at 1k MAU):
 
 - **Product analytics** — `posthog_flutter` (app) + `posthog-node` (agent).
-- **LLM observability** — `@posthog/ai` with `experimental_telemetry` on AI SDK
+- **AI Observability** — `@posthog/ai` with `experimental_telemetry` on AI SDK
   calls → `$ai_generation` events (tokens, cost, latency, traces per model).
   **content recording OFF at the source** (`recordInputs`/`recordOutputs`
   false; a CI leak test proves no journal text reaches spans). Only metadata
@@ -125,8 +128,11 @@ Adopted day one (all free at our scale, ~0€ at 1k MAU):
 - **Error tracking** — native PostHog exception tracking. **No Sentry.**
 - **Max AI + anomaly alerts** — agentic analyst that watches AI-cost-per-user and
   session-completion and pings on drift. This is the self-driving watchdog.
-- **Session replay + surveys** — deferred (replay only with mask-all-text, given
-  sensitive journal content).
+- **Surveys** — added for the beta (2026-09-18): event-triggered popovers for
+  structured questions, alongside the mailto feedback row
+  ([ADR 0004](docs/adr/0004-posthog-observability-stack.md)).
+- **Session replay** — deferred (only with mask-all-text, given sensitive
+  journal content).
 
 **The self-driving loop:** PostHog flag hands the agent `{model, prompt}` →
 `@posthog/ai` emits cost/latency per variant → LLM prompt experiment attributes
