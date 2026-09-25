@@ -41,7 +41,7 @@ write() {
 
 # The findings as sorted `path:line: message` lines, lines counted from 1.
 findings() {
-  (cd "$1" && bash scripts/tripwire.sh --json=stream 2>/dev/null || true) |
+  (cd "$1" && { bash scripts/tripwire.sh --json=stream 2>/dev/null || true; }) |
     jq -r '"\(.file):\(.range.start.line + 1): \(.message)"' | sort
 }
 
@@ -102,7 +102,7 @@ test_writes_github_annotations_when_asked() {
   local dir output
   dir="$(repo lib/a.dart '// TODO\n')"
 
-  output="$(cd "${dir}" && bash scripts/tripwire.sh --format github 2>/dev/null || true)"
+  output="$(cd "${dir}" && { bash scripts/tripwire.sh --format github 2>/dev/null || true; })"
   [[ "${output}" == *'::error file=lib/a.dart,line=1,endLine=1,title=workaround-tag-dart::workaround comment "TODO"'* ]] ||
     fail "writes a GitHub annotation: got
 ${output}"
