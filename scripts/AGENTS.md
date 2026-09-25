@@ -17,5 +17,8 @@ on purpose: `dart` is the standalone SDK `apps/web` is pinned to, and
 `flutter-dart` is Flutter's bundled one — the only one that resolves
 `sdk: flutter` packages, so it is what `apps/mobile/app` uses wherever CI says `dart`.
 
+`release-status.sh` records one store channel's version and build in the README badges' `status.json`.
+
 Shell here is linted by the `scripts` CI job: `shellcheck --external-sources
---severity=style scripts/*.sh`, clean.
+--severity=style scripts/*.sh`, clean; the same job runs
+`bash scripts/release-status.test.sh`.

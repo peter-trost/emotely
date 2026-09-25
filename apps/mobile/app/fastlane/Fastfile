@@ -47,6 +47,16 @@ def promote_build_number
   value.empty? ? nil : value
 end
 
+# Hands the build a lane just shipped to the workflow step running it, as the
+# step outputs `version` and `build`; app-release.yml's `status` job turns them
+# into the README badges. A no-op outside GitHub Actions.
+def report_shipped(version:, build:)
+  outputs = ENV.fetch("GITHUB_OUTPUT", "")
+  return if outputs.empty?
+
+  File.open(outputs, "a") { |file| file.puts("version=#{version}", "build=#{build}") }
+end
+
 def dart_defines
   defines = []
   defines << "--dart-define=POSTHOG_KEY=#{ENV.fetch("POSTHOG_KEY")}" if ENV["POSTHOG_KEY"].to_s != ""
@@ -138,6 +148,7 @@ platform :ios do
       # `expire_previous_builds` (testers keep the older build until they
       # update).
     )
+    report_shipped(version: BUILD_NAME, build: build_number)
   end
 
   # Queries below need Spaceship's token, which `asc_api_key` sets
@@ -272,6 +283,7 @@ platform :android do
       track: "internal",
       aab: File.join(APP_DIR, "build/app/outputs/bundle/release/app-release.aab")
     )
+    report_shipped(version: BUILD_NAME, build: build_number)
   end
 
   desc "No build: promote the internal release (or PROMOTE_BUILD_NUMBER) to the closed alpha track"
