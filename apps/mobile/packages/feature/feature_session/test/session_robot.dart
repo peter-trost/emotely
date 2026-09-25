@@ -71,8 +71,19 @@ class SessionRobot(
   }
 
   Future<void> answerLongtext(String text) async {
+    await writeLongtext(text);
+    await submitLongtext();
+  }
+
+  /// Types [text] into the paragraph, replacing what was there, and sends
+  /// nothing yet.
+  Future<void> writeLongtext(String text) async {
     await tester.enterText(find.byKey(LongtextInput.fieldKey), text);
     await tester.pump();
+  }
+
+  /// Taps the paragraph's submit, whether or not it is enabled.
+  Future<void> submitLongtext() async {
     await tapSubmit(tester, LongtextInput.submitKey);
     await settle();
   }

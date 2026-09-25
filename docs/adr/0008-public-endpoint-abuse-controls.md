@@ -50,6 +50,20 @@ and resends once on `unauthorized`, and offers a fresh session instead of a
 retry on `invalid_signature` and `transcript_too_long`. No server text reaches
 a screen, so every message can be localized.
 
+### Amendment 2026-09-24: the app enforces the answer cap too
+
+"4 KB" is `JSON.stringify(value).length`: UTF-16 code units of the encoded
+answer, not bytes, so escapes, quotes, list punctuation and both halves of an
+emoji count. A refused answer used to strand the user, since "Try again"
+resent it unchanged. The cap now lives in `packages/contract`
+(`maxAnswerLength`, emitted under `limits` in the JSON Schema and pinned by the
+app's contract test), and the longtext and text-list inputs measure exactly
+what the agent measures, count down near the cap and will not submit past it.
+The cap stays at 4096: it bounds what every later round re-sends, and about
+650 words per answer is room enough for journaling. The app enforces the cap
+from its own build, so **lowering it strands every older build in the loop
+this removed**: raise the minimum app version with it.
+
 ## Cost backstops
 
 - A per-round output-token cap and a round guard derived from the transcript
