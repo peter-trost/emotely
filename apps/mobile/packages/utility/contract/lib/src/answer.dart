@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:ui';
 
+import 'package:contract/src/answer_limit.dart';
 import 'package:contract/src/answer_type.dart';
 import 'package:contract/src/hex_color_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -38,6 +40,14 @@ extension AnswerX on Answer {
   /// The value as the agent expects it on the wire — `#RRGGBB` strings for
   /// colors, not Dart objects. This, never [value], is what gets posted.
   Object? get wireValue => toJson()['value'];
+
+  /// How long the agent measures this answer to be: [wireValue] encoded as
+  /// JSON, in UTF-16 code units. Dart's `jsonEncode` escapes exactly what
+  /// JavaScript's `JSON.stringify` does, so the two lengths agree.
+  int get wireLength => jsonEncode(wireValue).length;
+
+  /// Whether the agent accepts an answer this long ([maxAnswerLength]).
+  bool get fits => wireLength <= maxAnswerLength;
 
   /// The answer type this variant carries.
   AnswerType get answerType => switch (this) {

@@ -214,6 +214,22 @@ describe("advance-session handler", () => {
     assert.equal(res.status, 405);
   });
 
+  // The app caps its inputs by this exact rule (`Answer.fits` in the Dart
+  // contract), so the boundary is pinned here, where it is enforced.
+  it("measures an answer as its JSON in UTF-16 code units, up to 4096", async () => {
+    const withValue = (value: unknown) =>
+      handler()(post({ answer: { tool_call_id: "c1", value } }));
+
+    // Two quotes around the text: 4094 letters encode to exactly 4096.
+    assert.equal((await withValue("x".repeat(4094))).status, 200);
+    const over = await withValue("x".repeat(4095));
+    assert.equal(over.status, 400);
+    assert.equal(await codeOf(over), "answer_too_large");
+    // An emoji is two code units: 2047 of them encode to 4096 as well.
+    assert.equal((await withValue("😊".repeat(2047))).status, 200);
+    assert.equal((await withValue("😊".repeat(2048))).status, 400);
+  });
+
   it("maps a mismatched answer tool_call_id to 400, not a crash", async () => {
     const strict = createAdvanceSessionHandler({
       secret: SECRET,
