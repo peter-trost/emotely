@@ -116,15 +116,20 @@ gh run rerun <run-id> --failed
 
 ```bash
 gh pr-review threads list --pr <n> --repo peter-trost/emotely --unresolved
+gh pr-review review view --pr <n> --repo peter-trost/emotely --unresolved | jq -r '
+  .reviews[] | .comments[]? | [.thread_id, .author_login, (.body | split("\n")[0])] | @tsv'
 gh pr view <n> --json comments,reviews   # top-level comments and submissions
 ```
+
+`threads list` carries no author; `review view` does, and the author decides
+whether a thread is the user's or another human's.
 
 Ignore reviews still in `PENDING` state — the reviewer has not submitted them,
 and acting on a half-written review is both wrong and visible. Threads already
 marked resolved are done unless new unresolved feedback hangs off them.
 
 When a comment is correct and actionable, fix it in code, push, and then
-resolve its thread:
+resolve its thread once its [layer is recorded](#classifying-a-correction):
 
 ```bash
 gh pr-review threads resolve --pr <n> --repo peter-trost/emotely --thread-id <id>
@@ -136,16 +141,57 @@ GitHub. Writing to a review thread is visible to other people, so it follows
 one rule: never leave a GitHub trace that makes it hard to tell whether the user
 or an agent did something.
 
-- Resolve threads the user opened, and threads from review bots.
-- Leave threads where other humans are participating — report those instead.
+- Resolve threads the user opened.
+- Leave threads where other humans are participating — report those instead,
+  with your classification in the suggested reply.
 - Post a reply only when the user has confirmed the exact text, and prefix it with
-  `[from Claude]: ` so its origin is unambiguous.
+  `[from Claude]: ` so its origin is unambiguous. The one exception is the
+  layer record below on a thread the user opened: it states what was done, not
+  a position, so it needs no confirmation.
 - Never mark the PR draft or ready, never close or reopen it, never dismiss a
   review.
 
 ```bash
 gh pr-review comments reply --pr <n> --repo peter-trost/emotely \
   --thread-id <id> --body '[from Claude]: ...'
+```
+
+### Classifying a correction
+
+Classify every thread before resolving it, against the four layers in the
+root `AGENTS.md`:
+
+- **One-off** — true of this diff only: a typo, a wrong value, a misread
+  requirement. The fix is the whole answer.
+- **Kind of mistake** — the reviewer would write the same comment on another
+  PR. Pick the strongest layer that can hold it, then either
+  - build that layer in this PR, beside the fix, when it fits the PR's scope; or
+  - open a follow-up when the layer is its own piece of work (a lint plugin, a
+    refactor across packages), and link it in the reply:
+    `gh issue create --label enhancement --title '...' --body '...'`, with the
+    thread URL in the body and a line saying Claude opened it from review.
+
+  Layer 4 also goes in the PR description, with why nothing stronger fits.
+
+A kind of mistake closes only with a commit or a linked issue; a reply alone
+leaves it to be made again. Before picking the layer, look for an earlier
+record of the same kind:
+
+- **A rule that should have caught it** — an `AGENTS.md` line, a skill step, a
+  lint that misses this case. The correction has now been made twice: go one
+  layer above that rule.
+- **An open follow-up** — `gh issue list --label enhancement --search '<keywords>'`.
+  Link it instead of opening a second.
+
+Unsure whether it is a kind at all? Treat it as an ambiguous comment and bring
+it to the user with your guess.
+
+Record the call on the thread, then resolve it:
+
+```text
+[from Claude]: Fixed in <sha>. One-off.
+[from Claude]: Fixed in <sha>. Kind of mistake → layer 2: <the rule> in <sha>.
+[from Claude]: Fixed in <sha>. Kind of mistake → layer 1: follow-up #<n>.
 ```
 
 ## Merging is the user's, unless they hand it to you
@@ -309,4 +355,5 @@ secret reached the history, or if CI is failing in a way whose only fix would
 weaken a lint, a coverage gate or a tripwire.
 
 Final summary: head SHA, CI status, mergeability, what you pushed, how many
-re-runs you spent, and anything still open.
+re-runs you spent, each thread's class and layer (with any follow-up
+issue), and anything still open.
