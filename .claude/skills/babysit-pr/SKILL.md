@@ -122,15 +122,14 @@ gh pr view <n> --json comments,reviews   # top-level comments and submissions
 ```
 
 `threads list` carries no author; `review view` does, and the author decides
-whether a thread is a human's or a bot's (`coderabbitai`).
+whether a thread is the user's or another human's.
 
 Ignore reviews still in `PENDING` state — the reviewer has not submitted them,
 and acting on a half-written review is both wrong and visible. Threads already
 marked resolved are done unless new unresolved feedback hangs off them.
 
 When a comment is correct and actionable, fix it in code, push, and then
-resolve its thread — a human's thread once its
-[layer is recorded](#corrections-from-a-human):
+resolve its thread once its [layer is recorded](#classifying-a-correction):
 
 ```bash
 gh pr-review threads resolve --pr <n> --repo peter-trost/emotely --thread-id <id>
@@ -142,7 +141,7 @@ GitHub. Writing to a review thread is visible to other people, so it follows
 one rule: never leave a GitHub trace that makes it hard to tell whether the user
 or an agent did something.
 
-- Resolve threads the user opened, and threads from review bots.
+- Resolve threads the user opened.
 - Leave threads where other humans are participating — report those instead,
   with your classification in the suggested reply.
 - Post a reply only when the user has confirmed the exact text, and prefix it with
@@ -157,10 +156,10 @@ gh pr-review comments reply --pr <n> --repo peter-trost/emotely \
   --thread-id <id> --body '[from Claude]: ...'
 ```
 
-### Corrections from a human
+### Classifying a correction
 
-Classify every thread a human opened before resolving it, against the four
-layers in the root `AGENTS.md`:
+Classify every thread before resolving it, against the four layers in the
+root `AGENTS.md`:
 
 - **One-off** — true of this diff only: a typo, a wrong value, a misread
   requirement. The fix is the whole answer.
@@ -194,10 +193,6 @@ Record the call on the thread, then resolve it:
 [from Claude]: Fixed in <sha>. Kind of mistake → layer 2: <the rule> in <sha>.
 [from Claude]: Fixed in <sha>. Kind of mistake → layer 1: follow-up #<n>.
 ```
-
-CodeRabbit threads skip the classification: CodeRabbit is itself layer 3, and
-a finding it repeats costs no human attention. Fix and resolve them as above.
-A CodeRabbit finding the user endorses in its thread is a human correction.
 
 ## Merging is the user's, unless they hand it to you
 
@@ -360,5 +355,5 @@ secret reached the history, or if CI is failing in a way whose only fix would
 weaken a lint, a coverage gate or a tripwire.
 
 Final summary: head SHA, CI status, mergeability, what you pushed, how many
-re-runs you spent, each human thread's class and layer (with any follow-up
+re-runs you spent, each thread's class and layer (with any follow-up
 issue), and anything still open.

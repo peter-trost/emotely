@@ -19,8 +19,7 @@ the strongest layer that can hold it, not only in the code at hand:
    mistake impossible to write. Agents copy what they see, so this layer
    teaches as well as blocks.
 2. **Static analysis** — a lint rule, a compiler flag, a CI gate.
-3. **Guidance** — the nearest `AGENTS.md`, a skill, or CodeRabbit's
-   `.coderabbit.yaml`.
+3. **Guidance** — the nearest `AGENTS.md` or a skill.
 4. **Human review only** — last resort; the PR says why nothing stronger fits.
 
 A kind of mistake ends as a change in the same PR or a linked follow-up issue
