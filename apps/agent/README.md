@@ -47,7 +47,7 @@ Vercel project by a human, never committed (see the root
 | `SUPABASE_URL` | yes | The Supabase project whose users may call ([ADR 0010](../../docs/adr/0010-supabase-data-layer.md)). |
 | `AI_GATEWAY_API_KEY` | yes | Vercel AI Gateway key ([ADR 0003](../../docs/adr/0003-model-gateway-and-cost-ceiling.md)). |
 | `EMOTELY_MODEL` | no | Overrides `DEFAULT_MODEL` in `src/session-config.ts`. The value must be served by providers that **all** qualify under the gateway's privacy filters (below), or every round fails. |
-| `POSTHOG_KEY`, `POSTHOG_HOST` | no | LLM observability **and error tracking**; both or neither ([ADR 0004](../../docs/adr/0004-posthog-observability-stack.md)). Unset means no spans and no exception reports — the runbook below has nothing to read. |
+| `POSTHOG_KEY`, `POSTHOG_HOST` | no | AI Observability **and error tracking**; both or neither ([ADR 0004](../../docs/adr/0004-posthog-observability-stack.md)). Unset means no spans and no exception reports — the runbook below has nothing to read. |
 | `EMOTELY_STORE_URL` | no | Where the force-update screen sends a caller that named no platform, or one we do not know. Overrides `STORE_URL` in `src/session-config.ts`. Set these to correct a link without an app release — the only kind of fix that reaches someone who cannot install one. |
 | `EMOTELY_STORE_URL_IOS` | no | The App Store listing, served for `?platform=ios`. Overrides `STORE_URL_IOS`. |
 | `EMOTELY_STORE_URL_ANDROID` | no | The Play listing, served for `?platform=android`. Overrides `STORE_URL_ANDROID`. |

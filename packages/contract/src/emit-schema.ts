@@ -6,6 +6,7 @@ import {
   askQuestionInput,
   completeSessionInput,
   configResponse,
+  errorResponse,
   recordAnswerInput,
 } from "./index.ts";
 
@@ -23,6 +24,7 @@ const schema = {
     io: "input",
   }),
   config_response: z.toJSONSchema(configResponse, { io: "input" }),
+  error_response: z.toJSONSchema(errorResponse, { io: "input" }),
 };
 
 writeFileSync(

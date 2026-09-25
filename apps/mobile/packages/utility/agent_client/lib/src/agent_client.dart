@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:agent_client/src/advance_response.dart';
+import 'package:agent_client/src/agent_error_code.dart';
 import 'package:contract/contract.dart';
 import 'package:http/http.dart' as http;
 
@@ -18,6 +19,7 @@ class const AgentClient({
   required final Uri endpoint,
   required final String appVersion,
   required final String? Function() accessToken,
+  required final Future<void> Function() refreshAccessToken,
   final Duration timeout = defaultTimeout,
 }) {
   /// A round is one model call; anything slower than this is a hung request
@@ -29,11 +31,39 @@ class const AgentClient({
   /// [appVersion] so the server can gate behaviour per version, and carries
   /// the signed-in user's token from [accessToken]; without one the server
   /// refuses the round (ADR 0010).
+  ///
+  /// A token that lapsed is not the user's problem: when the agent answers
+  /// [AgentErrorCode.unauthorized], the token is renewed with
+  /// [refreshAccessToken] and the same round is sent once more. A renewal
+  /// that cannot happen signs the user out through the auth stream, which
+  /// is what takes them to sign-in; nothing here decides that.
   Future<AdvanceResponse> advance({
     List<Object?>? transcript,
     String? signature,
     SessionAnswer? answer,
   }) async {
+    final body = jsonEncode({
+      'transcript': ?transcript,
+      'signature': ?signature,
+      if (answer != null)
+        'answer': {
+          'tool_call_id': answer.toolCallId,
+          'value': answer.answer.wireValue,
+        },
+      'app_version': appVersion,
+    });
+    try {
+      return await _post(body);
+    } on AgentException catch (error) {
+      if (error.code != AgentErrorCode.unauthorized) {
+        rethrow;
+      }
+      await refreshAccessToken();
+      return await _post(body);
+    }
+  }
+
+  Future<AdvanceResponse> _post(String body) async {
     final response = await httpClient
         .post(
           endpoint,
@@ -42,43 +72,47 @@ class const AgentClient({
             if (accessToken() case final token?)
               'authorization': 'Bearer $token',
           },
-          body: jsonEncode({
-            'transcript': ?transcript,
-            'signature': ?signature,
-            if (answer != null)
-              'answer': {
-                'tool_call_id': answer.toolCallId,
-                'value': answer.answer.wireValue,
-              },
-            'app_version': appVersion,
-          }),
+          body: body,
         )
         .timeout(timeout);
     // The server sends `application/json` without a charset, which
     // package:http would decode as Latin-1 — emoji answers must survive.
-    final body = utf8.decode(response.bodyBytes);
+    final text = utf8.decode(response.bodyBytes);
     if (response.statusCode != 200) {
-      throw AgentException(response.statusCode, _errorMessage(body));
+      throw _refusal(response.statusCode, text);
     }
-    return AdvanceResponse.fromJson(jsonDecode(body) as Map<String, dynamic>);
+    return AdvanceResponse.fromJson(jsonDecode(text) as Map<String, dynamic>);
   }
 
-  static String _errorMessage(String body) {
+  static AgentException _refusal(int statusCode, String body) {
     try {
       final decoded = jsonDecode(body) as Object?;
-      if (decoded case {'error': final String message}) {
-        return message;
+      if (decoded case {
+        'error': final String message,
+        'code': final Object? code,
+      }) {
+        return AgentException(
+          statusCode,
+          message,
+          code: AgentErrorCode.fromWire(code),
+        );
       }
     } on FormatException {
-      // Not JSON: fall through to the generic message.
+      // Not JSON: an edge or gateway answered, not the agent.
     }
-    return 'unexpected response';
+    return AgentException(statusCode, 'unexpected response');
   }
 }
 
-/// A non-200 answer from the agent, with the server's own error message.
-class const AgentException(final int statusCode, final String message)
-    implements Exception {
+/// A non-200 answer from the agent. [code] is what the app acts on, null
+/// when the answer did not come from the agent or names a code this build
+/// does not know; [message] is the agent's English, for logs and error
+/// reports only — never for a screen.
+class const AgentException(
+  final int statusCode,
+  final String message, {
+  final AgentErrorCode? code,
+}) implements Exception {
   @override
   String toString() => 'AgentException($statusCode): $message';
 }

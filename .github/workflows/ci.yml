@@ -67,7 +67,7 @@ jobs:
       AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
@@ -80,12 +80,18 @@ jobs:
       - run: pnpm --filter @emotely/contract schema && git diff --exit-code packages/contract/contract.schema.json
       # Live-model protocol eval (deterministic assertions; judged behavior
       # evals run nightly). Fork PRs have no secrets and skip; anywhere else
-      # a missing key is a broken 'ci' environment and fails loudly.
+      # a missing key is a broken secret and fails loudly. Dependabot runs
+      # never see environment secrets, only Dependabot secrets, so theirs is
+      # a Dependabot secret of the same name — a dependency bump is exactly
+      # what this eval should gate.
       - run: |
           if [ -n "$AI_GATEWAY_API_KEY" ]; then
             pnpm --filter @emotely/agent eval
           elif [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
             echo "eval skipped: fork PR has no gateway key"
+          elif [ "${{ github.actor }}" = "dependabot[bot]" ]; then
+            echo "::error::AI_GATEWAY_API_KEY is missing — check the repo's Dependabot secret"
+            exit 1
           else
             echo "::error::AI_GATEWAY_API_KEY is missing — check the 'ci' environment secret"
             exit 1
@@ -176,6 +182,8 @@ jobs:
   # The machine-setup script bootstraps every other job, so it is the one file
   # that has to work where nothing else does yet — and the only one CI could not
   # see before. shellcheck is the lint for it; runners ship it preinstalled.
+  # release-status.sh gates what app-release writes to the public badge file,
+  # so its refusals are tested here, before a release depends on them.
   scripts:
     needs: changes
     if: needs.changes.outputs.scripts == 'true'
@@ -183,6 +191,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: shellcheck --external-sources --severity=style scripts/*.sh
+      - run: bash scripts/release-status.test.sh
 
   # The schema gate: migrations apply to a fresh Postgres, and the pgTAP suite
   # proves row-level security holds (ADR 0010). Only the database container
