@@ -56,6 +56,11 @@ simulator needs an Apple Account signed in under Settings.
   coverage gate — older very_good releases crash inside a workspace member).
 - First native build after adding a CocoaPods plugin may need
   `pod repo update` (the error says "specs repository is too out-of-date").
+- In a fresh worktree `pod` fails ("CocoaPods not installed or not in valid
+  state"): it resolves `apps/mobile/app/Gemfile`, which pins CocoaPods, and
+  the worktree has no bundle. From `apps/mobile/app`, once:
+  `bundle config set --local path vendor/bundle && bundle install`, and
+  export `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` for every build.
 
 ## Run on the iOS simulator
 
