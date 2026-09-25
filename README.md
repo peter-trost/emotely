@@ -117,7 +117,7 @@ The old `ColorText` / `ColorTextEditingController` feature becomes just one
 Adopted day one (all free at our scale, ~0€ at 1k MAU):
 
 - **Product analytics** — `posthog_flutter` (app) + `posthog-node` (agent).
-- **LLM observability** — `@posthog/ai` with `experimental_telemetry` on AI SDK
+- **AI Observability** — `@posthog/ai` with `experimental_telemetry` on AI SDK
   calls → `$ai_generation` events (tokens, cost, latency, traces per model).
   **content recording OFF at the source** (`recordInputs`/`recordOutputs`
   false; a CI leak test proves no journal text reaches spans). Only metadata

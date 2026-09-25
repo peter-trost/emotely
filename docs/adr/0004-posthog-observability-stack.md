@@ -6,7 +6,7 @@ platform, and deliberately do **not** add Sentry.
 Adopted day one (all within PostHog's free tier at our scale):
 
 - **Product analytics** — `posthog_flutter` (app) + `posthog-node` (agent).
-- **LLM observability** — `@posthog/ai` on the AI SDK calls → `$ai_generation`
+- **AI Observability** — `@posthog/ai` on the AI SDK calls → `$ai_generation`
   events (tokens, cost, latency, traces per model). This is the cost/quality
   benchmark surface.
 - **Feature flags + experiments** — a flag payload `{model, prompt}` drives
