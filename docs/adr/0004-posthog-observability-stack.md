@@ -6,7 +6,7 @@ platform, and deliberately do **not** add Sentry.
 Adopted day one (all within PostHog's free tier at our scale):
 
 - **Product analytics** — `posthog_flutter` (app) + `posthog-node` (agent).
-- **LLM observability** — `@posthog/ai` on the AI SDK calls → `$ai_generation`
+- **AI Observability** — `@posthog/ai` on the AI SDK calls → `$ai_generation`
   events (tokens, cost, latency, traces per model). This is the cost/quality
   benchmark surface.
 - **Feature flags + experiments** — a flag payload `{model, prompt}` drives
@@ -18,8 +18,9 @@ Adopted day one (all within PostHog's free tier at our scale):
 - **Max AI + anomaly alerts** — the "self-driving" watchdog: watches AI-cost-per-
   user and session-completion and pings on drift instead of us dashboard-staring.
 
-Deferred: session replay (only with mask-all-text, given sensitive journal content)
-and surveys — **surveys undeferred 2026-09-18, see below**. Skipped for now: the
+Deferred: session replay (only with mask-all-text, given sensitive journal
+content). Surveys were deferred too until **2026-09-18, when they were adopted
+for the beta — see below**. Skipped for now: the
 data warehouse (Supabase is our source of truth; revisit only to join Stripe
 subscription data).
 
