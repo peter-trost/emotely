@@ -1,4 +1,5 @@
 import 'package:contract/contract.dart';
+import 'package:feature_session/src/widgets/answer_length.dart';
 import 'package:feature_session/src/widgets/submit_button.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -25,10 +26,14 @@ class const TextListInput({
 class _TextListInputState() extends State<TextListInput> {
   final _fields = <_Field>[];
 
-  List<String> get _answer => [
+  List<String> get _items => [
     for (final field in _fields)
       if (field.text.isNotEmpty) field.text,
   ];
+
+  Answer get _answer => Answer.textList(_items);
+
+  bool get _submittable => _items.isNotEmpty && _answer.fits;
 
   @override
   void initState() {
@@ -88,11 +93,10 @@ class _TextListInputState() extends State<TextListInput> {
           onChanged: (_) => _changed(field),
           onSubmitted: (_) => _fields[index + 1].focus.requestFocus(),
         ),
+      AnswerLength(answer: _answer),
       SubmitButton(
         buttonKey: TextListInput.submitKey,
-        onPressed: _answer.isEmpty
-            ? null
-            : () => widget.onSubmit(Answer.textList(_answer)),
+        onPressed: _submittable ? () => widget.onSubmit(_answer) : null,
       ),
     ],
   );

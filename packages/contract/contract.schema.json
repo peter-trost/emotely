@@ -490,5 +490,8 @@
       "code",
       "error"
     ]
+  },
+  "limits": {
+    "max_answer_length": 4096
   }
 }

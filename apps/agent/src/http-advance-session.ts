@@ -4,6 +4,7 @@ import {
   advanceSessionRequest,
   type ErrorCode,
   type ErrorResponse,
+  maxAnswerLength,
 } from "@emotely/contract";
 import { classifyModelFailure } from "./error-tracking.ts";
 import type { VerifyCaller } from "./request-auth.ts";
@@ -11,7 +12,6 @@ import type { AdvanceResult, SessionAnswer } from "./session-core.ts";
 import { signTranscript, verifyTranscript } from "./transcript-auth.ts";
 
 const MAX_TRANSCRIPT_MESSAGES = 200;
-const MAX_ANSWER_BYTES = 4096;
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
@@ -67,7 +67,7 @@ function validate(
   }
   if (
     answer !== undefined &&
-    JSON.stringify(answer.value).length > MAX_ANSWER_BYTES
+    JSON.stringify(answer.value).length > maxAnswerLength
   ) {
     return {
       error: fail(HTTP_BAD_REQUEST, "answer_too_large", "answer too large"),
@@ -164,7 +164,7 @@ export function createAdvanceSessionHandler(deps: {
     // A fresh session must not smuggle an oversized answer either.
     if (
       parsed.answer !== undefined &&
-      JSON.stringify(parsed.answer.value).length > MAX_ANSWER_BYTES
+      JSON.stringify(parsed.answer.value).length > maxAnswerLength
     ) {
       return fail(HTTP_BAD_REQUEST, "answer_too_large", "answer too large");
     }

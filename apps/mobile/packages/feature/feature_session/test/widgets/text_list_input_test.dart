@@ -1,4 +1,5 @@
 import 'package:contract/contract.dart';
+import 'package:feature_session/src/widgets/answer_length.dart';
 import 'package:feature_session/src/widgets/text_list_input.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -94,6 +95,25 @@ void main() {
             ?.hasFocus,
         isTrue,
       );
+    });
+
+    testWidgets('the limit is on the whole list, punctuation included', (
+      tester,
+    ) async {
+      await pumpTestWidget(tester);
+
+      // ["…","…"]: two items of 2045 letters, four quotes, a comma and two
+      // brackets come to 4097, one past the limit.
+      await type(tester, 0, 'a' * 2045);
+      await type(tester, 1, 'a' * 2045);
+
+      expect(isSubmitEnabled(tester, TextListInput.submitKey), isFalse);
+      expect(find.text(AnswerLength.over(1)), findsOneWidget);
+
+      await type(tester, 1, 'a' * 2044);
+
+      expect(isSubmitEnabled(tester, TextListInput.submitKey), isTrue);
+      expect(find.text(AnswerLength.left(0)), findsOneWidget);
     });
 
     testWidgets('meets accessibility guidelines', (tester) async {

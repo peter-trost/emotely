@@ -1,4 +1,4 @@
-import { generateObject, type LanguageModel } from "ai";
+import { generateText, type LanguageModel, Output } from "ai";
 import { z } from "zod";
 
 const verdictSchema = z.object({
@@ -22,9 +22,9 @@ export async function judgeSession(opts: {
   context?: string;
 }): Promise<Verdict[]> {
   const { model, transcript, rubrics, context } = opts;
-  const { object } = await generateObject({
+  const { output } = await generateText({
     model,
-    schema: verdictSchema,
+    output: Output.object({ schema: verdictSchema }),
     // Deterministic grading: the judge must not be a second source of variance.
     temperature: 0,
     prompt: `You are grading a journaling-assistant conversation against rubrics.
@@ -37,5 +37,5 @@ ${rubrics.map((r, i) => `${i + 1}. ${r}`).join("\n")}
 Transcript:
 ${transcript}`,
   });
-  return object.verdicts;
+  return output.verdicts;
 }

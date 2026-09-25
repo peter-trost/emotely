@@ -7,6 +7,7 @@ import {
   completeSessionInput,
   configResponse,
   errorResponse,
+  maxAnswerLength,
   recordAnswerInput,
 } from "./index.ts";
 
@@ -25,6 +26,7 @@ const schema = {
   }),
   config_response: z.toJSONSchema(configResponse, { io: "input" }),
   error_response: z.toJSONSchema(errorResponse, { io: "input" }),
+  limits: { max_answer_length: maxAnswerLength },
 };
 
 writeFileSync(

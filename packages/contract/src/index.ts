@@ -63,6 +63,15 @@ const jsonValue = z.json();
 // reports it, the server gates on it and names the minimum it still serves.
 const appVersion = z.string().regex(/^\d+\.\d+\.\d+$/);
 
+// The longest answer the agent accepts: `JSON.stringify(value).length`, in
+// UTF-16 code units, so escapes, quotes, list punctuation and the second half
+// of every emoji count. The app caps its inputs to it, so an answer it sends
+// always fits; JSON Schema cannot state a length of an encoding, so it is
+// emitted beside the shapes under `limits`. Installed apps enforce the value
+// they were built with: lowering it needs a minimum-app-version bump with it
+// (ADR 0008).
+export const maxAnswerLength = 4096;
+
 export const advanceSessionRequest = z.object({
   transcript: z.array(z.unknown()).optional(),
   signature: z.string().optional(),

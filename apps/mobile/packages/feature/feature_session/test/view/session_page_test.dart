@@ -4,6 +4,7 @@ import 'package:agent_client/agent_client.dart';
 import 'package:contract/contract.dart';
 import 'package:design_system/design_system.dart';
 import 'package:feature_session/src/view/session_page.dart';
+import 'package:feature_session/src/widgets/answer_length.dart';
 import 'package:feature_session/src/widgets/longtext_input.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -145,6 +146,31 @@ void main() {
       expect(robot.questionText, worst.question);
       expect(find.text(draft), findsNothing);
       expect(isSubmitEnabled(tester, LongtextInput.submitKey), isFalse);
+    });
+
+    testWidgets('an answer too long for the agent is never sent, and the '
+        'shortened draft goes through', (tester) async {
+      final agent = AgentStub()
+        ..script([
+          awaiting(toolCallId: 'c1', question: SessionRobot.best),
+          awaiting(toolCallId: 'c2', question: SessionRobot.rate),
+        ]);
+      final robot = SessionRobot(tester, agent);
+      await robot.launch();
+      await robot.settle();
+
+      await robot.writeLongtext('a' * 4095);
+      await robot.submitLongtext();
+
+      expect(agent.requests, hasLength(1));
+      expect(robot.questionText, SessionRobot.best.question);
+      expect(find.text(AnswerLength.over(1)), findsOneWidget);
+
+      await robot.writeLongtext('a' * 4094);
+      await robot.submitLongtext();
+
+      expect(robot.lastPostedValue, 'a' * 4094);
+      expect(robot.questionText, SessionRobot.rate.question);
     });
 
     testWidgets('words a refusal itself and retries the same round', (
