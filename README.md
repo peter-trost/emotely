@@ -128,8 +128,11 @@ Adopted day one (all free at our scale, ~0€ at 1k MAU):
 - **Error tracking** — native PostHog exception tracking. **No Sentry.**
 - **Max AI + anomaly alerts** — agentic analyst that watches AI-cost-per-user and
   session-completion and pings on drift. This is the self-driving watchdog.
-- **Session replay + surveys** — deferred (replay only with mask-all-text, given
-  sensitive journal content).
+- **Surveys** — added for the beta (2026-09-18): event-triggered popovers for
+  structured questions, alongside the mailto feedback row
+  ([ADR 0004](docs/adr/0004-posthog-observability-stack.md)).
+- **Session replay** — deferred (only with mask-all-text, given sensitive
+  journal content).
 
 **The self-driving loop:** PostHog flag hands the agent `{model, prompt}` →
 `@posthog/ai` emits cost/latency per variant → LLM prompt experiment attributes
