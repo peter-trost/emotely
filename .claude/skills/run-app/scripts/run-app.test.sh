@@ -189,6 +189,8 @@ test_take_account_lock_fails_fast_naming_the_other_checkout() {
   fi
   [[ "${err}" == */checkout/a* ]] ||
     fail "take_account_lock names the checkout holding the lock: got ${err}"
+  [[ "${err}" != *" )"* ]] ||
+    fail "take_account_lock prints the start time without ps's padding: got ${err}"
 }
 
 test_the_account_lock_is_per_account() {

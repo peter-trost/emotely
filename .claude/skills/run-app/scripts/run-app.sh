@@ -143,7 +143,7 @@ new_session_id() {
 # with its content in one atomic step, so nobody reads a half-written lock.
 # The holder is alive while its pid runs with the same start time, so a
 # crashed session's lock is stale and a reused pid does not revive it.
-pid_started() { ps -o lstart= -p "$1" 2>/dev/null || true; }
+pid_started() { { ps -o lstart= -p "$1" 2>/dev/null || true; } | sed 's/ *$//'; }
 lock_record() { printf '%s\n%s\n%s\n%s' "$1" "$(pid_started "$1")" "$2" "$3"; }
 lock_read() { readlink "$1" 2>/dev/null || true; }
 # record_field <record> pid|started|session|checkout
