@@ -30,6 +30,9 @@ twice was held too low: move it up a layer. A one-off needs only its fix.
 
 - Research the latest version and current API of any dependency, model, or action
   from its canonical source before pinning or calling it — never from memory.
+- Before adopting a hosted service that runs per PR (CI runners, coverage,
+  anything with a free tier), check its usage limits against tens to hundreds
+  of PRs a day; a quota sized for one human's pace runs out at ours.
 - `main` is protected: all changes land via squash-merged PR, `ci-ok` green.
 - Agent guidance is `AGENTS.md`; every `CLAUDE.md` is a symlink to the
   `AGENTS.md` beside it, at the root and in each directory that carries its own
