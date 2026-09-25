@@ -5,112 +5,13 @@ description: How to run, drive and verify the Flutter app (apps/mobile/app) on a
 
 # Running apps/mobile/app
 
-## Verify on the simulator: up → drive → collect → down
+## Verify on the simulator
 
-`.claude/skills/run-app/scripts/run-app.sh` sets the app up and collects the
-evidence; you drive it in between with plain `marionette` commands. Run
-`run-app.sh help` first: it prints the CLI's usage followed by marionette's
-own reference (`marionette help-ai`).
-
-1. **Up.** `run-app.sh up` builds a debug app, boots a fresh iOS simulator,
-   launches the app with `flutter run` against the deployed agent, registers
-   it with marionette and signs in as the smoke account. It ends on the
-   signed-in journal and prints the **instance** and the **bundle**:
-
-   ```
-   instance  emotely-verify-12345
-   device    <udid>
-   bundle    …/apps/mobile/app/build/evidence/20260925-101500
-   drive     marionette -i emotely-verify-12345 get-interactive-elements
-   ```
-
-   About three minutes (build, boot, sign-in). `run-app.sh status` prints the
-   same again. Attach the Claude Code iOS Simulator panel to the device to
-   watch. Any command that fails exits non-zero and names its step
-   (`preflight`, `build`, `simulator`, `launch`, `register`, `sign-in`, …).
-2. **Drive** with `marionette -i <instance> <command>`. Look before acting:
-   `get-interactive-elements` lists what is on screen with its keys. Match by
-   **key** first (`--key journal_view.start`), by visible `--text` only where a
-   widget has none, and never by coordinates: a widget the task needs gets a
-   `Key('<screen>.<thing>')` like its neighbours. Marionette taps the centre
-   of what a key names, so the key belongs on the tappable widget itself (see
-   `SubmitButton.buttonKey`), never on a full-width row around it. A model
-   round takes a few seconds: poll `get-interactive-elements` until the next
-   key shows up. Screenshots go into the bundle:
-   `take-screenshots --output <bundle>/NN-<name>.png`. For video, wrap the
-   part worth watching in `run-app.sh record start` / `record stop`.
-3. **Collect.** `run-app.sh collect` stops a running recording and writes
-   `app.log` (marionette `get-logs`: every `debugPrint`),
-   `posthog-events.json` (the smoke user's events since `up`, `$`
-   properties dropped) and `summary.json`, next to `flutter-run.log` and your
-   screenshots. It briefly backgrounds the app so PostHog flushes (up to two
-   and a half minutes while events arrive), then brings it back; drive on and
-   collect again if you need to.
-4. **Down.** `run-app.sh down` stops the app and deletes the simulator `up`
-   created. The bundle stays. Attach what a reviewer needs to the pull
-   request with `gh pr create --attach` / `gh pr edit --attach`.
-
-`up --device <udid>` reuses a simulator (the app is uninstalled first, so it
-still starts signed out); `up --skip-build` reuses the last `Runner.app` that
-`up` built.
-
-### Worked example: start a session and answer the first question
-
-```bash
-S=.claude/skills/run-app/scripts/run-app.sh
-$S up                                   # prints instance and bundle
-I=emotely-verify-12345                  # from up's output
-B=/…/build/evidence/20260925-101500     # from up's output
-m() { marionette -i "$I" "$@"; }
-
-$S record start
-m get-interactive-elements              # a leftover session shows journal_view.discard
-m tap --key journal_view.discard        # only if it is there
-m take-screenshots --output "$B/01-journal.png"
-m tap --key journal_view.start
-# The consent screen, only while the smoke account's consent is missing or
-# out of date: m scroll-to --key consent_view.checkbox; m tap --key
-# consent_view.checkbox; m scroll-to --key consent_view.agree; m tap --key
-# consent_view.agree
-m get-interactive-elements              # repeat until session_view.question shows
-m take-screenshots --output "$B/02-first-question.png"
-# The keys tell the kind of question; this one was a text list:
-m enter-text --key text_list_input.field.0 --input "Made-up item one"
-m enter-text --key text_list_input.field.1 --input "Made-up item two"
-m tap --key text_list_input.submit
-m get-interactive-elements              # repeat until Text: "Question 2" shows
-m take-screenshots --output "$B/03-second-question.png"
-m press-back-button                     # leave no open session behind
-m get-interactive-elements              # repeat until journal_view.discard shows
-m tap --key journal_view.discard
-$S collect
-$S down
-```
-
-The other kinds: `longtext_input.field` then `longtext_input.submit`;
-`tap --key rating_input.slider` (its centre is a 5) then
-`rating_input.submit`; `emoji_input.slot.0`, `tap --text 😊` (the
-third-party picker has no keys) then `emoji_input.submit`;
-`color_input.slot.0`, `color_input.select` then `color_input.submit`.
-Discard what you open: the nightly live smoke starts a new session and fails
-on an unfinished one.
-
-### Privacy
-
-The repository and its attachments are public (ADR 0005). `up` signs in only
-as the smoke account from `apps/agent/.env.local` (read blind, from the main
-checkout when run in a worktree), refuses an address outside the reserved
-test domains, and signs in before any recording. `collect` scrubs the smoke
-address, password and user id from every text file in the bundle. What you
-type is yours to keep clean: made-up content only, and say so. Never sign in
-as anyone else on a driven app.
-
-How it fits together: `main.dart` initialises `MarionetteBinding` only under
-`kDebugMode`, so profile and release builds never contain it. The debug
-build carries `SMOKE_EMAIL`, which makes the sign-in screen ask that one
-account for a password instead of a code (it has no mailbox). The installed
-`marionette_cli` must match the app's `marionette_flutter` version; `up`'s
-preflight says which to activate.
+`scripts/run-app.sh` sets the app up signed in on a fresh simulator, you drive
+it with plain `marionette` commands, and it collects the evidence. Read
+[references/verification.md](references/verification.md) for up → drive →
+collect → down, the worked example, the keys, posting evidence and parallel
+sessions.
 
 ## Build-time configuration
 
