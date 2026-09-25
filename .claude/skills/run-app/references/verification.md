@@ -106,8 +106,23 @@ bundle:
   so it stays well under the 10 MB video limit. `--speed 2` or `--speed 1`
   on either command writes `video-2x.mp4` / `video-1x.mp4` instead.
 
-`gh pr edit --attach` rewrites a local path the body mentions into the
-uploaded URL. RECIPE_PLACEHOLDER
+`--attach` (gh 2.99+, on `gh pr create|edit` and `gh issue create|comment`)
+rewrites only a Markdown `![alt](path)` reference into the uploaded URL. An
+`<img src="path">` tag or a bare video path stays as written and the file is
+appended at the end (gh 2.100.0, checked on #180). So upload first, then
+write the tags with the URLs:
+
+```bash
+P=<bundle>/post
+gh pr edit <n> --attach "$P/01-journal.png" --attach "$P/02-first-question.png" \
+  --attach "$P/video-4x.mp4"
+gh pr view <n> --json body -q .body | grep -o 'https://github.com/user-attachments/assets/[^)]*'
+```
+
+The URLs come back in upload order. Rewrite the body with `gh pr edit <n>
+--body-file`, dropping the appended lines: the screenshots side by side on
+one line as `<img src="<url>" width="300" alt="<what it shows>">`, and the
+video's URL alone on its own line, which GitHub renders as a player.
 
 ## Privacy
 
