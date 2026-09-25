@@ -25,7 +25,7 @@ PostHog LLM prompt experiment — never pinned from memory.
 ## Deferred: which gateway
 
 OpenRouter vs Vercel AI Gateway. Both work with the Vercel AI SDK and with PostHog
-LLM observability. Deciding criterion: integration cleanliness — OpenRouter has a
+AI Observability. Deciding criterion: integration cleanliness — OpenRouter has a
 *dedicated* PostHog install path; Vercel AI Gateway is listed as "supported." The
 specific vendor is chosen at build step 3, after understanding the concrete
 differences (routing, failover, caching, billing) — not yet decided.
