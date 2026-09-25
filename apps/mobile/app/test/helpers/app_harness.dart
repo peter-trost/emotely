@@ -48,6 +48,11 @@ Widget appUnderTest({
     build: testBuildInfo,
     agentUrl: AgentStub.endpoint,
     configUrl: ConfigStub.endpoint,
+    // Public ids, but not the real ones: nothing here talks to Google.
+    google: const GoogleClientIds(
+      server: 'server.apps.googleusercontent.com',
+      ios: 'ios.apps.googleusercontent.com',
+    ),
   );
   return const EmotelyApp();
 }

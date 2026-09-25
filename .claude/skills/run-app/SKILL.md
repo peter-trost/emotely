@@ -35,6 +35,15 @@ for a password instead. Against the local Supabase stack (`supabase start`,
 see the supabase skill) the code shows up in Inbucket at
 http://127.0.0.1:54324 instead of a mailbox.
 
+Sign in with Google (iOS, Android) and Sign in with Apple (iOS only) sit
+under the email step. They need a real account in the platform's own sheet,
+so an agent cannot finish them unattended; drive them only with the human
+at the device. Google on Android works only for a build signed with a key
+that has an Android OAuth client in the `emotely-sign-in` Google Cloud
+project (Play App Signing, and the maintainer's local debug key); any other
+key fails with `canceled` before the sheet does anything. Apple on the
+simulator needs an Apple Account signed in under Settings.
+
 ## Toolchain
 
 - Flutter is pinned by FVM (`apps/mobile/app/.fvmrc`); always call `fvm flutter` /

@@ -2,6 +2,8 @@
 /// environment-specific is committed. This is the only place they are read.
 library;
 
+import 'package:feature_auth/feature_auth.dart' show GoogleClientIds;
+
 /// Where the agent runs (`--dart-define=EMOTELY_AGENT_URL=…`).
 const agentUrl = String.fromEnvironment(
   'EMOTELY_AGENT_URL',
@@ -40,6 +42,20 @@ const supabaseUrl = String.fromEnvironment(
 const supabasePublishableKey = String.fromEnvironment(
   'EMOTELY_SUPABASE_PUBLISHABLE_KEY',
   defaultValue: 'sb_publishable_di6BB76PPuuoDklt7jtI0w_KlwO_8JF',
+);
+
+/// The app's Google OAuth clients (Google Cloud project `emotely-sign-in`),
+/// for Sign in with Google (#51). Public identifiers, and deliberately not
+/// defines: the iOS client is also baked into `ios/Runner/Info.plist` as
+/// its reversed URL scheme, which a define could not follow. Supabase lists
+/// the same two in `supabase/config.toml`.
+const googleClients = GoogleClientIds(
+  server:
+      '928057308670-ak9h2h5h8s9rpsgcgto30uf5ecg4thq6'
+      '.apps.googleusercontent.com',
+  ios:
+      '928057308670-dcev1tfqmach6ihsuqntvn5ke2tu46li'
+      '.apps.googleusercontent.com',
 );
 
 /// A define that has to be an absolute URL, checked once at launch so a bad
