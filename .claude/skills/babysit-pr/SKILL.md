@@ -46,13 +46,16 @@ touches only `apps/web` legitimately shows `agent`, `app` and `supabase` as
 skipped — **skipped is not failed**, and `ci-ok` is green precisely because it
 treats them as fine.
 
-Two checks come from outside `ci.yml` and are worth recognising: the **Vercel**
-preview deployments (`emotely-agent`, `emotely-web`, each skipped by its
-`vercel-ignore.sh` when that app is untouched) and **GitGuardian**.
+The checks from outside `ci.yml` worth recognising are the **Vercel** preview
+deployments (`emotely-agent`, `emotely-web`, each skipped by its
+`vercel-ignore.sh` when that app is untouched).
 
-A GitGuardian failure means a secret may have been committed. Triage it first —
-test fixtures and example values trip it too. If it is a **real** secret, get it
-out of the history immediately (see [Staying current with `main`](#staying-current-with-main) — this
+Secrets are caught by GitHub's own **secret scanning with push protection**,
+not by a check: a push containing a known provider's secret is rejected with a
+`GH013` "push protection" error, and anything that got through shows up in
+`gh api repos/trost-systems/emotely/secret-scanning/alerts`. Triage it first —
+test fixtures and example values trip it too. If it is a **real** secret, never
+bypass the block: get it out of the history (see [Staying current with `main`](#staying-current-with-main) — this
 is the one case where rebasing is right), treat the secret as burned and needing
 rotation, and **tell the user**: a real leak is never something to handle
 silently. A false positive needs no history surgery, just the finding reported.
