@@ -36,7 +36,7 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         'This notice covers the emotely mobile app (listed on Google Play as '
         '"Reflect Therapy AI: emotely") for iOS and Android. The web site at '
         'getemotely.com and its waitlist are covered by a separate notice. '
-        'Last updated 15 September 2026.',
+        'Last updated 25 September 2026.',
       ),
     ]),
 
@@ -98,13 +98,35 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
     h3([.text('Your email address')]),
     p([
       .text(
-        'Signing in needs one thing: an email address. The app sends a '
-        'six-digit code to it and you type the code back in — no password, '
-        'no link to click. The address and the sign-in records live in '
-        'Supabase Auth on servers in Frankfurt, Germany (EU). The app has no '
-        'sign-up screen of its own and never asks for a name, a phone '
-        'number, a date of birth, contacts, photos, location or any device '
-        'identifier for advertising.',
+        'Signing in needs one thing: an email address. There are three ways '
+        'to give it. The app can send a six-digit code to it that you type '
+        'back in — no password, no link to click. Or you tap Sign in with '
+        'Google (iOS and Android) or Sign in with Apple (iPhone), and that '
+        'provider confirms who you are and tells us your address itself. '
+        'Either way, the address and the sign-in records live in Supabase '
+        'Auth on servers in Frankfurt, Germany (EU). The app has no sign-up '
+        'screen of its own and never asks for a name, a phone number, a date '
+        'of birth, contacts, photos, location or any device identifier for '
+        'advertising.',
+      ),
+    ]),
+    // #51. What each provider's token carries is what Supabase keeps, so
+    // the notice names it — including the name Google sends unasked.
+    p([
+      .text(
+        'If you sign in with Google or Apple, the provider also passes on an '
+        'identifier for your account with them, which is how the next '
+        'sign-in finds the same account. Google adds the name and profile '
+        'picture link of your Google account, and Supabase keeps them with '
+        'the sign-in records; the app does not show or use them. Apple can '
+        'pass on a name too, but the app does not ask it to. Apple also lets '
+        'you choose Hide My Email: we then receive a relay address that '
+        'forwards to yours. If the address a provider passes on matches an '
+        'account you already have, you land in that same account; a relay '
+        'address never matches, so it starts a new one. We never see your '
+        'Google or Apple password. The provider learns that you signed in '
+        'to emotely — as a controller in its own right, under its own '
+        'privacy policy — and nothing about your journal.',
       ),
     ]),
     p([
@@ -343,8 +365,11 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         strong([.text('Signing in')]),
         .text(
           ': sign_in_code_requested, sign_in_code_request_failed, '
-          'sign_in_code_rejected, sign_in_password_failed, signed_in, '
-          'signed_out, account_deleted.',
+          'sign_in_code_rejected, sign_in_password_failed, '
+          'sign_in_provider_canceled, sign_in_provider_failed, signed_in, '
+          'signed_out, account_deleted. The provider events and signed_in '
+          'say which way you signed in (code, password, Google or Apple) '
+          'and nothing more.',
         ),
       ]),
       li([
@@ -463,7 +488,9 @@ class const AppPrivacy({super.key}) extends StatelessComponent {
         strong([.text('Apple and Google')]),
         .text(
           ' — distribute the app and, independently of us, collect their own '
-          'download and crash statistics under their own privacy policies.',
+          'download and crash statistics under their own privacy policies. If '
+          'you sign in with one of them, it confirms who you are, as described '
+          'under your email address above.',
         ),
       ]),
     ]),

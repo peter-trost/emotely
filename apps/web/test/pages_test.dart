@@ -316,11 +316,30 @@ void main() {
       );
     });
 
+    testComponents('says what Google and Apple hand over at sign-in', (tester) {
+      tester.pumpComponent(const AppPrivacy());
+
+      // #51: both providers are optional ways into the same account, and
+      // what each passes on is stated rather than implied.
+      expect(find.textContaining('Sign in with Google'), findsComponents);
+      expect(find.textContaining('Sign in with Apple'), findsComponents);
+      // Google's token carries a name and a picture; Supabase keeps them.
+      expect(find.textContaining('name and profile picture'), findsComponents);
+      // Apple lets the user hide the address, which then cannot match.
+      expect(find.textContaining('Hide My Email'), findsComponents);
+      // The provider learns of the sign-in as a controller of its own.
+      expect(find.textContaining('learns that you signed in'), findsComponents);
+      // The app still asks for no name itself; it no longer claims that
+      // none ever arrives.
+      expect(find.textContaining('never asks for a name'), findsComponents);
+    });
+
     testComponents('describes analytics by their real event names', (tester) {
       tester.pumpComponent(const AppPrivacy());
 
       expect(find.textContaining('session_started'), findsComponents);
       expect(find.textContaining('sign_in_code_requested'), findsComponents);
+      expect(find.textContaining('sign_in_provider_failed'), findsComponents);
       expect(find.textContaining('journal_viewed'), findsComponents);
     });
 

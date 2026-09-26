@@ -1,4 +1,5 @@
 import 'package:feature_auth/feature_auth.dart';
+import 'package:feature_auth/src/view/provider_buttons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -18,6 +19,12 @@ class SignInRobot(
 
   static const homeKey = Key('home');
 
+  /// Public client ids, but not the real ones: nothing here talks to Google.
+  static const googleClients = GoogleClientIds(
+    server: 'server.apps.googleusercontent.com',
+    ios: 'ios.apps.googleusercontent.com',
+  );
+
   Finder get signIn => find.byType(SignInPage);
   Finder get home => find.byKey(homeKey);
   Finder get emailField => find.byKey(SignInPage.emailKey);
@@ -29,9 +36,13 @@ class SignInRobot(
   Finder get changeEmail => find.byKey(SignInPage.changeEmailKey);
   Finder get error => find.byKey(SignInPage.errorKey);
   Finder get busy => find.byType(CircularProgressIndicator);
+  Finder get googleButton => find.byKey(SignInPage.googleKey);
+  Finder get appleButton => find.byKey(SignInPage.appleKey);
 
   String get errorText => tester.widget<Text>(error).data!;
 
+  bool get canTapGoogle =>
+      tester.widget<GoogleSignInButton>(googleButton).onPressed != null;
   bool get canSendCode =>
       tester.widget<FilledButton>(sendCode).onPressed != null;
   bool get canSubmitCode =>
@@ -50,7 +61,7 @@ class SignInRobot(
       supabase: supabase,
       analytics: analytics,
     );
-    registerAuth(GetIt.I);
+    registerAuth(GetIt.I, google: googleClients);
     return pageUnderTest(
       BlocProvider(
         create: (_) => GetIt.I<AuthBloc>(),
@@ -90,6 +101,16 @@ class SignInRobot(
 
   Future<void> tapSignIn() async {
     await tester.tap(submitCode);
+    await tester.pump();
+  }
+
+  Future<void> tapGoogle() async {
+    await tester.tap(googleButton);
+    await tester.pump();
+  }
+
+  Future<void> tapApple() async {
+    await tester.tap(appleButton);
     await tester.pump();
   }
 

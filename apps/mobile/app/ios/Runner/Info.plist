@@ -22,6 +22,20 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<!-- Sign in with Google (#51): the iOS SDK returns to the app through its
+	     client id, reversed. Must match `googleClients.ios` in
+	     lib/app/environment.dart. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.928057308670-dcev1tfqmach6ihsuqntvn5ke2tu46li</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<!-- Only HTTPS, which is exempt: no export-compliance prompt per build. -->

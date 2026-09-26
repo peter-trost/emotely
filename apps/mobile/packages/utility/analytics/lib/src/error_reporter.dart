@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:agent_client/agent_client.dart';
+import 'package:analytics/src/auth_analytics.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
@@ -69,6 +70,20 @@ class const ErrorReporter({required final Posthog posthog}) {
   /// itself: an `AuthException` goes out with its message withheld).
   Future<void> passwordSignInFailed(Exception error, StackTrace stackTrace) =>
       _report(error, stackTrace, step: 'sign_in_password');
+
+  /// Signing in with [provider] failed, on the platform's side or when
+  /// Supabase checked its token (never the token itself: every such
+  /// exception goes out with its message withheld).
+  Future<void> providerSignInFailed(
+    Exception error,
+    StackTrace stackTrace, {
+    required SignInMethod provider,
+  }) => _report(
+    error,
+    stackTrace,
+    step: 'sign_in_provider',
+    properties: {'provider': provider.name},
+  );
 
   /// The `delete_account` call failed.
   Future<void> accountDeletionFailed(Exception error, StackTrace stackTrace) =>
