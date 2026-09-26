@@ -243,6 +243,20 @@ jobs:
       - run: supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF }}"
       - run: supabase db push
       - run: supabase config push --yes
+      # A second push must find nothing left to change. A value the
+      # Management API stores differently from config.toml (a comma list it
+      # splits, a default it rewrites) would be pushed again on every deploy
+      # and never settle; this makes that drift a red deploy, not a surprise.
+      - name: Config converged
+        run: |
+          out=$(supabase config push --yes 2>&1)
+          echo "$out"
+          for service in API DB Auth; do
+            grep -q "Remote $service config is up to date." <<<"$out" || {
+              echo "::error::$service config did not converge on a second push"
+              exit 1
+            }
+          done
 
   # The single required check. Green only if every job succeeded or was skipped.
   ci-ok:
