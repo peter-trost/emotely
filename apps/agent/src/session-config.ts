@@ -26,7 +26,7 @@ export const MIN_APP_VERSION = "1.0.0";
 // `STORE_URL` answers a caller that did not name a platform, or named one we
 // do not know. Until the store listings exist (#9) all three are the releases
 // page, which works everywhere; the per-platform ones get real links then.
-export const STORE_URL = "https://github.com/peter-trost/emotely/releases";
+export const STORE_URL = "https://github.com/trost-systems/emotely/releases";
 export const STORE_URL_IOS = STORE_URL;
 export const STORE_URL_ANDROID = STORE_URL;
 const FLAG_TIMEOUT_MS = 800;

@@ -40,7 +40,8 @@ twice was held too low: move it up a layer. A one-off needs only its fix.
   test account, under a lock that fails fast, names its holder and goes
   stale when the holder dies. The lock in
   `.claude/skills/run-app/scripts/run-app.sh` is the one to reuse.
-- `main` is protected: all changes land via squash-merged PR, `ci-ok` green.
+- `main` is protected: all changes land via squash-merged PR through the merge
+  queue, `ci-ok` green on the PR and again on the queue's run.
 - Agent guidance is `AGENTS.md`; every `CLAUDE.md` is a symlink to the
   `AGENTS.md` beside it, at the root and in each directory that carries its own
   (`.claude/skills`, `apps/mobile`, `apps/mobile/app`, `apps/web`,

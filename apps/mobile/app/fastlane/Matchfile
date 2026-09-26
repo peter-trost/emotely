@@ -2,7 +2,7 @@
 # with a deploy key (MATCH_DEPLOY_KEY) and decrypts with MATCH_PASSWORD; both
 # are secrets of the `release` environment. Nothing here is ever edited by
 # hand: `bundle exec fastlane ios certificates` (re)generates it.
-git_url("git@github.com:peter-trost/emotely-certificates.git")
+git_url("git@github.com:trost-systems/emotely-certificates.git")
 storage_mode("git")
 git_branch("main")
 

@@ -104,7 +104,7 @@ oracle and the page is not what opens it — `/auth/v1/otp` is public, the
 app's own sign-in calls it the same way, and a scripted caller reads the
 422-vs-200 (or the send latency) straight from GoTrue. Closing it needs a
 server-side control, tracked in
-[#94](https://github.com/peter-trost/emotely/issues/94); what the page owes
+[#94](https://github.com/trost-systems/emotely/issues/94); what the page owes
 its reader is not to answer the question for them. The events it sends
 carry an outcome name only — no address, no code.
 
@@ -116,7 +116,7 @@ anon key to `jaspr serve` (see `lib/environment.dart`).
 ## Deploy
 
 Vercel project `emotely-web` (`prj_Pd7GyDWACqua2yHuQFUbY6f8AQFn`), root
-directory `apps/web`, GitHub integration on `peter-trost/emotely`.
+directory `apps/web`, GitHub integration on `trost-systems/emotely`.
 Production: `getemotely.com`; `www.getemotely.com` redirects (308) to it.
 `vercel.json` names the steps:
 

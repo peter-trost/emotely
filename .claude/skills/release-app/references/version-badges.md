@@ -11,7 +11,7 @@ caching end to end).
 
 - **What a badge means:** uploaded to that channel, not processed or reviewed.
   A failed job leaves its badge on the last good build.
-- **History:** `gh api 'repos/peter-trost/emotely/commits?sha=status'`. The
+- **History:** `gh api 'repos/trost-systems/emotely/commits?sha=status'`. The
   ruleset `status branch: append-only` blocks force pushes and deletion.
 - **Adding a channel** (the beta lanes, later a store lane): call
   `report_shipped` at the end of that lane with what it actually promoted,

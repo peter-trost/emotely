@@ -11,7 +11,7 @@ Xcode, and a certificate exported by hand from someone's keychain.
   entry point: `ios certificates`, `ios beta`, `android beta`. It wraps
   `flutter build ipa` / `flutter build appbundle` and the two store uploads.
 - **match** holds the App Store certificate and provisioning profile,
-  encrypted, in the private repo `peter-trost/emotely-certificates`. It mints
+  encrypted, in the private repo `trost-systems/emotely-certificates`. It mints
   them through the **App Store Connect API key** (`emotely CI`, Admin, key ID
   `8S5G6UTCKM` on team `VCZSHMZY25`) — so no Apple ID, no 2FA, ever. The
   Matchfile is `readonly(true)`; only the `certificates` lane may write.

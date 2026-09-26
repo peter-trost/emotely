@@ -1,7 +1,7 @@
 # emotely
 
-[![TestFlight internal](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeter-trost%2Femotely%2Fstatus%2Fstatus.json&query=%24.ios.internal.label&label=TestFlight%20internal&logo=apple&color=blue)](https://github.com/peter-trost/emotely/commits/status)
-[![Play internal](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeter-trost%2Femotely%2Fstatus%2Fstatus.json&query=%24.android.internal.label&label=Play%20internal&logo=googleplay&color=blue)](https://github.com/peter-trost/emotely/commits/status)
+[![TestFlight internal](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftrost-systems%2Femotely%2Fstatus%2Fstatus.json&query=%24.ios.internal.label&label=TestFlight%20internal&logo=apple&color=blue)](https://github.com/trost-systems/emotely/commits/status)
+[![Play internal](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftrost-systems%2Femotely%2Fstatus%2Fstatus.json&query=%24.android.internal.label&label=Play%20internal&logo=googleplay&color=blue)](https://github.com/trost-systems/emotely/commits/status)
 
 A daily journaling app with an AI **Journaling Assistant** that walks you through
 a structured reflection — walking a chosen question set — and produces a summarized
