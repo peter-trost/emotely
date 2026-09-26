@@ -66,7 +66,7 @@ final _spaces = RegExp(r'\s+', unicode: true);
 /// and a scripted caller reads the 422-vs-200 (or the send latency)
 /// straight from GoTrue whether this page exists or not. Closing it needs a
 /// server-side control — tracked in
-/// [#94](https://github.com/peter-trost/emotely/issues/94). What this page
+/// [#94](https://github.com/trost-systems/emotely/issues/94). What this page
 /// owes its reader is not to amplify it into a UI that answers the
 /// question for them, and that is what the shared copy does.
 Future<CodeRequestOutcome> requestDeletionCode(

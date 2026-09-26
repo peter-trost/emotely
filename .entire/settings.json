@@ -3,7 +3,7 @@
   "strategy_options": {
     "checkpoint_remote": {
       "provider": "github",
-      "repo": "peter-trost/emotely-checkpoints"
+      "repo": "trost-systems/emotely-checkpoints"
     }
   },
   "redaction": {

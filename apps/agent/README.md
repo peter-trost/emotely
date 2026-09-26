@@ -13,7 +13,7 @@ this file holds what is specific to operating the service.
 | `GET /api/config` | none | The startup config the app reads once before anything else: `min_app_version` and `store_url`. Takes `?platform=ios\|android` to pick the right store listing. Public and edge-cached — see below. |
 
 `GET /api/config` is the one unauthenticated endpoint. The app checks it
-**above the sign-in gate** ([#49](https://github.com/peter-trost/emotely/issues/49)):
+**above the sign-in gate** ([#49](https://github.com/trost-systems/emotely/issues/49)):
 the users it exists to block are on a build the server no longer serves, so
 requiring a token would put a screen they may not be able to drive in front of
 the one telling them to update. It signs nothing, touches no database and
@@ -78,7 +78,7 @@ names each provider that was dropped and why.
 
 `EMOTELY_MODEL` is a Vercel environment variable, so changing it bypasses both
 the benchmark and CI — there is no deploy-time guard yet (follow-up to
-[issue #98](https://github.com/peter-trost/emotely/issues/98)). When a rejection
+[issue #98](https://github.com/trost-systems/emotely/issues/98)). When a rejection
 does happen, the runbook below says how to recognise and recover from it.
 
 ## Runbook: every session is failing

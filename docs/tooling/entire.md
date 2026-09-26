@@ -21,7 +21,7 @@ Capture is two halves ([capture-checkpoints](https://docs.entire.io/guides/check
   on `Agent` + `TaskCreate|TaskUpdate`. `.codex/hooks.json` does the same for
   Codex. `entire status` here reports: `Enabled · branch main`, agents
   `Claude Code, Codex`, `Checkpoints sync to: dedicated checkpoint remote
-  (peter-trost/emotely-checkpoints)`.
+  (trost-systems/emotely-checkpoints)`.
 - **Git hooks** — `.git/hooks/{prepare-commit-msg,commit-msg,post-commit,post-rewrite,pre-push}`
   all shell out to `entire hooks git ...`. `prepare-commit-msg` adds an
   `Entire-Checkpoint: <id>` trailer, `post-commit` condenses the session,
@@ -42,9 +42,10 @@ file that is removed on condense) and removes it.
 **Transcripts are private.** This repo is public, so checkpoint refs do not go
 to `origin`: `strategy_options.checkpoint_remote` in `.entire/settings.json`
 points them at the private
-[peter-trost/emotely-checkpoints](https://github.com/peter-trost/emotely-checkpoints)
-(same owner, as Entire requires; set up 2026-09-06 via
-`entire configure --checkpoint-remote github:peter-trost/emotely-checkpoints`,
+[trost-systems/emotely-checkpoints](https://github.com/trost-systems/emotely-checkpoints)
+(same owner, as Entire requires, so the two repos only ever move together; set
+up 2026-09-06 via `entire configure --checkpoint-remote github:<owner>/emotely-checkpoints`,
+both moved to `trost-systems` on 2026-09-26,
 docs: [store-checkpoints-in-another-repo](https://docs.entire.io/guides/checkpoints/store-checkpoints-in-another-repo.md)).
 If that remote is unreachable the code push still succeeds and Entire keeps the
 checkpoint local with a warning. Never push `refs/entire/*` to `origin`.
@@ -64,17 +65,19 @@ repos need a mirror, in the account's home jurisdiction (`us`, see
   checkpoints. Alone, entire.io lists the checkpoint IDs with no sessions.
 - `emotely-checkpoints` — the checkpoint refs holding the transcripts.
 
-Both were mirrored on 2026-09-22 into `aws-us-east-2.entire.io`
-(`entire repo mirror create github.com/peter-trost/<repo> aws-us-east-2.entire.io`;
-check with `entire repo mirror get peter-trost/<repo>`). That means Entire now
+Both are mirrored into `aws-us-east-2.entire.io` (first on 2026-09-22; again
+under the new owner after the 2026-09-26 move, since a mirror is keyed by
+owner/repo and does not follow a GitHub transfer):
+`entire repo mirror add /gh/trost-systems/<repo> --cluster aws-us-east-2.entire.io`,
+checked with `entire repo mirror get /gh/trost-systems/<repo>`. That means Entire now
 holds a copy of the transcripts. entire.io access follows GitHub collaborator
 permissions, so they stay as private as the private repo. Sessions show on
-the Home dashboard and under `gh/peter-trost/emotely-checkpoints/session/<id>`.
+the Home dashboard and under `gh/trost-systems/emotely-checkpoints/session/<id>`.
 The `emotely` repo's own Sessions tab stays empty: entire.io does not join the
 two repos yet, even though the committed `checkpoint_remote` setting names
 the link. The same goes for search: a plain `entire search` here scopes to
 `emotely` and finds commits only; pass `--all-repos` (or
-`--repo peter-trost/emotely-checkpoints`) to reach the sessions. No upstream
+`--repo trost-systems/emotely-checkpoints`) to reach the sessions. No upstream
 issue tracked the split as of 2026-09-22; the closest is
 [entireio/cli#1195](https://github.com/entireio/cli/issues/1195) (search
 empty with a checkpoint remote and both mirrors ready).

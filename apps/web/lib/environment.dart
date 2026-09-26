@@ -26,7 +26,7 @@ const posthogKey = String.fromEnvironment('POSTHOG_KEY');
 const posthogHost = 'https://eu.i.posthog.com';
 
 /// Where the code lives; the site links to it everywhere trust is asked for.
-const repositoryUrl = 'https://github.com/peter-trost/emotely';
+const repositoryUrl = 'https://github.com/trost-systems/emotely';
 
 /// The support and sender address (a Google Group behind the domain).
 const contactEmail = 'hello@getemotely.com';

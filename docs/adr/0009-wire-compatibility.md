@@ -32,7 +32,7 @@ here on.
    `SESSION_SIGNING_SECRET` is rotated the server must accept the previous
    secret for a grace window as long as the transcript cap makes a session
    plausible. Implemented in
-   [#50](https://github.com/peter-trost/emotely/issues/50): the verifier
+   [#50](https://github.com/trost-systems/emotely/issues/50): the verifier
    accepts `SESSION_SIGNING_SECRET_PREVIOUS` alongside the current secret
    while it is set, signing always uses the current one, and the runbook is
    in [`apps/agent/README.md`](../../apps/agent/README.md).
@@ -68,7 +68,7 @@ here on.
   unknown. That is rare and acceptable (the fallback is "no minimum"). The
   constant wins on review and history, not on availability.
 - **The minimum comes from `GET /api/config`, not from the session**
-  (amended 2026-09-15, [#49](https://github.com/peter-trost/emotely/issues/49)).
+  (amended 2026-09-15, [#49](https://github.com/trost-systems/emotely/issues/49)).
   It used to ride on every session response because a second public endpoint
   needs its own WAF rate-limit rule and Hobby allows one
   ([ADR 0008](0008-public-endpoint-abuse-controls.md)); the project has been on

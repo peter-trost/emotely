@@ -65,7 +65,7 @@ The README version badges are fed by the `status` job; how they work and how to 
 ## Signing
 
 - **iOS**: `match` (`fastlane/Matchfile`) stores the App Store certificate
-  and profile encrypted in `peter-trost/emotely-certificates`. CI is
+  and profile encrypted in `trost-systems/emotely-certificates`. CI is
   read-only. To mint or rotate, run locally with the ASC API key:
 
   ```bash
@@ -86,9 +86,9 @@ The README version badges are fed by the `status` job; how they work and how to 
   Play App Signing holds the app signing key; if the upload key is ever lost,
   request an upload-key reset in Play Console → Setup → App signing.
 
-## Secrets (`release` environment on peter-trost/emotely)
+## Secrets (`release` environment on trost-systems/emotely)
 
-Set blind, never echoed: `gh secret set NAME -R peter-trost/emotely --env release < file`.
+Set blind, never echoed: `gh secret set NAME -R trost-systems/emotely --env release < file`.
 The list is in ADR 0013. `PLAY_SERVICE_ACCOUNT_JSON` is the JSON key of
 `google-play-upload-konto@pc-api-5174249003608815741-70.iam.gserviceaccount.com`.
 
@@ -97,7 +97,7 @@ policy, set 2026-09-24): a job on any other branch that names
 `environment: release` fails before it sees a secret. So a beta run is
 always `gh workflow run app-release.yml` on `main`; `--ref <branch>` is
 refused by design. Check with
-`gh api repos/peter-trost/emotely/environments/release/deployment-branch-policies`.
+`gh api repos/trost-systems/emotely/environments/release/deployment-branch-policies`.
 
 ## Privacy policy URL (store requirements)
 

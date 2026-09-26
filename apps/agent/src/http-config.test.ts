@@ -6,7 +6,7 @@ import { CONFIG_CACHE_CONTROL, createConfigHandler } from "./http-config.ts";
 
 const CONFIG = {
   minAppVersion: "1.0.0",
-  storeUrl: "https://github.com/peter-trost/emotely/releases",
+  storeUrl: "https://github.com/trost-systems/emotely/releases",
   storeUrlIos: "https://apps.apple.com/app/emotely",
   storeUrlAndroid: "https://play.google.com/store/apps/details?id=com.emotely",
 };
@@ -26,7 +26,7 @@ describe("config handler", () => {
     const body = await res.json();
     assert.deepEqual(body, {
       min_app_version: "1.0.0",
-      store_url: "https://github.com/peter-trost/emotely/releases",
+      store_url: "https://github.com/trost-systems/emotely/releases",
     });
     // The app pins against this schema; the server must satisfy it.
     assert.equal(configResponse.safeParse(body).success, true);
