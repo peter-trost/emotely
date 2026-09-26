@@ -1,5 +1,7 @@
 import 'package:feature_auth/src/bloc/auth_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_sign_in/google_sign_in.dart'
+    show GoogleSignInExceptionCode;
 // gotrue has its own AuthState (the stream event); ours is the bloc state.
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:testing/testing.dart';
@@ -80,6 +82,49 @@ void main() {
       expect(robot.analytics.identified, [SupabaseStub.userId]);
     });
 
+    testWidgets("never sends a provider's token or its errors (ADR 0005)", (
+      tester,
+    ) async {
+      // An ID token names the user; a refusal may quote it, and the
+      // platform's own error text may name the account. The last try
+      // goes through.
+      const needleToken = 'needle.id-token.needle';
+      GoogleSignInFake.setup().script([
+        googleFailed(
+          GoogleSignInExceptionCode.unknownError,
+          description: 'Account needle.person@gmail.example unavailable',
+        ),
+        googleToken(needleToken),
+        googleToken(needleToken),
+      ]);
+      final supabase = SupabaseStub()
+        ..script(
+          idToken: [
+            authRefused(
+              statusCode: 400,
+              errorCode: 'bad_jwt',
+              message: 'Bad ID token ',
+            ),
+            sessionGranted(),
+          ],
+        );
+      final robot = SignInRobot(tester, supabase: supabase, agent: AgentStub());
+      await robot.launch();
+
+      for (var attempt = 0; attempt < 3; attempt++) {
+        await robot.tapGoogle();
+        await robot.settle();
+      }
+
+      expect(robot.home, findsOneWidget);
+      expect(robot.analytics.exceptions, hasLength(2));
+      final outgoing = robot.analytics.outgoingStrings.toList();
+      expect(outgoing, isNotEmpty);
+      for (final leaving in outgoing) {
+        expect(leaving, isNot(contains('needle')));
+      }
+    });
+
     testWidgets("never sends a review account's password (ADR 0005)", (
       tester,
     ) async {
@@ -131,7 +176,7 @@ void main() {
       expect(robot.analytics.events, [
         event('sign_in_password_failed'),
         event('sign_in_password_failed'),
-        event('signed_in'),
+        event('signed_in', {'method': 'password'}),
       ]);
       final outgoing = robot.analytics.outgoingStrings.toList();
       expect(outgoing, isNotEmpty);

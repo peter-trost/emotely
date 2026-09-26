@@ -104,6 +104,7 @@ class LiveSessionRobot(final WidgetTester tester) {
       ),
       agentUrl: urlFrom(agentUrl, define: 'EMOTELY_AGENT_URL'),
       configUrl: urlFrom(configUrl, define: 'EMOTELY_CONFIG_URL'),
+      google: googleClients,
     );
     await tester.pumpWidget(const EmotelyApp());
     await tester.pumpAndSettle();
