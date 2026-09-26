@@ -48,17 +48,17 @@ findings() {
 test_reports_every_tracked_hand_written_source_with_its_path() {
   local dir
   dir="$(repo \
-    apps/mobile/lib/a.dart '// TODO: handle later\n' \
-    apps/agent/src/b.ts '// ok\n// biome-ignore lint/x/y\nf();\n' \
+    apps/mobile/lib/a.dart '// XXX: handle later\n' \
+    apps/agent/src/b.ts '// ok\n// @ts-expect-error\nf();\n' \
     apps/agent/src/c.mjs 'f(); // HACK\n' \
     scripts/d.sh '#!/bin/sh\n# FIXME\n' \
     lib/e.dart 'void f() {}\n// Use the cached value for now.\n')"
 
   local expected
   expected="$(printf '%s\n' \
-    'apps/agent/src/b.ts:2: unexplained suppression "biome-ignore lint/x/y": give its reason in 4 or more words on the same line or on the comment line above' \
+    'apps/agent/src/b.ts:2: unexplained suppression "@ts-expect-error": give its reason in 4 or more words on the same line or on the comment line above' \
     'apps/agent/src/c.mjs:1: workaround comment "HACK": record deferred work in an issue, not a comment' \
-    'apps/mobile/lib/a.dart:1: workaround comment "TODO": record deferred work in an issue, not a comment' \
+    'apps/mobile/lib/a.dart:1: workaround comment "XXX": record deferred work in an issue, not a comment' \
     'lib/e.dart:2: workaround comment "for now": record deferred work in an issue, not a comment' \
     'scripts/d.sh:2: workaround comment "FIXME": record deferred work in an issue, not a comment')"
   local actual
@@ -71,13 +71,13 @@ ${actual}"
 test_exempts_generated_files_and_anything_git_does_not_track() {
   local dir
   dir="$(repo \
-    lib/a.g.dart '// ignore: type=lint\n// TODO\n' \
-    lib/a.freezed.dart '// ignore_for_file: type=lint\n' \
-    lib/main.server.options.dart '// ignore_for_file: type=lint\n' \
-    lib/mocks.mocks.dart '// ignore_for_file: type=lint\n' \
+    lib/a.g.dart '// coverage:ignore-file\n// XXX\n' \
+    lib/a.freezed.dart '// coverage:ignore-file\n' \
+    lib/main.server.options.dart '// XXX\n' \
+    lib/mocks.mocks.dart '// Use it for now.\n' \
     lib/clean.dart '// Nothing to see here.\n' \
-    README.md '<!-- TODO -->\n// TODO\n')"
-  write "${dir}/lib/scratch.dart" '// TODO\n'
+    README.md '<!-- XXX -->\n// XXX\n')"
+  write "${dir}/lib/scratch.dart" '// XXX\n'
   write "${dir}/node_modules/x/y.ts" '// TODO\n'
 
   local actual
@@ -88,22 +88,22 @@ ${actual}"
 
 test_fails_with_the_file_the_line_and_the_reason() {
   local dir output
-  dir="$(repo lib/a.dart 'void f() {}\n// TODO: handle later\n')"
+  dir="$(repo lib/a.ts 'f();\n// TODO: handle later\n')"
 
   if output="$(cd "${dir}" && bash scripts/tripwire.sh --report-style short 2>&1)"; then
     fail "fails a workaround comment: exited 0"
   fi
-  [[ "${output}" == *'lib/a.dart:2:1: error[workaround-tag-dart]: workaround comment "TODO"'* ]] ||
+  [[ "${output}" == *'lib/a.ts:2:1: error[workaround-tag-typescript]: workaround comment "TODO"'* ]] ||
     fail "names the file, the line and the reason: got
 ${output}"
 }
 
 test_writes_github_annotations_when_asked() {
   local dir output
-  dir="$(repo lib/a.dart '// TODO\n')"
+  dir="$(repo scripts/a.sh '# TODO\n')"
 
   output="$(cd "${dir}" && { bash scripts/tripwire.sh --format github 2>/dev/null || true; })"
-  [[ "${output}" == *'::error file=lib/a.dart,line=1,endLine=1,title=workaround-tag-dart::workaround comment "TODO"'* ]] ||
+  [[ "${output}" == *'::error file=scripts/a.sh,line=1,endLine=1,title=workaround-tag-bash::workaround comment "TODO"'* ]] ||
     fail "writes a GitHub annotation: got
 ${output}"
 }

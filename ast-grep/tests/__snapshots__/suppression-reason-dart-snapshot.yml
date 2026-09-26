@@ -1,15 +1,15 @@
 id: suppression-reason-dart
 snapshots:
   ? |
-    // Both rules fire on the classic constructor form here.
-    // ignore_for_file: use_primary_constructors
-    // ignore_for_file: unnecessary_type_name_in_constructor
-    class A {}
+    // The generated table below is data, not logic to test.
+    // coverage:ignore-start
+    // cognitive_complexity:ignore
+    void h() {}
   : labels:
-    - source: '// ignore_for_file: unnecessary_type_name_in_constructor'
+    - source: // cognitive_complexity:ignore
       style: primary
-      start: 102
-      end: 158
+      start: 82
+      end: 112
   ? |
     // coverage:ignore-start
     f();
@@ -21,14 +21,24 @@ snapshots:
   ? |
     void f() {
       // Needed here.
-      // ignore: deprecated_member_use
+      // coverage:ignore-line
       old();
     }
   : labels:
-    - source: '// ignore: deprecated_member_use'
+    - source: // coverage:ignore-line
       style: primary
       start: 31
-      end: 63
+      end: 54
+  ? |
+    void f() {
+      // coverage:ignore-line
+      old();
+    }
+  : labels:
+    - source: // coverage:ignore-line
+      style: primary
+      start: 13
+      end: 36
   ? |
     void f() {
       // coverage:ignore-start
@@ -41,63 +51,34 @@ snapshots:
       end: 37
   ? |
     void f() {
-      // ignore: a_rule, b_rule
-      older();
-    }
-  : labels:
-    - source: '// ignore: a_rule, b_rule'
-      style: primary
-      start: 13
-      end: 38
-  ? |
-    void f() {
-      // ignore: a_rule, b_rule, c_rule, d_rule, e_rule
-      older();
-    }
-  : labels:
-    - source: '// ignore: a_rule, b_rule, c_rule, d_rule, e_rule'
-      style: primary
-      start: 13
-      end: 62
-  ? |
-    void f() {
-      // ignore: deprecated_member_use
+      // ignore: deprecated_member_use because the bridge still needs it
+      // coverage:ignore-line
       old();
     }
   : labels:
-    - source: '// ignore: deprecated_member_use'
+    - source: // coverage:ignore-line
       style: primary
-      start: 13
-      end: 45
-  ? |
-    void f() {
-      // ignore: deprecated_member_use a b c
-      old();
-    }
-  : labels:
-    - source: '// ignore: deprecated_member_use a b c'
-      style: primary
-      start: 13
-      end: 51
+      start: 82
+      end: 105
   ? |
     void f() {
       final a = b; // the reason sits beside the code
-      old(); // ignore: deprecated_member_use
+      old(); // coverage:ignore-line
     }
   : labels:
-    - source: '// ignore: deprecated_member_use'
+    - source: // coverage:ignore-line
       style: primary
       start: 70
-      end: 102
+      end: 93
   ? |
     void f() {
-      old(); // ignore: deprecated_member_use -- needed
+      old(); // coverage:ignore-line -- needed
     }
   : labels:
-    - source: '// ignore: deprecated_member_use -- needed'
+    - source: // coverage:ignore-line -- needed
       style: primary
       start: 20
-      end: 62
+      end: 53
   ? |
     void f() {}
     // coverage:ignore-line

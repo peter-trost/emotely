@@ -11,49 +11,42 @@ snapshots:
   ? |
     x;
     /*
-     * @ts-ignore
+     * @ts-expect-error
      */
     f(4);
   : labels:
     - source: |-
         /*
-         * @ts-ignore
+         * @ts-expect-error
          */
       style: primary
       start: 3
-      end: 23
+      end: 29
   ? |
     x;
-    /* @ts-ignore */ f(3);
+    // @ts-expect-error -- needed
+    f(1);
   : labels:
-    - source: /* @ts-ignore */
+    - source: // @ts-expect-error -- needed
       style: primary
       start: 3
-      end: 19
+      end: 32
   ? |
     x;
-    // biome-ignore lint/security/noSecrets: ok
-    y;
+    // @ts-nocheck
+    f(1);
   : labels:
-    - source: '// biome-ignore lint/security/noSecrets: ok'
+    - source: // @ts-nocheck
       style: primary
       start: 3
-      end: 46
+      end: 17
   ? |
     x;
-    // biome-ignore lint/style/noMagicNumbers
-    y;
+    // biome-ignore lint/style/noMagicNumbers: the literal is the documented limit
+    // @ts-expect-error
+    f(1);
   : labels:
-    - source: // biome-ignore lint/style/noMagicNumbers
+    - source: // @ts-expect-error
       style: primary
-      start: 3
-      end: 44
-  ? |
-    x;
-    // biome-ignore-start lint/style/noMagicNumbers: <explanation>
-    y;
-  : labels:
-    - source: '// biome-ignore-start lint/style/noMagicNumbers: <explanation>'
-      style: primary
-      start: 3
-      end: 65
+      start: 82
+      end: 101

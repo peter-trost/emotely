@@ -1,40 +1,48 @@
 id: workaround-tag-dart
 snapshots:
   ? |
-    /* outer /* inner */ still a comment: TODO */ void f() {}
+    /* outer /* inner */ still a comment: XXX */ void f() {}
   : labels:
-    - source: '/* outer /* inner */ still a comment: TODO */'
+    - source: '/* outer /* inner */ still a comment: XXX */'
       style: primary
       start: 0
-      end: 45
+      end: 44
   ? |
-    // todo(peter): later
+    // Keep this for a while, hack: see the picker.
     void f() {}
   : labels:
-    - source: '// todo(peter): later'
+    - source: '// Keep this for a while, hack: see the picker.'
       style: primary
       start: 0
-      end: 21
+      end: 47
   ? |
-    /// TODO: document
+    // fixme(peter): later
     void f() {}
   : labels:
-    - source: '/// TODO: document'
+    - source: '// fixme(peter): later'
       style: primary
       start: 0
-      end: 18
+      end: 22
   ? |
-    final u = 'https://x'; // TODO
+    /// XXX: document
+    void f() {}
   : labels:
-    - source: // TODO
+    - source: '/// XXX: document'
+      style: primary
+      start: 0
+      end: 17
+  ? |
+    final u = 'https://x'; // XXX
+  : labels:
+    - source: // XXX
       style: primary
       start: 23
-      end: 30
+      end: 29
   ? |
     void f() {}
-    // TODO: handle later
+    // XXX: handle later
   : labels:
-    - source: '// TODO: handle later'
+    - source: '// XXX: handle later'
       style: primary
       start: 12
-      end: 33
+      end: 32

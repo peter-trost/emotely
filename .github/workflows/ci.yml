@@ -196,7 +196,8 @@ jobs:
   # The comment tripwire (ast-grep rules, ADR 0018): hand-written Dart,
   # TypeScript and shell must not announce a workaround (TODO, FIXME, HACK,
   # XXX, "workaround", "for now", "temporary") or suppress a diagnostic
-  # without a reason; deferred work goes into an issue. It installs only the
+  # without a reason; deferred work goes into an issue. It checks only what
+  # the Dart analyzer and biome do not already fail. It installs only the
   # root package, whose ast-grep is a prebuilt binary, and reads every tracked
   # source in well under a second, so it has no paths filter.
   tripwire:

@@ -1,52 +1,60 @@
 id: suppression-reason-typescript
 valid:
-  # biome's reason follows the colon.
+  # A reason on the same line.
   - |
-    const names = [
-      // biome-ignore lint/security/noSecrets: a gateway error class name, not a secret
-      "GatewayInvalidRequestError",
-    ];
+    // @ts-expect-error the fixture is malformed on purpose here
+    f(2);
   # A reason on the comment line above.
   - |
-    // Not a credential: the literal field name the gateway returns.
-    // biome-ignore lint/security/noSecrets: gateway field name
-    const KEY = "enabledDisallowPromptTraining";
+    // The fixture is malformed on purpose here.
+    // @ts-expect-error
+    f(0);
   # A block comment above counts by its last line.
   - |
     /* The fixture is malformed on purpose. */
     // @ts-expect-error
     f(0);
-  # Closing a range needs no reason.
+  # A directive that opens the file may take its reason from below.
   - |
-    x;
-    // biome-ignore-end lint/style/noMagicNumbers
-  # TypeScript's own, with a reason on the same line.
-  - |
-    // @ts-expect-error the fixture is malformed on purpose here
-    f(2);
-invalid:
-  - |
-    x;
-    // biome-ignore lint/security/noSecrets: ok
-    y;
+    // @ts-nocheck
+    // Vendored as published; its types are upstream's to fix.
+    export const a = 1;
+  # biome already rejects a `biome-ignore` without its explanation
+  # (`suppressions/parse`) and any `@ts-ignore` (`noTsIgnore`), so the
+  # tripwire leaves both to it, with biome's own bar for the explanation.
   - |
     x;
     // biome-ignore lint/style/noMagicNumbers
     y;
   - |
     x;
-    // biome-ignore-start lint/style/noMagicNumbers: <explanation>
+    // biome-ignore lint/security/noSecrets: ok
     y;
+  - |
+    x;
+    /* @ts-ignore */ f(3);
+invalid:
   - |
     // @ts-expect-error
     f(1);
   - |
     x;
-    /* @ts-ignore */ f(3);
+    // @ts-nocheck
+    f(1);
+  - |
+    x;
+    // @ts-expect-error -- needed
+    f(1);
+  # A biome explanation above is that directive's reason, not this one's.
+  - |
+    x;
+    // biome-ignore lint/style/noMagicNumbers: the literal is the documented limit
+    // @ts-expect-error
+    f(1);
   # A directive on an inner line of a block comment is still one.
   - |
     x;
     /*
-     * @ts-ignore
+     * @ts-expect-error
      */
     f(4);
