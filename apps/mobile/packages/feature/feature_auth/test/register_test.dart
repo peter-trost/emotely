@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:testing/testing.dart';
 
+import 'sign_in_robot.dart';
+
 void main() {
   group('registerAuth', () {
     test('registers the bloc as a factory over the utilities', () async {
@@ -14,7 +16,7 @@ void main() {
         analytics: AnalyticsSpy(),
       );
 
-      registerAuth(getIt);
+      registerAuth(getIt, google: SignInRobot.googleClients);
 
       final first = getIt<AuthBloc>();
       final second = getIt<AuthBloc>();

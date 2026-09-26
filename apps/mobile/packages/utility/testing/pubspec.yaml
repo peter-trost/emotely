@@ -25,12 +25,16 @@ dependencies:
     sdk: flutter
   get_it: 9.2.1
   go_router: 18.0.1
+  # The two sign-in plugins, faked at their platform interfaces like
+  # url_launcher (the Apple one sorts further down).
+  google_sign_in_platform_interface: 3.1.0
   http: 1.6.0
   journal_repository: any
   material_ui: ^1.1.0
   mockito: 5.8.1
   plugin_platform_interface: 2.1.8
   posthog_flutter: 5.39.0
+  sign_in_with_apple_platform_interface: 2.0.0
   supabase_flutter: 3.0.0-dev.7
   url_launcher_platform_interface: 2.3.2
 

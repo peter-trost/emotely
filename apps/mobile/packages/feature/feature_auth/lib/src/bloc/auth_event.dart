@@ -18,6 +18,10 @@ sealed class AuthEvent with _$AuthEvent {
   /// Check the [password] of the review account at the password step.
   const factory passwordSubmitted(String password) = AuthPasswordSubmitted;
 
+  /// Sign in with [provider]'s own sheet instead of an email code.
+  const factory providerSelected(IdentityProvider provider) =
+      AuthProviderSelected;
+
   /// Back to the email step.
   const factory emailChangeRequested() = AuthEmailChangeRequested;
 

@@ -12,7 +12,7 @@ void main() {
       registerAnalytics(getIt, posthog: spy.posthog, consentVersion: 'v1');
 
       await getIt<SessionAnalytics>().sessionStarted();
-      await getIt<AuthAnalytics>().signedIn();
+      await getIt<AuthAnalytics>().signedIn(SignInMethod.code);
       await getIt<JournalAnalytics>().entryOpened();
       await getIt<ConsentAnalytics>().consentDeclined();
       await getIt<ErrorReporter>().consentLoadFailed(
@@ -22,7 +22,7 @@ void main() {
 
       expect(spy.events, [
         event('session_started'),
-        event('signed_in'),
+        event('signed_in', {'method': 'code'}),
         event('entry_opened'),
         event('consent_declined', {'version': 'v1'}),
       ]);

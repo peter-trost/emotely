@@ -127,12 +127,11 @@ replacement disclaimed the app it was supposed to cover.
 
 **The ASC data declarations must keep agreeing with the page.** App Store
 Connect asks separately *which* data types are collected, and a reviewer
-compares those answers with the notice. As corrected on 2026-09-15 the
-declarations are seven types, everything **Linked** to the user, and **no
-tracking**: contact info (email), user content (the journal), identifiers
-(user id and the analytics library's device id), usage data, diagnostics.
-If the page gains or loses a category — a new event, a new provider, a
-dropped identifier — change the declarations in the same release, not later.
+compares those answers with the notice. If the page gains or loses a
+category — a new event, a new provider, a dropped identifier — change the
+declarations in the same release, not later. Changing or checking them —
+read [references/data-declarations.md](references/data-declarations.md)
+first: what is declared today, per console.
 
 ## Account deletion (store requirements)
 

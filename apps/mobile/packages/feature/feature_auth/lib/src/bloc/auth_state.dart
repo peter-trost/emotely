@@ -19,6 +19,9 @@ sealed class AuthState with _$AuthState {
   /// The code for [email] is being checked.
   const factory verifying({required String email}) = AuthVerifying;
 
+  /// [provider]'s sheet is up, or its token is being traded for a session.
+  const factory signingInWith(IdentityProvider provider) = AuthSigningInWith;
+
   /// [email] is a review account and needs its password, with the last
   /// [error] if any.
   const factory passwordRequired({required String email, String? error}) =

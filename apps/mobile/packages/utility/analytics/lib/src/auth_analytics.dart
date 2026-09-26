@@ -1,5 +1,16 @@
 import 'package:posthog_flutter/posthog_flutter.dart';
 
+/// How a user got in: an emailed code, a review account's password, or a
+/// provider's ID token. Its name is the only thing a sign-in event says
+/// beyond the event itself, so a funnel can compare the ways in without
+/// learning who took them (ADR 0005).
+enum SignInMethod() {
+  code,
+  password,
+  google,
+  apple,
+}
+
 /// Sign-in analytics, content-free by construction (ADR 0005): PostHog
 /// learns the user's id (a UUID), which step failed, and one boolean saying
 /// whether the account is ours — never the email or the code. The methods
@@ -43,8 +54,25 @@ class const AuthAnalytics({required final Posthog posthog}) {
         userProperties: {r'$internal_or_test_user': internal},
       );
 
-  /// The user completed a sign-in (not a restored session).
-  Future<void> signedIn() => posthog.capture(eventName: 'signed_in');
+  /// The user dismissed [provider]'s sign-in sheet. Not a failure: they may
+  /// have meant to use another way in.
+  Future<void> providerCanceled(SignInMethod provider) => posthog.capture(
+    eventName: 'sign_in_provider_canceled',
+    properties: {'provider': provider.name},
+  );
+
+  /// Signing in with [provider] did not go through: the platform refused,
+  /// or Supabase did not accept its token.
+  Future<void> providerFailed(SignInMethod provider) => posthog.capture(
+    eventName: 'sign_in_provider_failed',
+    properties: {'provider': provider.name},
+  );
+
+  /// The user completed a sign-in (not a restored session) by [method].
+  Future<void> signedIn(SignInMethod method) => posthog.capture(
+    eventName: 'signed_in',
+    properties: {'method': method.name},
+  );
 
   /// The user signed out: PostHog forgets who this device belongs to.
   Future<void> signedOut() async {
