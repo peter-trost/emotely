@@ -33,7 +33,7 @@ authenticated request from here on.
 4. **Sign-in is an email one-time code, and it is required.** Six digits typed
    into the app, no password, no deep link. Email is our own account system,
    so Apple guideline 4.8 does not force Sign in with Apple until a social
-   provider is added ([#51](https://github.com/peter-trost/emotely/issues/51)).
+   provider is added ([#51](https://github.com/trost-systems/emotely/issues/51)).
    No anonymous sign-in: it needs CAPTCHA and a cleanup job per Supabase's
    own guidance, and a journal that is not persisted is not the product.
    *2026-09-13, one exception:* the two store reviewer accounts
@@ -91,7 +91,7 @@ precedent: from the first store build on, rules 1 to 4 apply unmodified.
   job. The Vercel project needs one new variable, the public Supabase URL.
 - **The built-in mailer sends two emails an hour.** Enough for one user,
   a release blocker for #9
-  ([#52](https://github.com/peter-trost/emotely/issues/52)).
+  ([#52](https://github.com/trost-systems/emotely/issues/52)).
 - **How to run and test the schema locally is a skill**
   (`.claude/skills/supabase`), so an autonomous agent can add a table, prove
   its policies, and ship it without a human step.

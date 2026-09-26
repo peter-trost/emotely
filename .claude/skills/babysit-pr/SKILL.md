@@ -30,7 +30,7 @@ that lands mid-loop invalidates it.
 gh pr checks --json name,state,bucket,link,workflow | jq -r '
   group_by(.bucket) | map({bucket: .[0].bucket, n: length, names: map(.name)}) | .[]
   | "\(.bucket)\t\(.n)\t\(.names | join(", "))"'
-gh pr-review threads list --pr <n> --repo peter-trost/emotely --unresolved
+gh pr-review threads list --pr <n> --repo trost-systems/emotely --unresolved
 ```
 
 `gh pr-review` needs both `--pr` and `--repo`: it does not infer the PR from
@@ -115,8 +115,8 @@ gh run rerun <run-id> --failed
 ## Reading review feedback
 
 ```bash
-gh pr-review threads list --pr <n> --repo peter-trost/emotely --unresolved
-gh pr-review review view --pr <n> --repo peter-trost/emotely --unresolved | jq -r '
+gh pr-review threads list --pr <n> --repo trost-systems/emotely --unresolved
+gh pr-review review view --pr <n> --repo trost-systems/emotely --unresolved | jq -r '
   .reviews[] | .comments[]? | [.thread_id, .author_login, (.body | split("\n")[0])] | @tsv'
 gh pr view <n> --json comments,reviews   # top-level comments and submissions
 ```
@@ -132,7 +132,7 @@ When a comment is correct and actionable, fix it in code, push, and then
 resolve its thread once its [layer is recorded](#classifying-a-correction):
 
 ```bash
-gh pr-review threads resolve --pr <n> --repo peter-trost/emotely --thread-id <id>
+gh pr-review threads resolve --pr <n> --repo trost-systems/emotely --thread-id <id>
 ```
 
 When it is ambiguous, wrong, asks a question, or wants a product decision,
@@ -152,7 +152,7 @@ or an agent did something.
   review.
 
 ```bash
-gh pr-review comments reply --pr <n> --repo peter-trost/emotely \
+gh pr-review comments reply --pr <n> --repo trost-systems/emotely \
   --thread-id <id> --body '[from Claude]: ...'
 ```
 
@@ -315,7 +315,7 @@ primitive at all, so it is a sampling problem:
 ```bash
 sleep 240
 gh pr view <n> --json state,mergeable,mergeStateStatus,reviewDecision,headRefOid
-gh pr-review threads list --pr <n> --repo peter-trost/emotely --unresolved
+gh pr-review threads list --pr <n> --repo trost-systems/emotely --unresolved
 ```
 
 Four minutes is the right order of magnitude: a human reviewer's feedback does

@@ -90,7 +90,7 @@ global limit for a distributed attacker is higher — acceptable, because the
 budget backstop above catches what the rule lets through.
 
 A second rule covers the startup config endpoint, added with
-[#49](https://github.com/peter-trost/emotely/issues/49) now that Pro allows
+[#49](https://github.com/trost-systems/emotely/issues/49) now that Pro allows
 more than one:
 
 | Rule | Value |
@@ -154,7 +154,7 @@ them. The commands above are the recovery procedure.
   stay as they are.
 - **A second rate-limit rule needed Pro**, which the project has been on since
   2026-09-13. `/api/config` uses that allowance
-  ([#49](https://github.com/peter-trost/emotely/issues/49)). A further rule
+  ([#49](https://github.com/trost-systems/emotely/issues/49)). A further rule
   (e.g. a tighter cap on empty-transcript session starts) is now possible too.
 - **`/api/config` is public on purpose.** It answers without a token, unlike
   every other endpoint here (ADR 0010), because the users it exists to block
