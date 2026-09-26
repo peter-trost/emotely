@@ -45,6 +45,11 @@ void main() {
       await reporter.codeRequestFailed(noCode, trace);
       await reporter.codeVerifyFailed(wrongCode, trace);
       await reporter.passwordSignInFailed(wrongPassword, trace);
+      await reporter.providerSignInFailed(
+        wrongPassword,
+        trace,
+        provider: SignInMethod.google,
+      );
       await reporter.accountDeletionFailed(saveRefused, trace);
       await reporter.configLoadFailed(unreachable, trace);
       await reporter.storeLaunchFailed(unreachable, trace);
@@ -87,6 +92,14 @@ void main() {
             statusCode: 400,
           ),
           {'step': 'sign_in_password'},
+        ),
+        captured(
+          withheld(
+            AuthApiException,
+            code: 'invalid_credentials',
+            statusCode: 400,
+          ),
+          {'step': 'sign_in_provider', 'provider': 'google'},
         ),
         captured(
           withheld(PostgrestApiException, code: '42501', statusCode: 403),

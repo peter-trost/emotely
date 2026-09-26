@@ -18,7 +18,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// registers into [getIt] here, in dependency order, and nowhere else.
 ///
 /// The parameters are the leaves — the http clients, the Supabase client,
-/// the PostHog instance — plus the build-time values the app owns. `main`
+/// the PostHog instance — plus the build-time values the app owns (the
+/// endpoints, the Google sign-in clients). `main`
 /// passes the real ones; a test passes scripted ones and nothing else, so
 /// what a test exercises is the production graph with fake edges.
 ///
@@ -41,6 +42,7 @@ void registerApp(
   required Uri agentUrl,
   required Uri configUrl,
   required Set<String> passwordAccounts,
+  required GoogleClientIds google,
 }) {
   getIt.registerSingleton(supabase);
   registerAgentClient(
@@ -61,7 +63,7 @@ void registerApp(
   registerConsentRepository(getIt, supabase: supabase, version: consentVersion);
   registerFeedbackLink(getIt, build: build);
   registerConfig(getIt, appVersion: appVersion);
-  registerAuth(getIt, passwordAccounts: passwordAccounts);
+  registerAuth(getIt, google: google, passwordAccounts: passwordAccounts);
   registerJournal(getIt);
   registerSession(getIt);
   // The app's side of each feature's navigator, next to the feature.

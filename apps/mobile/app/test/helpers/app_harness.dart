@@ -51,6 +51,11 @@ Widget appUnderTest({
     // The release shape: every address outside the review accounts gets a
     // code (feature_auth's tests cover the password accounts).
     passwordAccounts: const {},
+    // Public ids, but not the real ones: nothing here talks to Google.
+    google: const GoogleClientIds(
+      server: 'server.apps.googleusercontent.com',
+      ios: 'ios.apps.googleusercontent.com',
+    ),
   );
   return const EmotelyApp();
 }

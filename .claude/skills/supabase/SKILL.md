@@ -91,6 +91,10 @@ re-run the deploy (any push to `main` touching `supabase/**`). Sender and
 reply address is `hello@getemotely.com`, a Google Group in the Workspace.
 Anything with a secret uses `env(VAR)` and is never committed.
 
+Changing Google or Apple sign-in — the `[auth.external.*]` blocks, a
+client id, a new app signing key — read
+[references/provider-sign-in.md](references/provider-sign-in.md) first.
+
 ## The waitlist mail (double opt-in)
 
 `public.waitlist` (ADR 0011) sends its own confirmation mail: an
@@ -118,10 +122,11 @@ after a week by the guard trigger.
 ## Deploying
 
 A merge to `main` that touches `supabase/**` runs `supabase-deploy` in CI:
-`supabase link` → `supabase db push` → `supabase config push`. It needs, in
-the GitHub `ci` environment: secrets `SUPABASE_ACCESS_TOKEN` and
-`SUPABASE_DB_PASSWORD` (set blind, never printed), variable
-`SUPABASE_PROJECT_REF`.
+`supabase link` → `supabase db push` → `supabase config push`, then a second
+`config push` (`Config converged`) that fails unless every service reports
+its config up to date. It needs, in the GitHub `ci` environment: secrets
+`SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` (set blind, never
+printed), variable `SUPABASE_PROJECT_REF`.
 
 By hand only for recovery, from the repo root, with the same three values in
 the environment: `supabase link --project-ref "$SUPABASE_PROJECT_REF" && supabase db push`.

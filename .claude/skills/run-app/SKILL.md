@@ -8,8 +8,9 @@ description: How to run, drive and verify the Flutter app (apps/mobile/app) on a
 ## Verify on the simulator
 
 `scripts/run-app.sh` sets the app up signed in on a fresh simulator, you drive
-it with plain `marionette` commands, and it collects the evidence. Read
-[references/verification.md](references/verification.md) for up → drive →
+it with plain `marionette` commands, and it collects the evidence.
+Verifying a change on the simulator, or posting its evidence — read
+[references/verification.md](references/verification.md) first: up → drive →
 collect → down, the worked example, the keys, posting evidence and parallel
 sessions.
 
@@ -45,10 +46,14 @@ KEY=$(grep -E '^POSTHOG_KEY=' apps/agent/.env.local | cut -d= -f2- | tr -d '"' |
   the `Runner.app` on disk came from `flutter test integration_test`: rebuild.
 - **Toolchain.** Flutter is pinned by FVM (`apps/mobile/app/.fvmrc`); call
   `fvm flutter` / `fvm dart` from `apps/mobile/app`. CocoaPods comes from the
-  app's `Gemfile` (`bundle config set --local path vendor/bundle && bundle
-  install` once per checkout; the CLI does it) and fails under a non-UTF-8
-  locale (`LANG=en_US.UTF-8`). After adding a CocoaPods plugin the first
-  build may need `pod repo update`.
+  app's `Gemfile`: a fresh worktree has no bundle, so `pod` fails with
+  "CocoaPods not installed or not in valid state" until `bundle config set
+  --local path vendor/bundle && bundle install` runs once per checkout (the
+  CLI does it). It fails under a non-UTF-8 locale (`LANG=en_US.UTF-8`).
+  After adding a CocoaPods plugin the first build may need `pod repo update`.
+
+Driving Sign in with Google or Apple on a device — read
+[references/provider-sign-in.md](references/provider-sign-in.md) first.
 
 ## On-device acceptance (live agent)
 

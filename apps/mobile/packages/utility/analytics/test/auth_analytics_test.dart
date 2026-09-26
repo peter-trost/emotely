@@ -13,7 +13,12 @@ void main() {
       await analytics.codeRejected();
       await analytics.passwordFailed();
       await analytics.identify(userId: 'user-1', internal: false);
-      await analytics.signedIn();
+      await analytics.providerCanceled(SignInMethod.google);
+      await analytics.providerFailed(SignInMethod.apple);
+      await analytics.signedIn(SignInMethod.code);
+      await analytics.signedIn(SignInMethod.password);
+      await analytics.signedIn(SignInMethod.google);
+      await analytics.signedIn(SignInMethod.apple);
 
       expect(spy.identified, ['user-1']);
       expect(spy.events, [
@@ -21,7 +26,13 @@ void main() {
         event('sign_in_code_request_failed'),
         event('sign_in_code_rejected'),
         event('sign_in_password_failed'),
-        event('signed_in'),
+        // Which way, never who: the provider's name is the one property.
+        event('sign_in_provider_canceled', {'provider': 'google'}),
+        event('sign_in_provider_failed', {'provider': 'apple'}),
+        event('signed_in', {'method': 'code'}),
+        event('signed_in', {'method': 'password'}),
+        event('signed_in', {'method': 'google'}),
+        event('signed_in', {'method': 'apple'}),
       ]);
     });
 

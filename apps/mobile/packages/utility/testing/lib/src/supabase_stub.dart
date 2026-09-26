@@ -108,6 +108,7 @@ class SupabaseStub() {
     List<AuthRound> otp = const [],
     List<AuthRound> verify = const [],
     List<AuthRound> password = const [],
+    List<AuthRound> idToken = const [],
     List<AuthRound> logout = const [],
   }) {
     rest('POST /auth/v1/otp', otp);
@@ -115,6 +116,8 @@ class SupabaseStub() {
     // The password grant posts to `/token?grant_type=password`; the query
     // is recorded on the request, not part of the key.
     rest('POST /auth/v1/token', password);
+    // So does the ID-token grant (Google, Apple), as `grant_type=id_token`.
+    rest('POST /auth/v1/token', idToken);
     rest('POST /auth/v1/logout', logout);
   }
 

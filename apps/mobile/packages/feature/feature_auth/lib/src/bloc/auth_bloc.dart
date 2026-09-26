@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:feature_auth/src/providers/provider_sign_in.dart';
 import 'package:feature_auth/src/review_accounts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -11,8 +12,9 @@ part 'auth_bloc.freezed.dart';
 part 'auth_event.dart';
 part 'auth_state.dart';
 
-/// Who is signed in, and the two-step email code sign-in that gets there:
-/// request a code for an email, then verify it. The app stores' review
+/// Who is signed in, and the ways in: the two-step email code (request a
+/// code for an email, then verify it), or a provider's ID token from its own
+/// sheet ([ProviderSignIn]), traded for a session. The app stores' review
 /// accounts ([reviewAccounts]) take a password at the second step instead,
 /// since a reviewer has no mailbox to read, and so do the
 /// [_passwordAccounts] the app names (the smoke account in a debug build,
@@ -23,12 +25,14 @@ class AuthBloc({
   required final SupabaseClient _supabase,
   required final AuthAnalytics _analytics,
   required final ErrorReporter _errors,
+  required final ProviderSignIn _providers,
   final Set<String> _passwordAccounts = const {},
 }) extends Bloc<AuthEvent, AuthState> {
   this : super(_initial(_supabase.auth.currentSession)) {
     on<AuthEmailSubmitted>(_onEmailSubmitted);
     on<AuthCodeSubmitted>(_onCodeSubmitted);
     on<AuthPasswordSubmitted>(_onPasswordSubmitted);
+    on<AuthProviderSelected>(_onProviderSelected);
     on<AuthEmailChangeRequested>(_onEmailChangeRequested);
     on<AuthSignOutRequested>(_onSignOutRequested);
     on<AuthSessionChanged>(_onSessionChanged);
@@ -103,7 +107,7 @@ class AuthBloc({
         // never starts (two-step email changes); here it can only mean the
         // code did not sign anyone in.
         if (response.session case final session?) {
-          unawaited(_analytics.signedIn());
+          unawaited(_analytics.signedIn(SignInMethod.code));
           _signedIn(session.user.id, session.user.email, emit);
         } else {
           _rejected(email, wrongCodeMessage, emit);
@@ -130,7 +134,7 @@ class AuthBloc({
           email: email,
           password: event.password,
         );
-        unawaited(_analytics.signedIn());
+        unawaited(_analytics.signedIn(SignInMethod.password));
         _signedIn(session.user.id, session.user.email, emit);
       } on Exception catch (error, stackTrace) {
         unawaited(_errors.passwordSignInFailed(error, stackTrace));
@@ -143,6 +147,49 @@ class AuthBloc({
     }
   }
 
+  /// Sign in with [AuthProviderSelected.provider], from the first step only:
+  /// its sheet issues an ID token, Supabase trades it for a session. A
+  /// dismissed sheet is no failure; the user is back where they were.
+  Future<void> _onProviderSelected(
+    AuthProviderSelected event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state is! AuthSignedOut) {
+      return;
+    }
+    final provider = event.provider;
+    emit(AuthState.signingInWith(provider));
+    try {
+      final token = await _providers.signIn(provider);
+      if (token == null) {
+        unawaited(_analytics.providerCanceled(provider.method));
+        emit(const AuthState.signedOut());
+        return;
+      }
+      final session = await _supabase.auth.signInWithIdToken(
+        provider: provider.oauth,
+        idToken: token.idToken,
+        nonce: token.nonce,
+      );
+      unawaited(_analytics.signedIn(provider.method));
+      _signedIn(session.user.id, session.user.email, emit);
+    } on Exception catch (error, stackTrace) {
+      unawaited(_analytics.providerFailed(provider.method));
+      unawaited(
+        _errors.providerSignInFailed(
+          error,
+          stackTrace,
+          provider: provider.method,
+        ),
+      );
+      emit(
+        AuthState.signedOut(
+          error: _describe(error, fallback: providerFailedMessage),
+        ),
+      );
+    }
+  }
+
   void _onEmailChangeRequested(
     AuthEmailChangeRequested event,
     Emitter<AuthState> emit,
@@ -150,7 +197,8 @@ class AuthBloc({
 
   /// Ends the session on this device. The SDK drops it locally first and
   /// reports that on its stream, which is what moves the UI; whether the
-  /// server-side revocation then succeeds changes nothing here.
+  /// server-side revocation then succeeds changes nothing here, and
+  /// neither does a provider that cannot be signed out of.
   Future<void> _onSignOutRequested(
     AuthSignOutRequested event,
     Emitter<AuthState> emit,
@@ -159,6 +207,11 @@ class AuthBloc({
       await _supabase.auth.signOut();
     } on Exception {
       // Already signed out locally; see above.
+    }
+    try {
+      await _providers.signOut();
+    } on Exception {
+      // Only the provider's own shortcut back in; the session is gone.
     }
     unawaited(_analytics.signedOut());
   }
@@ -243,6 +296,8 @@ class AuthBloc({
       'That code is wrong or has expired. Request a new one if needed.';
   static const wrongPasswordMessage = 'That password was not accepted.';
   static const unreachableMessage = 'Could not reach the sign-in service.';
+  static const providerFailedMessage =
+      'That sign-in did not go through. Try again, or use your email.';
 
   @override
   Future<void> close() async {

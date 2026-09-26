@@ -106,6 +106,7 @@ class LiveSessionRobot(final WidgetTester tester) {
       configUrl: urlFrom(configUrl, define: 'EMOTELY_CONFIG_URL'),
       // Signed in above, not through the screen.
       passwordAccounts: const {},
+      google: googleClients,
     );
     await tester.pumpWidget(const EmotelyApp());
     await tester.pumpAndSettle();

@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:testing/testing.dart';
 
+import 'sign_in_robot.dart';
+
 void main() {
   group(SignInRoute, () {
     testWidgets('shows the sign-in screen at its location', (tester) async {
@@ -13,7 +15,7 @@ void main() {
         supabase: SupabaseStub(),
         analytics: AnalyticsSpy(),
       );
-      registerAuth(GetIt.I);
+      registerAuth(GetIt.I, google: SignInRobot.googleClients);
 
       await tester.pumpWidget(
         featureUnderTest(

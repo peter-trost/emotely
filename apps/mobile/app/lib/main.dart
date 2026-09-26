@@ -63,6 +63,7 @@ Future<void> main() async {
     agentUrl: urlFrom(agentUrl, define: 'EMOTELY_AGENT_URL'),
     configUrl: urlFrom(configUrl, define: 'EMOTELY_CONFIG_URL'),
     passwordAccounts: passwordAccounts,
+    google: googleClients,
   );
   runApp(const EmotelyApp());
 }

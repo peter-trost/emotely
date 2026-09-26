@@ -1,4 +1,5 @@
 import 'package:feature_auth/src/bloc/auth_bloc.dart';
+import 'package:feature_auth/src/providers/provider_sign_in.dart';
 import 'package:feature_auth/src/view/sign_in_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -489,6 +490,7 @@ void main() {
             supabase: supabase.supabase,
             analytics: spy.authAnalytics,
             errors: spy.errorReporter,
+            providers: ProviderSignIn(google: SignInRobot.googleClients),
           ),
           child: const MaterialApp(home: SignInPage()),
         ),
@@ -542,7 +544,10 @@ void main() {
         expect(robot.home, findsOneWidget);
         expect(robot.signIn, findsNothing);
         // No code was requested.
-        expect(robot.analytics.events.first, event('signed_in'));
+        expect(
+          robot.analytics.events.first,
+          event('signed_in', {'method': 'password'}),
+        );
         expect(
           robot.analytics.events.map((captured) => captured['event']),
           isNot(contains(startsWith('sign_in_code'))),

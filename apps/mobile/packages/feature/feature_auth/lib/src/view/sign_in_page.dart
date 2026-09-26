@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:feature_auth/src/bloc/auth_bloc.dart';
+import 'package:feature_auth/src/view/provider_buttons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:legal_links/legal_links.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Email code sign-in in two steps: the email, then the six-digit code
 /// Supabase sent to it. Nothing to remember, nothing to leave the app for.
+/// Under the email, the providers' own buttons sign in with Google, and
+/// with Apple on iOS, in one step.
 /// The second step is a password instead for the accounts the bloc knows
 /// to ask one of (the app stores' reviewers).
 class const SignInPage({super.key}) extends StatelessWidget {
@@ -19,6 +22,8 @@ class const SignInPage({super.key}) extends StatelessWidget {
   static const changeEmailKey = Key('sign_in_page.change_email');
   static const errorKey = Key('sign_in_page.error');
   static const privacyNoticeKey = Key('sign_in_page.privacy_notice');
+  static const googleKey = ProviderButtons.googleKey;
+  static const appleKey = ProviderButtons.appleKey;
 
   static const tooManyCodesMessage = AuthBloc.tooManyCodesMessage;
   static const tooManyAttemptsMessage = AuthBloc.tooManyAttemptsMessage;
@@ -26,6 +31,7 @@ class const SignInPage({super.key}) extends StatelessWidget {
   static const wrongCodeMessage = AuthBloc.wrongCodeMessage;
   static const wrongPasswordMessage = AuthBloc.wrongPasswordMessage;
   static const unreachableMessage = AuthBloc.unreachableMessage;
+  static const providerFailedMessage = AuthBloc.providerFailedMessage;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -35,29 +41,9 @@ class const SignInPage({super.key}) extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Expanded(
-              child: BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, state) => switch (state) {
-                  AuthSignedOut(:final error) => _EmailStep(error: error),
-                  AuthRequestingCode() => const _EmailStep(busy: true),
-                  AuthCodeSent(:final email, :final error) => _CodeStep(
-                    email: email,
-                    error: error,
-                  ),
-                  AuthVerifying(:final email) => _CodeStep(
-                    email: email,
-                    busy: true,
-                  ),
-                  AuthPasswordRequired(:final email, :final error) =>
-                    _PasswordStep(email: email, error: error),
-                  AuthCheckingPassword(:final email) => _PasswordStep(
-                    email: email,
-                    busy: true,
-                  ),
-                  AuthSignedIn() => const SizedBox.shrink(),
-                },
-              ),
-            ),
+            // The providers' buttons make the first step taller than a small
+            // phone in landscape.
+            const Expanded(child: SingleChildScrollView(child: _Step())),
             // Reachable before an account exists, and before an address has
             // been typed: Play's disclosure expectations are stricter than
             // Apple's about a policy that lives only behind a menu, and
@@ -71,6 +57,32 @@ class const SignInPage({super.key}) extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+/// The one step the sign-in state asks for.
+class const _Step() extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => BlocBuilder<AuthBloc, AuthState>(
+    builder: (context, state) => switch (state) {
+      AuthSignedOut(:final error) => _EmailStep(error: error),
+      AuthRequestingCode() => const _EmailStep(busy: true),
+      AuthSigningInWith() => const _EmailStep(busy: true),
+      AuthCodeSent(:final email, :final error) => _CodeStep(
+        email: email,
+        error: error,
+      ),
+      AuthVerifying(:final email) => _CodeStep(email: email, busy: true),
+      AuthPasswordRequired(:final email, :final error) => _PasswordStep(
+        email: email,
+        error: error,
+      ),
+      AuthCheckingPassword(:final email) => _PasswordStep(
+        email: email,
+        busy: true,
+      ),
+      AuthSignedIn() => const SizedBox.shrink(),
+    },
   );
 }
 
@@ -127,6 +139,7 @@ class _EmailStepState() extends State<_EmailStep> {
               : null,
           child: const Text('Send code'),
         ),
+      ProviderButtons(enabled: !widget.busy),
     ],
   );
 }
