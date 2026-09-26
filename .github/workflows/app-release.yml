@@ -174,8 +174,20 @@ jobs:
               "${ANDROID_VERSION}" "${ANDROID_BUILD}" "${GITHUB_SHA}" "${now}"
           fi
 
-          tree="$(jq -n --rawfile content status.json \
-            '{tree: [{path: "status.json", mode: "100644", type: "blob", content: $content}]}' |
+          # Vercel deploys every pushed branch, and this one holds none of
+          # the Vercel projects' Root Directories, so each push failed as a
+          # preview with "Root Directory does not exist". Vercel reads
+          # git.deploymentEnabled from the pushed commit's Root Directory,
+          # so the branch carries a vercel.json in each that turns
+          # deployments off. A new Vercel project needs its root added here.
+          tree="$(jq -n --rawfile content status.json '
+            {tree: (
+              [{path: "status.json", mode: "100644", type: "blob", content: $content}] +
+              (["apps/agent", "apps/web"] | map({
+                path: "\(.)/vercel.json", mode: "100644", type: "blob",
+                content: "{\"git\":{\"deploymentEnabled\":false}}\n"
+              }))
+            )}' |
             gh api "repos/${repo}/git/trees" --input - --jq .sha)"
           commit="$(jq -n --arg tree "${tree}" --arg head "${head}" \
             --arg message "internal builds of ${GITHUB_SHA} (app-release run ${GITHUB_RUN_ID})" \
