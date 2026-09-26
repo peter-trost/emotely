@@ -2,6 +2,10 @@ name: CI
 
 on:
   pull_request:
+  # The merge queue tests each pull request against what main will be; ci-ok
+  # must report here too, or the queue waits forever. Deploy jobs gate on
+  # `push` to main, so a queue branch never deploys.
+  merge_group:
   push:
     branches: [main]
 
@@ -129,8 +133,8 @@ jobs:
       # dependents — unless something outside a package changed (the workspace
       # pubspec or lock, the shared rule set in packages/utility/analysis, the
       # contract schema the app is pinned against, this workflow), which
-      # affects every package and runs everything. Pushes to main always run
-      # everything.
+      # affects every package and runs everything. Merge-queue runs and pushes
+      # to main always run everything.
       - name: Scope the gates to what changed
         if: github.event_name == 'pull_request'
         env:
