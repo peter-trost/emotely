@@ -50,6 +50,21 @@ docs: [store-checkpoints-in-another-repo](https://docs.entire.io/guides/checkpoi
 If that remote is unreachable the code push still succeeds and Entire keeps the
 checkpoint local with a warning. Never push `refs/entire/*` to `origin`.
 
+**An owner mismatch fails open, to the public repo.** When `checkpoint_remote`'s
+owner differs from `origin`'s, Entire 0.11 does *not* keep checkpoints local: it
+logs "ignoring checkpoint_remote that appears to belong to another owner;
+pushing checkpoints to the push remote instead" (only in `entire doctor logs`)
+and pushes the transcripts to `origin`. That happened on 2026-09-26 from a
+branch cut before the move to `trost-systems` still carried the old owner
+([#199](https://github.com/trost-systems/emotely/issues/199)). So after any
+owner change, on a fork, or on a branch older than the last change to
+`.entire/settings.json`: before pushing, merge `main` or put the right
+`checkpoint_remote` in the gitignored `.entire/settings.local.json`, and check
+that `entire status` says "Checkpoints sync to: dedicated checkpoint remote
+(trost-systems/emotely-checkpoints)". A leaked ref is removed with
+`git push origin --delete refs/entire/checkpoints/<xx>/<id>` after copying it to
+the checkpoint repo.
+
 **entire.io only shows mirrored repos.** Having the Entire GitHub App installed
 makes a repo *visible* on entire.io, but it stays "Inactive" and the backend
 ingests nothing until the repo is onboarded, i.e. has a mirror placement.
