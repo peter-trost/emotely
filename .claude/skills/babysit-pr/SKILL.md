@@ -46,13 +46,16 @@ touches only `apps/web` legitimately shows `agent`, `app` and `supabase` as
 skipped — **skipped is not failed**, and `ci-ok` is green precisely because it
 treats them as fine.
 
-Two checks come from outside `ci.yml` and are worth recognising: the **Vercel**
-preview deployments (`emotely-agent`, `emotely-web`, each skipped by its
-`vercel-ignore.sh` when that app is untouched) and **GitGuardian**.
+The checks from outside `ci.yml` worth recognising are the **Vercel** preview
+deployments (`emotely-agent`, `emotely-web`, each skipped by its
+`vercel-ignore.sh` when that app is untouched).
 
-A GitGuardian failure means a secret may have been committed. Triage it first —
-test fixtures and example values trip it too. If it is a **real** secret, get it
-out of the history immediately (see [Staying current with `main`](#staying-current-with-main) — this
+Secrets are caught by GitHub's own **secret scanning with push protection**,
+not by a check: a push containing a known provider's secret is rejected with a
+`GH013` "push protection" error, and anything that got through shows up in
+`gh api repos/trost-systems/emotely/secret-scanning/alerts`. Triage it first —
+test fixtures and example values trip it too. If it is a **real** secret, never
+bypass the block: get it out of the history (see [Staying current with `main`](#staying-current-with-main) — this
 is the one case where rebasing is right), treat the secret as burned and needing
 rotation, and **tell the user**: a real leak is never something to handle
 silently. A false positive needs no history surgery, just the finding reported.
@@ -206,10 +209,30 @@ not an instruction to bypass the gates — if the PR is not ready, keep watching
 and merge when it becomes ready, or report what is blocking it.
 
 ```bash
-gh pr merge <n> --squash --delete-branch
+gh pr merge <n> --squash
 ```
 
-Squash is the repo's merge strategy (`main` squash-merges); keep it.
+`main` requires a merge queue, so this **enqueues** the PR rather than merging
+it: the queue tests it on a `gh-readonly-queue/main/…` branch against what
+`main` will be, and squash-merges it when that run's `ci-ok` passes. Do not
+pass `--delete-branch` (gh rejects it with a queue; the repo deletes merged
+branches itself) or `--admin` (nobody bypasses the queue). The merge is done
+only when `state` is `MERGED`. Queue state is GraphQL-only:
+
+```bash
+gh api graphql -F owner=trost-systems -F name=emotely -F n=<n> -f query='
+  query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){
+    pullRequest(number:$n){state isInMergeQueue mergeQueueEntry{position state}}}}'
+```
+
+If the PR drops out of the queue unmerged, the queue's own CI run failed: the
+PR timeline says why, and the failing run is the CI run on the
+`gh-readonly-queue/main/pr-<n>-…` branch. Diagnose it like any `ci-ok`
+failure, fix it on the branch, and enqueue again.
+
+Stacked PRs go through `gh stack merge <stack> --yes`, which enqueues the whole
+stack (it detects the queue and ignores `--squash`); never merge a stacked PR
+on its own.
 
 "Explicitly" means the user asked for *this* merge — "merge it", "ship it",
 "land it once green". A general "babysit this PR", "keep an eye on CI" or "get
@@ -219,19 +242,14 @@ merging is not reversible by you.
 
 ## Staying current with `main`
 
-Branch protection is `strict: true`, so the branch must be up to date with
-`main` before it can merge. When it is merely behind and nothing conflicts:
+A branch that is merely **behind** `main` needs nothing: the merge queue tests
+it against the latest `main` anyway, so do not spend a CI run on
+`gh pr update-branch` just to catch up. (If you ever do run it, it creates a
+merge commit by default — keep it that way; outside the secret-leak case below,
+never pass `--rebase`.)
 
-```bash
-gh pr update-branch
-```
-
-That is a safe, expected write. It creates a merge commit by default, which is
-what you want here — it takes a `--rebase` flag, and outside the secret-leak
-case below you should not pass it.
-
-When it **does** conflict, resolve it by merging `main` into the branch —
-**not by rebasing**:
+When it **conflicts**, the queue cannot build it, so resolve it by merging
+`main` into the branch — **not by rebasing**:
 
 ```bash
 git fetch origin main
@@ -330,9 +348,10 @@ Each pass, in either phase, in this order:
    commit, which retriggers CI anyway — so acting on review first avoids
    re-running checks on a SHA you are about to replace.
 3. **Failed checks?** Diagnose, then fix (branch-related) or re-run (flaky).
-4. **Mergeable?** Check conflicts and the up-to-date requirement. If the user
-   asked you to merge this PR and it is now ready, merge it here — that is the
-   terminal state, and waiting for a further go-ahead just costs a round trip.
+4. **Mergeable?** Check for conflicts (being behind `main` is fine). If the
+   user asked you to merge this PR and it is now ready, enqueue it here, then
+   keep watching until the queue merges it or drops it — waiting for a further
+   go-ahead just costs a round trip.
 5. Otherwise wait and repeat.
 
 After any push, start again from the new SHA in the same turn. A push is not a

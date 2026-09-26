@@ -10,8 +10,12 @@ on:
     branches: [main]
 
 # Supersede in-flight runs for the same ref; ci-ok stays pending on cancellation.
+# Never on main: each push diffs only its own commits, so a cancelled (or, in a
+# shared group, a replaced pending) run would skip that push's supabase-deploy
+# for good, and the merge queue lands pushes back to back. Each push to main
+# gets its own group; supabase-deploy serializes itself below.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -234,6 +238,13 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: ci
+    # One deploy at a time, and each deploys main as it is now rather than
+    # this run's commit: runs of back-to-back pushes can reach this job out of
+    # order, and an older `config push` would revert a newer one. A deploy
+    # waiting here may be replaced by a later one, which ships its changes too.
+    concurrency:
+      group: supabase-deploy
+      cancel-in-progress: false
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -241,6 +252,8 @@ jobs:
       SMTP_PASS: ${{ secrets.SMTP_PASS }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
       - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
         with:
           version: 2.116.0
